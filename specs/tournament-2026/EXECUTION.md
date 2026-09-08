@@ -26,7 +26,7 @@ Fresh review: required — test-gate infrastructure
 - [x] Create `src/domain/types.ts` and `src/domain/commands.ts` with the exact exported records, command payloads, mutation envelope, and receipt in PLAN.md → API changes; use discriminated states and no loose `any`.
 - [x] Create `src/domain/scoring.ts` and `src/domain/scoring.test.ts` for valid scores, symmetry, deuce, cap, impossible scores, and the transition that stops point entry.
 - [x] Create `src/domain/fixtures.ts` and `src/domain/fixtures.test.ts` for 6/7/8 pairs, group membership, every group pairing exactly once, two courts, initial ordering, and best-effort avoidance of consecutive play; leave three knockout slots with the defined dependency labels.
-- [ ] Create `src/domain/standings.ts` and `src/domain/standings.test.ts` for confirmed wins, head-to-head, tied-pair point difference, manual residual ties, walkovers without fabricated points, and withdrawn-pair exclusion.
+- [x] Create `src/domain/standings.ts` and `src/domain/standings.test.ts` for confirmed wins, head-to-head, tied-pair point difference, manual residual ties, walkovers without fabricated points, and withdrawn-pair exclusion.
 
 **Phase gate (hard):**
 - [ ] Run `npm run typecheck` project-wide.
