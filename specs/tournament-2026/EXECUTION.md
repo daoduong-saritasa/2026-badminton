@@ -33,7 +33,7 @@ Fresh review: required — test-gate infrastructure
 **Phase gate (hard):**
 - [x] Run `npm run typecheck` project-wide.
 - [x] Run `npm run test:related -- <changed files>` with paths derived from the real phase diff; configuration changes trigger the runner's configured rerun behavior.
-- [ ] Rerun `npm run typecheck` and `npm run test:related -- <changed files>` after the fresh-review corrections, deriving paths from the real phase diff; separately verify `npm run test:related -- package-lock.json` runs the complete suite. (amended 2026-09-09)
+- [x] Rerun `npm run typecheck` and `npm run test:related -- <changed files>` after the fresh-review corrections, deriving paths from the real phase diff; separately verify `npm run test:related -- package-lock.json` runs the complete suite. (amended 2026-09-09)
 
 **Review checklist (user, at PR review):**
 - [ ] Check the 6/7/8-pair fixture examples and tie examples against the organizer's rules.
