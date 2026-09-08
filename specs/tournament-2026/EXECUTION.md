@@ -29,8 +29,8 @@ Fresh review: required — test-gate infrastructure
 - [x] Create `src/domain/standings.ts` and `src/domain/standings.test.ts` for confirmed wins, head-to-head, tied-pair point difference, manual residual ties, walkovers without fabricated points, and withdrawn-pair exclusion.
 
 **Phase gate (hard):**
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed files>` with paths derived from the real phase diff; configuration changes trigger the runner's configured rerun behavior.
+- [x] Run `npm run typecheck` project-wide.
+- [x] Run `npm run test:related -- <changed files>` with paths derived from the real phase diff; configuration changes trigger the runner's configured rerun behavior.
 
 **Review checklist (user, at PR review):**
 - [ ] Check the 6/7/8-pair fixture examples and tie examples against the organizer's rules.
