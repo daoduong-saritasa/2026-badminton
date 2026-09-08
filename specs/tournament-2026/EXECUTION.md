@@ -5,8 +5,8 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default; probe
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — Domain contracts and logic: in-progress
+- Current phase: 1 — done
+- Phase 1 — Domain contracts and logic: done
 - Phase 2 — Database and staff authorization: pending
 - Phase 3 — Frontend data and scoring recovery: pending
 - Phase 4 — Tournament and staff screens: pending
