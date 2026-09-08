@@ -102,7 +102,7 @@ Anyone with the unlisted link can view player names, seeds, fixtures, live score
 
 - One shared staff PIN grants organizer and referee capabilities; no individual staff profiles or separate permission tiers.
 - Keep Referee and Organizer controls out of public navigation. After PIN entry, expose a separate staff control menu.
-- Staff sessions last several days and support explicit sign-out. Final duration is an implementation parameter.
+- Staff authorization lasts seven days from successful PIN verification, without sliding renewal, and supports explicit sign-out.
 - Changing the PIN invalidates every existing staff session.
 - Record action timestamps and anonymous staff session identifiers for debugging and conflict diagnosis.
 - Never ship the PIN hash or privileged database credentials to the frontend.
@@ -152,7 +152,8 @@ If saving fails, pause further scoring, clearly show “Score not saved,” pres
 - Public reads are restricted to intended tournament information through database grants and Row Level Security.
 - Staff mutations use narrowly scoped RPC operations, not unrestricted table updates.
 - Every mutation validates a live, authorized staff session. PIN rotation must revoke access immediately, including access from otherwise unexpired tokens; a stale staff claim alone is insufficient.
-- The exact supported mechanism for establishing the staff Auth session must be verified before implementation. Do not assume an Edge Function can mint an ordinary refreshable Supabase Auth session merely by setting a claim.
+- Use Supabase anonymous Auth for staff sign-in, then verify the PIN through the Edge Function to grant seven days of staff authorization in a private session registry. Public viewing does not create an Auth user. Anonymous Auth alone grants no staff permissions.
+- Bind each staff grant to the verified Auth user and session identifier. Every mutation checks the registry for expiry, revocation, and the current PIN generation. PIN rotation invalidates all existing grants immediately; sign-out revokes the current grant. Supabase manages Auth token refresh separately from the fixed staff-authorization expiry.
 - Database transactions enforce score validity, scorekeeper ownership, match/court exclusivity, record versions, and allowed state transitions.
 - Idempotency prevents duplicate points when a response is lost or a request is retried.
 - Use Realtime Postgres Changes for this small audience. On reconnection, fetch authoritative state rather than assuming every event was delivered.
@@ -193,6 +194,8 @@ These are mandatory implementation rules requested by the user:
 
 ## Implementation verification
 
+Use Vitest for pure logic and focused local Supabase integration tests. Do not add React Testing Library, component snapshot tests, or an automated browser suite. Review UI behavior manually against the prototype.
+
 Verify the behavior that can affect tournament integrity:
 
 - Fixture generation for all three supported pair counts and court/pair exclusivity.
@@ -208,7 +211,66 @@ No code commits, external account provisioning, paid-plan purchases, or deployme
 
 ## Remaining implementation details
 
-The product scope is agreed. Before deployment, resolve account/project identifiers, the production URL, exact event date, final entrants, and the initial staff PIN through appropriate secret handling. Before building staff authentication, verify the supported Supabase session flow and select the concrete revocation implementation. These details do not change the accepted screen or tournament scope.
+The product scope, staff authorization flow, UUID identifiers, explicit transactional RPCs, feature folders, and logic-focused testing are agreed. Before deployment, resolve account/project identifiers, the production URL, exact event date, final entrants, and the initial staff PIN through appropriate secret handling. No production provisioning or deployment is part of execution without separate authorization.
+
+## Schema changes
+
+Keep one tournament; do not add a multi-tournament management layer. Use UUID primary keys, UTC timestamps, integer versions, foreign keys, and checked state values. SQL migrations live in `supabase/migrations/`.
+
+- `public.tournament`: singleton UUID, name, stage (`setup`, `groups`, `knockouts`, `completed`), setup-lock timestamp, version. Preserve the setup lock when reopening.
+- `public.players`: UUID, name, seed (`1` or `2`). `public.pairs`: UUID, optional team name, two distinct player foreign keys, group (`A` or `B`), withdrawn flag. Enforce that a player belongs to at most one pair across both slots.
+- `public.matches`: UUID, round (`group`, `semifinal`, `final`), optional group, pair foreign keys, source labels/dependent match foreign keys for knockout slots, court (`1` or `2`), playing order, state (`unstarted`, `playing`, `completed`, `void`), scores, result kind (`played` or `walkover`), winner, version. Unresolved knockout slots may be null; starting requires both participants.
+- `public.tie_resolutions`: group, ordered pair UUIDs, explanation, standings revision. Invalidate resolutions when contributing results change.
+- `private.staff_grants`: Auth session UUID, Auth user UUID, granted/expiry/revoked timestamps, PIN generation. `private.staff_config`: singleton PIN hash and generation. `private.pin_attempts`: server-derived rate-limit bucket and attempt timestamps/counts.
+- `private.match_ownership`: match UUID and staff-session UUID. `private.mutation_log`: request UUID, staff-session UUID, operation, payload fingerprint, response, timestamp, match UUID when applicable, point side and undone marker when applicable. Keep ownership and audit identifiers out of public match rows.
+
+All mutations serialize on the singleton tournament row, then check the current grant, expected record version, and operation rules. This deliberately simple lock scope fits two courts. A repeated request with the same session and payload returns its recorded result; mismatched reuse fails. Check current authorization and score ownership before replaying a scoring response. Increment tournament version for each tournament mutation and affected match versions for match changes.
+
+## API changes
+
+Create `src/domain/types.ts` for `UUID = string`, `Group = 'A' | 'B'`, `Side = 'a' | 'b'`, `Score = { a: number; b: number }`, and the typed `Tournament`, `Player`, `Pair`, `Match`, `TieResolution`, `TournamentSnapshot`, `Standing`, `Fixture`, `SetupInput`, `CourtAssignment`, and `StaffAccess` records corresponding to the fields above. `TournamentSnapshot` contains tournament, players, pairs, matches, and tie resolutions, never private rows. `StaffAccess` contains sessionId and expiresAt.
+
+Create `src/domain/commands.ts` with `CommandPayloads` mapping the following operation names to payloads. `MutationInput<K extends keyof CommandPayloads>` is `{ requestId: UUID; expectedVersion: number; payload: CommandPayloads[K] }`; expectedVersion refers to the match for match operations and the tournament otherwise. `MutationReceipt` is `{ requestId: UUID; tournamentVersion: number; matchId: UUID | null; matchVersion: number | null }`.
+
+| RPC operation | Payload |
+| --- | --- |
+| `save_setup` | `{ setup: SetupInput }` |
+| `generate_fixtures` | `{}` |
+| `assign_courts` | `{ assignments: CourtAssignment[] }` |
+| `start_scoring`, `take_over`, `undo_point`, `confirm_result` | `{ matchId: UUID }` |
+| `add_point` | `{ matchId: UUID; side: Side }` |
+| `enter_result`, `correct_result` | `{ matchId: UUID; score: Score }` |
+| `mark_walkover` | `{ matchId: UUID; winnerId: UUID }` |
+| `withdraw_pair` | `{ pairId: UUID }` |
+| `resolve_tie` | `{ group: Group; orderedPairIds: UUID[]; explanation: string }` |
+| `confirm_groups`, `reopen_tournament` | `{}` |
+
+Each named public mutation RPC takes `(p_request_id uuid, p_expected_version integer, p_payload jsonb)` and returns a JSON `MutationReceipt`; validate payload fields server-side. `get_tournament_snapshot() returns jsonb` provides one consistent public snapshot. `get_staff_access() returns jsonb` returns the caller's valid grant or null; `get_score_access(p_match_id uuid) returns boolean` reports caller ownership without exposing another session. `revoke_staff_access() returns void` revokes the caller's grant.
+
+`supabase/functions/staff-pin/index.ts` accepts `{ pin: string }` with a verified anonymous Auth JWT and returns `StaffAccess`. Verify the JWT user and session; never trust body-supplied identity. Use a server-only password hash, constant-time library verification, transactional rate limiting and grant issuance. `supabase/functions/rotate-pin/index.ts` accepts `{ pin: string }` from a currently authorized staff session and atomically updates hash/generation. Both endpoints reject invalid input without logging PINs. Store secrets only server-side; provision the initial hash through the documented operator procedure.
+
+Create `src/domain/scoring.ts` with `isWinningScore(score: Score): boolean`; `src/domain/fixtures.ts` with `generateFixtures(pairs: readonly Pair[]): Fixture[]`; `src/domain/standings.ts` with `calculateStandings(snapshot: TournamentSnapshot, group: Group): Standing[]`. SQL remains authoritative for writes; test SQL outcomes against the same scoring, fixture, and standings examples. A residual tie after applying its specified criterion requires manual resolution, without recursively inventing another tiebreak rule.
+
+## Frontend changes
+
+- `src/lib/supabase.ts` creates the publishable-key client; `src/lib/database.types.ts` contains CLI-generated database types. `.env.example` documents public configuration names without credentials.
+- `src/data/tournament.ts` exports `fetchTournament(): Promise<TournamentSnapshot>`, `mutateTournament<K extends keyof CommandPayloads>(operation: K, input: MutationInput<K>): Promise<MutationReceipt>`, and `subscribeTournament(onChange: () => void): () => void`. Treat Realtime events as invalidations; fetch snapshots with stale-response protection.
+- `src/data/staff.ts` exports `signInStaff(pin: string): Promise<StaffAccess>`, `getStaffAccess(): Promise<StaffAccess | null>`, `signOutStaff(): Promise<void>`, `rotateStaffPin(pin: string): Promise<void>`, and `canScore(matchId: UUID): Promise<boolean>`.
+- `src/features/scoring/scoring-state.ts` exports pure `reduceScoring(state: ScoringState, event: ScoringEvent): ScoringState`. Define the discriminated states/events in this file: idle, saving, failed, and reviewing; preserve one pending request UUID across retries, block further point entry until acknowledgement, and retain ownership/version conflicts for explicit recovery.
+- `src/features/tournament/` holds `TournamentPage.tsx`, `MatchTicket.tsx`, `StandingsTable.tsx`, and `KnockoutBracket.tsx`; `src/features/staff/` holds `StaffAccessDialog.tsx` and `StaffMenu.tsx`; `src/features/scoring/` holds `ScoreTracker.tsx`; `src/features/organizer/` holds `OrganizerPage.tsx`, `SetupForm.tsx`, and `ResultEditor.tsx`.
+- `src/App.tsx` owns navigation and snapshot loading; `src/index.css` owns the brand tokens and typography. Install reusable controls into `src/components/ui/` using the official shadcn CLI. Keep score panels as styled shadcn buttons. Self-host Be Vietnam Pro and retain its license in `THIRD_PARTY_NOTICES.md`.
+
+## Test and delivery structure
+
+Use `vitest.config.ts`, strict project-wide TypeScript configurations, and package scripts `typecheck`, `test`, and `test:related`. Typecheck covers frontend, tests, tooling, and Edge Function sources with the appropriate runtime types. `test` runs the full Vitest suite; `test:related` runs `vitest related --run` with changed paths supplied at execution.
+
+Pure tests: `src/domain/scoring.test.ts`, `src/domain/fixtures.test.ts`, `src/domain/standings.test.ts`, `src/features/scoring/scoring-state.test.ts`, and `src/data/tournament.test.ts`. Focus data-layer tests on retry identity, reconciliation, and stale responses; do not test component rendering.
+
+Integration tests: `tests/integration/auth.test.ts` and `tests/integration/tournament.test.ts`, using `tests/integration/local-supabase.ts`. Restrict fixtures to a disposable local Supabase instance and refuse remote URLs. Missing local services fail explicitly; do not silently skip database tests. SQL and Edge configuration changes have no reliable TypeScript import graph, so run the integration suite as a fallback when those paths change. Configure Vitest to rerun tests for shared test/configuration changes.
+
+The Supabase CLI must be installed as a development dependency through npm. Docker is installed but its daemon was unavailable during planning on 2026-09-08. Database integration checks require the daemon, local Supabase, and locally served Edge Functions. If still blocked during execution, record the blocked check as verification debt with pure-logic test evidence; do not claim database verification.
+
+`README.md` documents local setup and commands. `docs/deployment.md` documents company-owned Cloudflare Pages/Supabase configuration, license checks, PIN initialization/rotation, migration deployment, and the pre-event smoke check. Producing instructions does not deploy or provision accounts.
 
 ## Reference documentation
 
