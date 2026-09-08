@@ -5,8 +5,8 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default; probe
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — Domain contracts and logic: pending
+- Current phase: 1 — in-progress
+- Phase 1 — Domain contracts and logic: in-progress
 - Phase 2 — Database and staff authorization: pending
 - Phase 3 — Frontend data and scoring recovery: pending
 - Phase 4 — Tournament and staff screens: pending
@@ -22,7 +22,7 @@ Produces: `isWinningScore(score: Score): boolean`, `generateFixtures(pairs: read
 
 Fresh review: required — test-gate infrastructure
 
-- [ ] In `package.json`, `package-lock.json`, `vitest.config.ts`, `tsconfig.app.json`, `tsconfig.node.json`, and `tsconfig.json`, install Vitest through npm, enable strict types, and add `typecheck` (project-wide `tsc -b`), `test` (`vitest run`), and `test:related` (`vitest related --run`); cover tests/tooling and rerun for shared configuration changes without adding UI test tooling.
+- [x] In `package.json`, `package-lock.json`, `vitest.config.ts`, `tsconfig.app.json`, `tsconfig.node.json`, and `tsconfig.json`, install Vitest through npm, enable strict types, and add `typecheck` (project-wide `tsc -b`), `test` (`vitest run`), and `test:related` (`vitest related --run`); cover tests/tooling and rerun for shared configuration changes without adding UI test tooling.
 - [ ] Create `src/domain/types.ts` and `src/domain/commands.ts` with the exact exported records, command payloads, mutation envelope, and receipt in PLAN.md → API changes; use discriminated states and no loose `any`.
 - [ ] Create `src/domain/scoring.ts` and `src/domain/scoring.test.ts` for valid scores, symmetry, deuce, cap, impossible scores, and the transition that stops point entry.
 - [ ] Create `src/domain/fixtures.ts` and `src/domain/fixtures.test.ts` for 6/7/8 pairs, group membership, every group pairing exactly once, two courts, initial ordering, and best-effort avoidance of consecutive play; leave three knockout slots with the defined dependency labels.
