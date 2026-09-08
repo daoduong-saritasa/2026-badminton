@@ -29,7 +29,7 @@ export function isWinningScore(score: Score): boolean {
     return loser <= MIN_WINNING_SCORE - 2
   }
 
-  return winner < SCORE_CAP && winner - loser === 2
+  return winner > MIN_WINNING_SCORE && winner < SCORE_CAP && winner - loser === 2
 }
 
 export function addPointToScore(score: Score, side: Side): Score {

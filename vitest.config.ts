@@ -5,6 +5,7 @@ export default defineConfig({
     environment: 'node',
     forceRerunTriggers: [
       '**/package.json',
+      '**/package-lock.json',
       '**/{vitest,vite}.config.*',
       '**/tsconfig*.json',
     ],

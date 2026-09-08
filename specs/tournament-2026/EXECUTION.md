@@ -27,10 +27,13 @@ Fresh review: required — test-gate infrastructure
 - [x] Create `src/domain/scoring.ts` and `src/domain/scoring.test.ts` for valid scores, symmetry, deuce, cap, impossible scores, and the transition that stops point entry.
 - [x] Create `src/domain/fixtures.ts` and `src/domain/fixtures.test.ts` for 6/7/8 pairs, group membership, every group pairing exactly once, two courts, initial ordering, and best-effort avoidance of consecutive play; leave three knockout slots with the defined dependency labels.
 - [x] Create `src/domain/standings.ts` and `src/domain/standings.test.ts` for confirmed wins, head-to-head, tied-pair point difference, manual residual ties, walkovers without fabricated points, and withdrawn-pair exclusion.
+- [x] In `src/domain/scoring.ts` and `src/domain/scoring.test.ts`, reject two-point margins below 21 symmetrically and prove point entry continues from those scores. (amended 2026-09-09)
+- [x] In `tsconfig.node.json` and `vitest.config.ts`, include Vitest configuration in strict project-wide typechecking and make `package-lock.json` force a complete related-test rerun. (amended 2026-09-09)
 
 **Phase gate (hard):**
 - [x] Run `npm run typecheck` project-wide.
 - [x] Run `npm run test:related -- <changed files>` with paths derived from the real phase diff; configuration changes trigger the runner's configured rerun behavior.
+- [ ] Rerun `npm run typecheck` and `npm run test:related -- <changed files>` after the fresh-review corrections, deriving paths from the real phase diff; separately verify `npm run test:related -- package-lock.json` runs the complete suite. (amended 2026-09-09)
 
 **Review checklist (user, at PR review):**
 - [ ] Check the 6/7/8-pair fixture examples and tie examples against the organizer's rules.

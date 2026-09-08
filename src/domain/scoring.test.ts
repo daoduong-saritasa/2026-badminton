@@ -23,6 +23,8 @@ describe('isWinningScore', () => {
   it.each<Score>([
     { a: 0, b: 0 },
     { a: 20, b: 19 },
+    { a: 20, b: 18 },
+    { a: 19, b: 17 },
     { a: 21, b: 20 },
     { a: 22, b: 19 },
     { a: 29, b: 28 },
@@ -33,6 +35,7 @@ describe('isWinningScore', () => {
     { a: 21.5, b: 19.5 },
   ])('rejects impossible or unfinished score $a–$b', (score) => {
     expect(isWinningScore(score)).toBe(false)
+    expect(isWinningScore(reverse(score))).toBe(false)
   })
 })
 
@@ -40,6 +43,11 @@ describe('addPointToScore', () => {
   it('allows deuce to continue until a two-point margin', () => {
     expect(addPointToScore({ a: 20, b: 20 }, 'a')).toEqual({ a: 21, b: 20 })
     expect(addPointToScore({ a: 21, b: 20 }, 'a')).toEqual({ a: 22, b: 20 })
+  })
+
+  it('continues point entry from a pre-21 two-point margin symmetrically', () => {
+    expect(addPointToScore({ a: 20, b: 18 }, 'a')).toEqual({ a: 21, b: 18 })
+    expect(addPointToScore({ a: 18, b: 20 }, 'b')).toEqual({ a: 18, b: 21 })
   })
 
   it('stops point entry after a normal win', () => {
