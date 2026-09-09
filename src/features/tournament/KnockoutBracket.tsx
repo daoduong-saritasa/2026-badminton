@@ -6,7 +6,17 @@ import { cn } from '@/lib/utils'
 
 import { pairName, pairPlayers, pairSeeds, pairTeamName } from './MatchTicket'
 
-function BracketMatch({ match, snapshot, final = false }: { match: Match; snapshot: TournamentSnapshot; final?: boolean }) {
+function BracketMatch({
+  match,
+  snapshot,
+  label,
+  final = false,
+}: {
+  match: Match
+  snapshot: TournamentSnapshot
+  label: string
+  final?: boolean
+}) {
   const sides = [
     { pairId: match.pairAId, fallback: match.sourceALabel, score: match.score?.a },
     { pairId: match.pairBId, fallback: match.sourceBLabel, score: match.score?.b },
@@ -14,7 +24,7 @@ function BracketMatch({ match, snapshot, final = false }: { match: Match; snapsh
   return (
     <article className={cn('ticket rounded-[1.375rem] border p-5', final ? 'bg-primary text-primary-foreground' : 'bg-white')}>
       <div className="mb-4 flex items-center justify-between gap-3">
-        <h3 className="font-semibold">{final ? 'The final' : `Semifinal ${match.playingOrder}`}</h3>
+        <h3 className="font-semibold">{label}</h3>
         <span className={cn('text-[0.625rem]', final ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
           {match.court ? `Court ${match.court}` : 'Court pending'}
         </span>
@@ -75,9 +85,11 @@ export function KnockoutBracket({ snapshot }: { snapshot: TournamentSnapshot }) 
       </div>
       <div className="grid items-center gap-8 md:grid-cols-2">
         <div className="space-y-4">
-          {semifinals.map((match) => <BracketMatch key={match.id} match={match} snapshot={snapshot} />)}
+          {semifinals.map((match, index) => (
+            <BracketMatch key={match.id} match={match} snapshot={snapshot} label={`Semifinal ${index + 1}`} />
+          ))}
         </div>
-        {final ? <BracketMatch match={final} snapshot={snapshot} final /> : null}
+        {final ? <BracketMatch match={final} snapshot={snapshot} label="The final" final /> : null}
       </div>
     </section>
   )

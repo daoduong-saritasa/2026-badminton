@@ -82,6 +82,7 @@ function ScoringSurface({
   const queryClient = useQueryClient()
   const [state, dispatch] = useReducer(reduceScoring, createInitialState(match, ownership))
   const [takeoverOpen, setTakeoverOpen] = useState(false)
+  const [actionFailure, setActionFailure] = useState<string | null>(null)
 
   useEffect(() => {
     dispatch({
@@ -137,7 +138,34 @@ function ScoringSurface({
     void runPoint(state.pending)
   }
 
+  const reconcileAfterAction = async (): Promise<void> => {
+    const latestSnapshot = await fetchTournament()
+    queryClient.setQueryData(['tournament'], latestSnapshot)
+    const latest = latestSnapshot.matches.find(
+      (candidate): candidate is PlayingMatch => candidate.id === match.id && candidate.state === 'playing',
+    )
+    if (!latest) return
+    const hasOwnership = await canScore(match.id)
+    queryClient.setQueryData(['score-access', match.id], hasOwnership)
+    dispatch({
+      type: 'snapshot-received',
+      score: latest.score,
+      matchVersion: latest.version,
+      hasOwnership,
+    })
+  }
+
+  const handleActionFailure = async (action: string, error: unknown): Promise<void> => {
+    try {
+      await reconcileAfterAction()
+      setActionFailure(`${action} failed: ${message(error)}. The latest score and ownership were restored; retry only if the action is still needed.`)
+    } catch {
+      setActionFailure(`${action} failed: ${message(error)}. The latest state could not be verified; leave and reopen scoring before continuing.`)
+    }
+  }
+
   const takeoverMutation = useMutation({
+    onMutate: () => setActionFailure(null),
     mutationFn: async () => {
       await mutateTournament('take_over', {
         requestId: crypto.randomUUID(),
@@ -157,29 +185,35 @@ function ScoringSurface({
       }
       setTakeoverOpen(false)
     },
+    onError: (error) => handleActionFailure('Takeover', error),
   })
 
   const undoMutation = useMutation({
+    onMutate: () => setActionFailure(null),
     mutationFn: () => mutateTournament('undo_point', {
       requestId: crypto.randomUUID(),
       expectedVersion: state.matchVersion,
       payload: { matchId: match.id },
     }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament'] }),
+    onError: (error) => handleActionFailure('Undo', error),
   })
 
   const confirmMutation = useMutation({
+    onMutate: () => setActionFailure(null),
     mutationFn: () => mutateTournament('confirm_result', {
       requestId: crypto.randomUUID(),
       expectedVersion: state.matchVersion,
       payload: { matchId: match.id },
     }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament'] }),
+    onError: (error) => handleActionFailure('Confirmation', error),
   })
 
   const failed = state.status === 'failed' ? state : null
   const needsTakeover = !state.hasOwnership || failed?.reason === 'ownership-conflict'
-  const disabled = state.status !== 'idle' || !state.hasOwnership || isWinningScore(state.score)
+  const actionPending = takeoverMutation.isPending || undoMutation.isPending || confirmMutation.isPending
+  const disabled = state.status !== 'idle' || !state.hasOwnership || isWinningScore(state.score) || actionPending
 
   return (
     <main className="score-viewport grid grid-rows-[2.75rem_minmax(0,1fr)_auto] gap-2 overflow-hidden bg-background">
@@ -192,7 +226,7 @@ function ScoringSurface({
             variant="ghost"
             size="sm"
             className="rounded-full"
-            disabled={undoMutation.isPending || state.status === 'saving' || state.status === 'failed' || !state.hasOwnership}
+            disabled={actionPending || state.status === 'saving' || state.status === 'failed' || !state.hasOwnership}
             onClick={() => undoMutation.mutate()}
           >
             <RotateCcw /> Undo
@@ -200,7 +234,7 @@ function ScoringSurface({
           <Button
             size="sm"
             className="rounded-full"
-            disabled={state.status !== 'reviewing' || confirmMutation.isPending}
+            disabled={state.status !== 'reviewing' || actionPending}
             onClick={() => confirmMutation.mutate()}
           >
             Confirm
@@ -250,10 +284,11 @@ function ScoringSurface({
           </div>
         ) : null}
         {needsTakeover ? (
-          <Button size="sm" variant="outline" className="rounded-full" onClick={() => setTakeoverOpen(true)}>
+          <Button size="sm" variant="outline" className="rounded-full" disabled={actionPending} onClick={() => setTakeoverOpen(true)}>
             <ShieldAlert /> Take over scoring
           </Button>
         ) : null}
+        {actionFailure ? <p className="mt-1 text-destructive" role="alert">{actionFailure}</p> : null}
       </div>
 
       <AlertDialog open={state.status === 'reviewing'} onOpenChange={(open) => {
@@ -268,7 +303,7 @@ function ScoringSurface({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Review and undo</AlertDialogCancel>
-            <AlertDialogAction onClick={() => confirmMutation.mutate()}>Confirm result</AlertDialogAction>
+            <AlertDialogAction disabled={actionPending} onClick={() => confirmMutation.mutate()}>Confirm result</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -281,7 +316,7 @@ function ScoringSurface({
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={() => takeoverMutation.mutate()}>
+            <AlertDialogAction disabled={actionPending} onClick={() => takeoverMutation.mutate()}>
               {takeoverMutation.isPending ? 'Taking over…' : 'Take over'}
             </AlertDialogAction>
           </AlertDialogFooter>
