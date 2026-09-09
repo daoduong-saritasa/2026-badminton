@@ -1,22 +1,15 @@
 import { useEffect, useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, KeyRound, RefreshCw } from 'lucide-react'
 
 import { fetchTournament, subscribeTournament } from '@/data/tournament'
-import { getStaffAccess, signInStaff } from '@/data/staff'
+import { getStaffAccess } from '@/data/staff'
 import type { TournamentSnapshot, TournamentStage } from '@/domain/types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { StaffAccessDialog } from '@/features/staff/StaffAccessDialog'
+import { StaffMenu } from '@/features/staff/StaffMenu'
 import { KnockoutBracket } from '@/features/tournament/KnockoutBracket'
 import { StandingsTable } from '@/features/tournament/StandingsTable'
 import { TournamentPage } from '@/features/tournament/TournamentPage'
@@ -104,7 +97,6 @@ export default function App() {
   const queryClient = useQueryClient()
   const [selectedView, setSelectedView] = useState<AppView | null>(null)
   const [staffDialogOpen, setStaffDialogOpen] = useState(false)
-  const [pin, setPin] = useState('')
   const tournamentQuery = useQuery({ queryKey: tournamentQueryKey, queryFn: fetchTournament })
   const staffQuery = useQuery({
     queryKey: staffQueryKey,
@@ -114,15 +106,6 @@ export default function App() {
 
   const staffAccess = staffQuery.data ?? null
   const isStaff = staffAccess !== null && Date.parse(staffAccess.expiresAt) > Date.now()
-  const signInMutation = useMutation({
-    mutationFn: signInStaff,
-    onSuccess: (access) => {
-      queryClient.setQueryData(staffQueryKey, access)
-      setPin('')
-      setStaffDialogOpen(false)
-      setSelectedView('organizer')
-    },
-  })
 
   useEffect(() => subscribeTournament(() => {
     void queryClient.invalidateQueries({ queryKey: tournamentQueryKey })
@@ -153,9 +136,13 @@ export default function App() {
     if (isStaff) setSelectedView('organizer')
     else setStaffDialogOpen(true)
   }
-  const handleStaffSubmit = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
-    signInMutation.mutate(pin)
+  const handleStaffGranted = (access: NonNullable<typeof staffAccess>) => {
+    queryClient.setQueryData(staffQueryKey, access)
+    setSelectedView('organizer')
+  }
+  const handleSignedOut = () => {
+    queryClient.setQueryData(staffQueryKey, null)
+    setSelectedView(null)
   }
   const viewContent = renderView(snapshot, view)
 
@@ -171,13 +158,17 @@ export default function App() {
             {snapshot.tournament.stage} stage
           </p>
         </div>
-        <Button
-          variant="ghost"
-          className="rounded-full text-xs text-muted-foreground"
-          onClick={handleStaffAction}
-        >
-          <KeyRound /> {isStaff ? 'Staff menu' : 'Staff access'}
-        </Button>
+        {isStaff ? (
+          <StaffMenu onNavigate={setSelectedView} onSignedOut={handleSignedOut} />
+        ) : (
+          <Button
+            variant="ghost"
+            className="rounded-full text-xs text-muted-foreground"
+            onClick={handleStaffAction}
+          >
+            <KeyRound /> Staff access
+          </Button>
+        )}
       </header>
 
       <Tabs value={view} onValueChange={handleViewChange} className="gap-7">
@@ -196,34 +187,11 @@ export default function App() {
         <span aria-live="polite">{tournamentQuery.isFetching ? 'Updating…' : 'Live updates ready'}</span>
       </footer>
 
-      <Dialog open={staffDialogOpen} onOpenChange={setStaffDialogOpen}>
-        <DialogContent className="rounded-2xl bg-white sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>Staff access</DialogTitle>
-            <DialogDescription>Enter the tournament staff PIN.</DialogDescription>
-          </DialogHeader>
-          <form className="space-y-4" onSubmit={handleStaffSubmit}>
-            <div className="space-y-2">
-              <Label htmlFor="staff-pin">Staff PIN</Label>
-              <Input
-                id="staff-pin"
-                inputMode="numeric"
-                autoComplete="one-time-code"
-                value={pin}
-                onChange={(event) => setPin(event.target.value)}
-              />
-            </div>
-            {signInMutation.isError ? (
-              <p className="text-sm text-destructive" role="alert">
-                {signInMutation.error.message}
-              </p>
-            ) : null}
-            <Button className="w-full rounded-full" disabled={signInMutation.isPending}>
-              {signInMutation.isPending ? 'Checking…' : 'Continue'}
-            </Button>
-          </form>
-        </DialogContent>
-      </Dialog>
+      <StaffAccessDialog
+        open={staffDialogOpen}
+        onOpenChange={setStaffDialogOpen}
+        onGranted={handleStaffGranted}
+      />
     </div>
   )
 }
