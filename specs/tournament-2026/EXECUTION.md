@@ -5,10 +5,10 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default; probe
 
 ## STATUS
 
-- Current phase: 2 — done-with-debt
+- Current phase: 3 — in-progress
 - Phase 1 — Domain contracts and logic: done
 - Phase 2 — Database and staff authorization: done-with-debt
-- Phase 3 — Frontend data and scoring recovery: pending
+- Phase 3 — Frontend data and scoring recovery: in-progress
 - Phase 4 — Tournament and staff screens: pending
 - Verification debt: Phase 2 local Supabase schema type generation and database/Edge integration execution are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is unavailable; `src/lib/database.types.ts` is migration-derived until CLI regeneration. Project-wide typechecking and all 45 domain tests pass, but no database verification is claimed.
 
@@ -87,7 +87,7 @@ Produces: `fetchTournament(): Promise<TournamentSnapshot>`, `mutateTournament<K 
 
 Fresh review: required — staff authorization and recovery paths protecting durable score data
 
-- [ ] Install `@supabase/supabase-js` through npm; create `src/lib/supabase.ts` and `.env.example` using only the public URL/key in browser configuration, with explicit missing-configuration errors.
+- [x] Install `@supabase/supabase-js` through npm; create `src/lib/supabase.ts` and `.env.example` using only the public URL/key in browser configuration, with explicit missing-configuration errors.
 - [ ] Create `src/data/tournament.ts` to map generated database responses into domain records, invoke named RPCs, and subscribe to public changes as invalidations; refetch on reconnect and mutation acknowledgement, reject stale responses, and clean up subscriptions.
 - [ ] Create `src/data/staff.ts` for anonymous Auth plus PIN elevation, registry-backed access checks, current-session revocation before sign-out, PIN rotation, and private ownership checks; preserve explicit errors if server-side sign-out revocation fails.
 - [ ] Create `src/features/scoring/scoring-state.ts` with exported `ScoringState`, `ScoringEvent`, and `reduceScoring`; permit one in-flight point, retain its request/version through failures, retry the same request, pause until acknowledgement, and require explicit takeover after ownership conflicts.
