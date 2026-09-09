@@ -10,7 +10,7 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default; probe
 - Phase 2 — Database and staff authorization: in-progress
 - Phase 3 — Frontend data and scoring recovery: pending
 - Phase 4 — Tournament and staff screens: pending
-- Verification debt: none
+- Verification debt: Phase 2 local Supabase schema type generation and database/Edge integration execution are blocked because the Docker daemon is unavailable; `src/lib/database.types.ts` is migration-derived until CLI regeneration, while project-wide typechecking passes.
 
 ## Phase 1 — Domain contracts and logic
 
@@ -61,7 +61,7 @@ Fresh review: required — authentication, secrets, persistent migrations, and d
 - [x] In `supabase/migrations/202609080003_tournament.sql`, increment dependent knockout match versions when participant slots change and return group confirmation to review when corrected results or withdrawals invalidate seeded slots. (amended 2026-09-09)
 - [x] In `supabase/migrations/202609080003_tournament.sql`, lock setup when direct results or walkovers record tournament play so reopening cannot expose an unlocked setup. (amended 2026-09-09)
 - [x] Add `tests/integration/local-supabase.ts`, `tests/integration/auth.test.ts`, and `tests/integration/tournament.test.ts` covering anonymous denial, expired/revoked grants, PIN rotation, rate limits, concurrent claims/court conflicts, takeover, retry duplication, score/undo boundaries, correction dependencies, withdrawals, group confirmation, and final reopening; use local-only fixtures and fail clearly when services are unavailable.
-- [ ] Generate `src/lib/database.types.ts` through the Supabase CLI from the local schema; configure publication of public tournament tables for Realtime and verify that audit/ownership/PIN records cannot be read publicly.
+- [~] Generate `src/lib/database.types.ts` through the Supabase CLI from the local schema; configure publication of public tournament tables for Realtime and verify that audit/ownership/PIN records cannot be read publicly. Docker unavailable at `/Users/thomasduong/.orbstack/run/docker.sock`; added migration-derived fallback types, `202609080004_realtime.sql`, and an executable private-table privilege check pending local runtime verification.
 - [ ] Update `README.md` and `docs/deployment.md` with local Supabase/Edge commands, initial PIN hash handling and rotation; note that production credentials/provisioning remain separate deployment inputs.
 
 **Phase gate (hard):**
