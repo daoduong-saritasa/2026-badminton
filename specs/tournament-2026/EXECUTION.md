@@ -10,7 +10,7 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default; probe
 - Phase 2 — Database and staff authorization: done-with-debt
 - Phase 3 — Frontend data and scoring recovery: in-progress
 - Phase 4 — Tournament and staff screens: pending
-- Verification debt: Phase 2 local Supabase schema type generation and database/Edge integration execution are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is unavailable; `src/lib/database.types.ts` is migration-derived until CLI regeneration. Project-wide typechecking and all 45 domain tests pass, but no database verification is claimed.
+- Verification debt: Phase 2 local Supabase schema type generation and database/Edge integration execution are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is unavailable; `src/lib/database.types.ts` is migration-derived until CLI regeneration. Phase 3's dependency-aware gate selected the integration suites after `package-lock.json` changed and hit the same unavailable socket; project-wide typechecking and all 54 source tests pass, but no database verification is claimed.
 
 ## Phase 1 — Domain contracts and logic
 
@@ -96,8 +96,8 @@ Fresh review: required — staff authorization and recovery paths protecting dur
 - [x] In `src/data/tournament.ts` and `src/data/tournament.test.ts`, keep Realtime cleanup and reconnect handling safe in the Node test runtime while retaining browser online recovery. (amended 2026-09-09)
 
 **Phase gate (hard):**
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed files>` from the real phase diff; if SQL/Edge/configuration changes occur, also run the fallback `npm exec vitest -- run tests/integration` with the same explicit local-service debt rule as Phase 2.
+- [x] Run `npm run typecheck` project-wide.
+- [~] Run `npm run test:related -- <changed files>` from the real phase diff; if SQL/Edge/configuration changes occur, also run the fallback `npm exec vitest -- run tests/integration` with the same explicit local-service debt rule as Phase 2. The real Phase 3 diff selected both integration suites because `package-lock.json` changed; 54 tests passed and 9 integration tests could not connect to `/Users/thomasduong/.orbstack/run/docker.sock`. Substitute `npm exec vitest -- run src` passed all 54 source tests.
 
 **Review checklist (user, at PR review):**
 - [ ] Confirm that retries preserve one pending point and that a restored session can recover ownership without an automatic takeover.
