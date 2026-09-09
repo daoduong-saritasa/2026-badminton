@@ -17,6 +17,9 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { KnockoutBracket } from '@/features/tournament/KnockoutBracket'
+import { StandingsTable } from '@/features/tournament/StandingsTable'
+import { TournamentPage } from '@/features/tournament/TournamentPage'
 
 import './App.css'
 
@@ -64,11 +67,8 @@ function ErrorScreen({ error, onRetry }: { error: Error; onRetry: () => void }) 
   )
 }
 
-function ViewPlaceholder({ snapshot, view }: { snapshot: TournamentSnapshot; view: AppView }) {
-  const labels: Record<AppView, string> = {
-    matches: 'Matches',
-    standings: 'Standings',
-    knockouts: 'Knockouts',
+function StaffViewPlaceholder({ snapshot, view }: { snapshot: TournamentSnapshot; view: StaffView }) {
+  const labels: Record<StaffView, string> = {
     scoring: 'Referee scoring',
     organizer: 'Tournament control',
   }
@@ -84,6 +84,20 @@ function ViewPlaceholder({ snapshot, view }: { snapshot: TournamentSnapshot; vie
       </p>
     </section>
   )
+}
+
+function renderView(snapshot: TournamentSnapshot, view: AppView) {
+  switch (view) {
+    case 'matches':
+      return <TournamentPage snapshot={snapshot} />
+    case 'standings':
+      return <StandingsTable snapshot={snapshot} />
+    case 'knockouts':
+      return <KnockoutBracket snapshot={snapshot} />
+    case 'scoring':
+    case 'organizer':
+      return <StaffViewPlaceholder snapshot={snapshot} view={view} />
+  }
 }
 
 export default function App() {
@@ -143,6 +157,7 @@ export default function App() {
     event.preventDefault()
     signInMutation.mutate(pin)
   }
+  const viewContent = renderView(snapshot, view)
 
   return (
     <div className="app-shell">
@@ -173,7 +188,7 @@ export default function App() {
           {isStaff ? <TabsTrigger value="scoring">Referee</TabsTrigger> : null}
           {isStaff ? <TabsTrigger value="organizer">Organizer</TabsTrigger> : null}
         </TabsList>
-        <ViewPlaceholder snapshot={snapshot} view={view} />
+        {viewContent}
       </Tabs>
 
       <footer className="mt-10 flex flex-wrap justify-between gap-3 text-[0.625rem] text-muted-foreground">
