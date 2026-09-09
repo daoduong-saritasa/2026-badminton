@@ -101,6 +101,7 @@ describe('reduceScoring', () => {
 
     const recovered = reduceScoring(conflicted, {
       type: 'ownership-recovered',
+      score: { a: 12, b: 10 },
       matchVersion: 12,
     })
     const retried = reduceScoring(recovered, { type: 'retry-requested' })
@@ -108,7 +109,95 @@ describe('reduceScoring', () => {
       status: 'saving',
       hasOwnership: true,
       matchVersion: 12,
-      pending: { requestId, expectedVersion: 12 },
+      pending: { requestId, expectedVersion: 7 },
+    })
+
+    const acknowledged = reduceScoring(retried, {
+      type: 'point-acknowledged',
+      requestId,
+      matchVersion: 8,
+    })
+    expect(acknowledged).toMatchObject({
+      status: 'idle',
+      score: { a: 12, b: 10 },
+      matchVersion: 12,
+      hasOwnership: true,
+    })
+  })
+
+  it('reconciles a version conflict before issuing a replacement request', () => {
+    const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
+    const observed = reduceScoring(saving, {
+      type: 'snapshot-received',
+      score: { a: 10, b: 11 },
+      matchVersion: 8,
+      hasOwnership: false,
+    })
+    const conflicted = reduceScoring(observed, {
+      type: 'point-failed',
+      requestId,
+      reason: 'version-conflict',
+      message: 'Match changed',
+    })
+    expect(reduceScoring(conflicted, { type: 'retry-requested' })).toBe(conflicted)
+
+    const reconciled = reduceScoring(conflicted, { type: 'version-conflict-reconciled' })
+    expect(reconciled).toMatchObject({
+      status: 'idle',
+      score: { a: 10, b: 11 },
+      matchVersion: 8,
+      hasOwnership: false,
+    })
+    expect(
+      reduceScoring(reconciled, {
+        type: 'point-requested',
+        side: 'a',
+        requestId: '00000000-0000-4000-8000-000000000004',
+      }),
+    ).toBe(reconciled)
+
+    const recovered = reduceScoring(reconciled, {
+      type: 'ownership-recovered',
+      score: { a: 10, b: 11 },
+      matchVersion: 9,
+    })
+    const replacement = reduceScoring(recovered, {
+      type: 'point-requested',
+      side: 'a',
+      requestId: '00000000-0000-4000-8000-000000000004',
+    })
+    expect(replacement).toMatchObject({
+      status: 'saving',
+      pending: {
+        requestId: '00000000-0000-4000-8000-000000000004',
+        expectedVersion: 9,
+      },
+    })
+  })
+
+  it('retains a newer revoked snapshot until a delayed acknowledgement settles', () => {
+    const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
+    const observed = reduceScoring(saving, {
+      type: 'snapshot-received',
+      score: { a: 12, b: 10 },
+      matchVersion: 10,
+      hasOwnership: false,
+    })
+    expect(observed).toMatchObject({
+      status: 'saving',
+      observed: { score: { a: 12, b: 10 }, matchVersion: 10, hasOwnership: false },
+    })
+
+    const acknowledged = reduceScoring(observed, {
+      type: 'point-acknowledged',
+      requestId,
+      matchVersion: 8,
+    })
+    expect(acknowledged).toMatchObject({
+      status: 'idle',
+      score: { a: 12, b: 10 },
+      matchVersion: 10,
+      hasOwnership: false,
     })
   })
 
@@ -133,7 +222,7 @@ describe('reduceScoring', () => {
     expect(attempted).toBe(revoked)
   })
 
-  it('keeps pending state isolated from snapshots until its request settles', () => {
+  it('retains authoritative snapshots without replacing the pending mutation', () => {
     const saving: ScoringState = reduceScoring(idle(), {
       type: 'point-requested',
       side: 'a',
@@ -145,6 +234,14 @@ describe('reduceScoring', () => {
       matchVersion: 50,
       hasOwnership: false,
     })
-    expect(snapshot).toBe(saving)
+    expect(snapshot).toMatchObject({
+      status: 'saving',
+      pending: { requestId, expectedVersion: 7 },
+      observed: {
+        score: { a: 50, b: 50 },
+        matchVersion: 50,
+        hasOwnership: false,
+      },
+    })
   })
 })

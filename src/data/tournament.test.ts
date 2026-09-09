@@ -119,4 +119,38 @@ describe('tournament data', () => {
     unsubscribe()
     expect(removeChannel).toHaveBeenCalledOnce()
   })
+
+  it('keeps a remaining subscriber connected when another unsubscribes', () => {
+    const firstChannel = { on: vi.fn(), subscribe: vi.fn() }
+    const secondChannel = { on: vi.fn(), subscribe: vi.fn() }
+    let secondInvalidation: (() => void) | undefined
+    firstChannel.on.mockImplementation(() => firstChannel)
+    firstChannel.subscribe.mockReturnValue(firstChannel)
+    secondChannel.on.mockImplementation(
+      (_event: string, _filter: unknown, handler: () => void) => {
+        secondInvalidation = handler
+        return secondChannel
+      },
+    )
+    secondChannel.subscribe.mockReturnValue(secondChannel)
+    const createChannel = vi.fn()
+      .mockReturnValueOnce(firstChannel)
+      .mockReturnValueOnce(secondChannel)
+    getSupabaseClient.mockReturnValue({ rpc, channel: createChannel, removeChannel })
+
+    const firstListener = vi.fn()
+    const secondListener = vi.fn()
+    const unsubscribeFirst = subscribeTournament(firstListener)
+    const unsubscribeSecond = subscribeTournament(secondListener)
+    expect(createChannel.mock.calls[0]?.[0]).not.toBe(createChannel.mock.calls[1]?.[0])
+
+    unsubscribeFirst()
+    secondInvalidation?.()
+    expect(firstListener).not.toHaveBeenCalled()
+    expect(secondListener).toHaveBeenCalledOnce()
+    expect(removeChannel).toHaveBeenCalledWith(firstChannel)
+
+    unsubscribeSecond()
+    expect(removeChannel).toHaveBeenCalledWith(secondChannel)
+  })
 })

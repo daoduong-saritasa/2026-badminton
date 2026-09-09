@@ -87,6 +87,7 @@ const receiptSchema = z.object({
 type MatchDto = z.infer<typeof matchDtoSchema>
 
 let newestTournamentVersion = -1
+let subscriptionSequence = 0
 const invalidationListeners = new Set<() => void>()
 
 export class InvalidTournamentDataError extends Error {
@@ -265,8 +266,9 @@ export function subscribeTournament(onChange: () => void): () => void {
   const handleOnline = () => refreshAfterReconnect()
   if (typeof window !== 'undefined') window.addEventListener('online', handleOnline)
 
+  subscriptionSequence += 1
   const channel = getSupabaseClient()
-    .channel('public-tournament-invalidations')
+    .channel(`public-tournament-invalidations-${subscriptionSequence}`)
     .on('postgres_changes', { event: '*', schema: 'public' }, notifyInvalidation)
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {

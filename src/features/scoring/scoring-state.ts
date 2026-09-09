@@ -19,9 +19,16 @@ export interface PendingPoint {
   readonly previousScore: Score
 }
 
+export interface AuthoritativeObservation {
+  readonly score: Score
+  readonly matchVersion: number
+  readonly hasOwnership: boolean
+}
+
 export interface SavingScoringState extends ScoringContext {
   readonly status: 'saving'
   readonly pending: PendingPoint
+  readonly observed: AuthoritativeObservation | null
 }
 
 export type SaveFailureReason = 'network' | 'version-conflict' | 'ownership-conflict' | 'server'
@@ -29,6 +36,7 @@ export type SaveFailureReason = 'network' | 'version-conflict' | 'ownership-conf
 export interface FailedScoringState extends ScoringContext {
   readonly status: 'failed'
   readonly pending: PendingPoint
+  readonly observed: AuthoritativeObservation | null
   readonly reason: SaveFailureReason
   readonly message: string
 }
@@ -54,7 +62,7 @@ export type ScoringEvent =
       readonly message: string
     }
   | { readonly type: 'retry-requested' }
-  | { readonly type: 'ownership-recovered'; readonly matchVersion: number }
+  | { readonly type: 'ownership-recovered'; readonly score: Score; readonly matchVersion: number }
   | {
       readonly type: 'snapshot-received'
       readonly score: Score
@@ -62,6 +70,7 @@ export type ScoringEvent =
       readonly hasOwnership: boolean
     }
   | { readonly type: 'review-dismissed' }
+  | { readonly type: 'version-conflict-reconciled' }
 
 function addPoint(score: Score, side: Side): Score {
   return side === 'a'
@@ -74,14 +83,19 @@ function winningSide(score: Score): Side {
 }
 
 function settlePoint(state: SavingScoringState, matchVersion: number): ScoringState {
-  const context: ScoringContext = {
-    matchId: state.matchId,
-    score: state.score,
-    matchVersion,
-    hasOwnership: state.hasOwnership,
-  }
-  if (isWinningScore(state.score)) {
-    return { ...context, status: 'reviewing', winningSide: winningSide(state.score) }
+  const observation = state.observed !== null && state.observed.matchVersion > matchVersion
+    ? state.observed
+    : null
+  const context: ScoringContext = observation === null
+    ? {
+        matchId: state.matchId,
+        score: state.score,
+        matchVersion,
+        hasOwnership: state.hasOwnership,
+      }
+    : { matchId: state.matchId, ...observation }
+  if (isWinningScore(context.score)) {
+    return { ...context, status: 'reviewing', winningSide: winningSide(context.score) }
   }
   return { ...context, status: 'idle' }
 }
@@ -91,7 +105,17 @@ function restoreSnapshot(
   event: Extract<ScoringEvent, { type: 'snapshot-received' }>,
 ): ScoringState {
   if (event.matchVersion < state.matchVersion) return state
-  if (state.status === 'saving' || state.status === 'failed') return state
+  if (state.status === 'saving' || state.status === 'failed') {
+    if (state.observed !== null && event.matchVersion <= state.observed.matchVersion) return state
+    return {
+      ...state,
+      observed: {
+        score: event.score,
+        matchVersion: event.matchVersion,
+        hasOwnership: event.hasOwnership,
+      },
+    }
+  }
 
   const context: ScoringContext = {
     matchId: state.matchId,
@@ -119,6 +143,7 @@ export function reduceScoring(state: ScoringState, event: ScoringEvent): Scoring
           expectedVersion: state.matchVersion,
           previousScore: state.score,
         },
+        observed: null,
       }
     }
     case 'point-acknowledged': {
@@ -137,17 +162,29 @@ export function reduceScoring(state: ScoringState, event: ScoringEvent): Scoring
     }
     case 'retry-requested': {
       if (state.status !== 'failed') return state
+      if (state.reason === 'version-conflict') return state
       if (state.reason === 'ownership-conflict' && !state.hasOwnership) return state
       const { reason: _reason, message: _message, ...retryState } = state
       return { ...retryState, status: 'saving' }
     }
     case 'ownership-recovered': {
-      if (state.status !== 'failed' || state.reason !== 'ownership-conflict') return state
+      const observation: AuthoritativeObservation = {
+        score: event.score,
+        matchVersion: event.matchVersion,
+        hasOwnership: true,
+      }
+      if (state.status === 'idle' || state.status === 'reviewing') {
+        if (isWinningScore(event.score)) {
+          return { ...state, ...observation, status: 'reviewing', winningSide: winningSide(event.score) }
+        }
+        return { ...state, ...observation, status: 'idle' }
+      }
+      if (state.status !== 'failed') return state
       return {
         ...state,
         hasOwnership: true,
         matchVersion: event.matchVersion,
-        pending: { ...state.pending, expectedVersion: event.matchVersion },
+        observed: observation,
       }
     }
     case 'snapshot-received':
@@ -156,6 +193,14 @@ export function reduceScoring(state: ScoringState, event: ScoringEvent): Scoring
       if (state.status !== 'reviewing') return state
       const { winningSide: _winningSide, ...idleState } = state
       return { ...idleState, status: 'idle' }
+    }
+    case 'version-conflict-reconciled': {
+      if (state.status !== 'failed' || state.reason !== 'version-conflict' || state.observed === null) return state
+      const context: ScoringContext = { matchId: state.matchId, ...state.observed }
+      if (isWinningScore(context.score)) {
+        return { ...context, status: 'reviewing', winningSide: winningSide(context.score) }
+      }
+      return { ...context, status: 'idle' }
     }
   }
 }

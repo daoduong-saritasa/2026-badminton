@@ -94,10 +94,13 @@ Fresh review: required — staff authorization and recovery paths protecting dur
 - [x] Create `src/features/scoring/scoring-state.ts` with exported `ScoringState`, `ScoringEvent`, and `reduceScoring`; permit one in-flight point, retain its request/version through failures, retry the same request, pause until acknowledgement, and require explicit takeover after ownership conflicts.
 - [x] Create `src/features/scoring/scoring-state.test.ts` and `src/data/tournament.test.ts` for failed-save retry identity, duplicate acknowledgements, stale snapshots, winning-score review/dismiss/undo, reconnection, and revoked ownership; test logic without rendering components.
 - [x] In `src/data/tournament.ts` and `src/data/tournament.test.ts`, keep Realtime cleanup and reconnect handling safe in the Node test runtime while retaining browser online recovery. (amended 2026-09-09)
+- [x] In `src/features/scoring/scoring-state.ts` and `src/features/scoring/scoring-state.test.ts`, preserve the original point mutation envelope through ownership recovery, retain newer authoritative observations until acknowledgement, and add explicit version-conflict reconciliation before a new request. (amended 2026-09-09)
+- [x] In `src/data/tournament.ts` and `src/data/tournament.test.ts`, isolate Realtime channels per subscriber so one cleanup cannot disconnect remaining subscribers. (amended 2026-09-09)
 
 **Phase gate (hard):**
 - [x] Run `npm run typecheck` project-wide.
 - [~] Run `npm run test:related -- <changed files>` from the real phase diff; if SQL/Edge/configuration changes occur, also run the fallback `npm exec vitest -- run tests/integration` with the same explicit local-service debt rule as Phase 2. The real Phase 3 diff selected both integration suites because `package-lock.json` changed; 54 tests passed and 9 integration tests could not connect to `/Users/thomasduong/.orbstack/run/docker.sock`. Substitute `npm exec vitest -- run src` passed all 54 source tests.
+- [ ] Rerun `npm run typecheck` and `npm run test:related -- <changed files>` after fresh-review corrections, with the same explicit local-service debt rule and source-test substitute. (amended 2026-09-09)
 
 **Review checklist (user, at PR review):**
 - [ ] Confirm that retries preserve one pending point and that a restored session can recover ownership without an automatic takeover.
