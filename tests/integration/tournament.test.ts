@@ -30,6 +30,7 @@ interface SnapshotMatch {
   id: string
   pair_a_id: string | null
   pair_b_id: string | null
+  playing_order: number
   result_kind: 'played' | 'walkover' | null
   round: 'group' | 'semifinal' | 'final'
   score_a: number | null
@@ -193,18 +194,71 @@ describe('tournament transactions', () => {
 
     const owner = competingStarts[0]?.ok ? firstStaff : secondStaff
     const taker = owner === firstStaff ? secondStaff : firstStaff
-    const takeover = await callMutation('take_over', taker, playingMatch.version, {
+    const ownerPointRequest = crypto.randomUUID()
+    const ownerPoint = await callMutation(
+      'add_point',
+      owner,
+      playingMatch.version,
+      { matchId: playingMatch.id, side: 'a' },
+      ownerPointRequest,
+    )
+    const takeover = await callMutation('take_over', taker, ownerPoint.matchVersion ?? -1, {
       matchId: playingMatch.id,
     })
-    const staleWrite = await rpc(
+    const staleReplay = await rpc(
       'add_point',
-      mutation(takeover.matchVersion ?? -1, { matchId: playingMatch.id, side: 'a' }),
+      mutation(
+        playingMatch.version,
+        { matchId: playingMatch.id, side: 'a' },
+        ownerPointRequest,
+      ),
       owner,
     )
-    expect(staleWrite.ok).toBe(false)
+    expect(staleReplay.ok).toBe(false)
     await callMutation('add_point', taker, takeover.matchVersion ?? -1, {
       matchId: playingMatch.id,
       side: 'a',
+    })
+  })
+
+  it('swaps occupied court slots without transient unique-index conflicts', async () => {
+    const staff = await signInAnonymously()
+    await elevate(staff)
+    const initial = await createTournament(staff)
+    const [firstMatch, secondMatch] = initial.matches.filter(
+      (match) => match.round === 'group' && match.court !== null,
+    )
+    if (!firstMatch?.court || !secondMatch?.court) {
+      throw new Error('Insufficient assigned group fixtures were generated')
+    }
+
+    await callMutation('assign_courts', staff, initial.tournament.version, {
+      assignments: [
+        {
+          matchId: firstMatch.id,
+          court: secondMatch.court,
+          playingOrder: secondMatch.playing_order,
+        },
+        {
+          matchId: secondMatch.id,
+          court: firstMatch.court,
+          playingOrder: firstMatch.playing_order,
+        },
+      ],
+    })
+
+    const swapped = await readSnapshot(staff)
+    const firstAfter = swapped.matches.find((match) => match.id === firstMatch.id)
+    const secondAfter = swapped.matches.find((match) => match.id === secondMatch.id)
+    expect(firstAfter).toMatchObject({
+      court: secondMatch.court,
+      playing_order: secondMatch.playing_order,
+      version: firstMatch.version + 1,
+    })
+    expect(secondAfter).toMatchObject({
+      court: firstMatch.court,
+      playing_order: firstMatch.playing_order,
+      version: secondMatch.version + 1,
     })
   })
 
@@ -234,6 +288,17 @@ describe('tournament transactions', () => {
       requestId,
     )
     expect(replayedPoint).toEqual(firstPoint)
+
+    const changedVersionReplay = await rpc(
+      'add_point',
+      mutation(
+        (start.matchVersion ?? -1) + 1,
+        { matchId: firstMatch.id, side: 'a' },
+        requestId,
+      ),
+      staff,
+    )
+    expect(changedVersionReplay.ok).toBe(false)
 
     const mismatchedReplay = await rpc(
       'add_point',
@@ -266,6 +331,22 @@ describe('tournament transactions', () => {
       staff,
     )
     expect(afterWin.ok).toBe(false)
+    const confirmRequest = crypto.randomUUID()
+    const confirmed = await callMutation(
+      'confirm_result',
+      staff,
+      winningPoint.matchVersion ?? -1,
+      { matchId: firstMatch.id },
+      confirmRequest,
+    )
+    const confirmedReplay = await callMutation(
+      'confirm_result',
+      staff,
+      winningPoint.matchVersion ?? -1,
+      { matchId: firstMatch.id },
+      confirmRequest,
+    )
+    expect(confirmedReplay).toEqual(confirmed)
 
     const invalidDirect = await rpc(
       'enter_result',

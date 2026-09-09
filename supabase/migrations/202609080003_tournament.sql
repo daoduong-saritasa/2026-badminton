@@ -11,6 +11,7 @@ create or replace function private.replay_mutation(
   p_session_id uuid,
   p_request_id uuid,
   p_operation text,
+  p_expected_version integer,
   p_payload jsonb
 )
 returns jsonb
@@ -21,7 +22,13 @@ as $$
 declare
   logged private.mutation_log%rowtype;
   fingerprint text := pg_catalog.encode(
-    extensions.digest(pg_catalog.convert_to(p_payload::text, 'UTF8'), 'sha256'),
+    extensions.digest(
+      pg_catalog.convert_to(
+        jsonb_build_object('expectedVersion', p_expected_version, 'payload', p_payload)::text,
+        'UTF8'
+      ),
+      'sha256'
+    ),
     'hex'
   );
 begin
@@ -45,6 +52,7 @@ create or replace function private.store_mutation(
   p_session_id uuid,
   p_request_id uuid,
   p_operation text,
+  p_expected_version integer,
   p_payload jsonb,
   p_response jsonb,
   p_match_id uuid default null,
@@ -69,7 +77,13 @@ begin
     p_session_id,
     p_operation,
     pg_catalog.encode(
-      extensions.digest(pg_catalog.convert_to(p_payload::text, 'UTF8'), 'sha256'),
+      extensions.digest(
+        pg_catalog.convert_to(
+          jsonb_build_object('expectedVersion', p_expected_version, 'payload', p_payload)::text,
+          'UTF8'
+        ),
+        'sha256'
+      ),
       'hex'
     ),
     p_response,
@@ -99,7 +113,7 @@ begin
     raise exception 'Tournament is not configured' using errcode = 'P0002';
   end if;
 
-  if current_tournament.version <> p_expected_version then
+  if p_expected_version is null or current_tournament.version <> p_expected_version then
     raise exception 'Tournament version conflict' using errcode = '40001';
   end if;
 
@@ -172,7 +186,7 @@ declare
 begin
   staff_session := private.require_staff_access();
   perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, 'save_setup', p_payload);
+  replay := private.replay_mutation(staff_session, p_request_id, 'save_setup', p_expected_version, p_payload);
   if replay is not null then return replay; end if;
 
   if jsonb_typeof(setup) <> 'object'
@@ -196,7 +210,7 @@ begin
 
   select * into tournament_row from public.tournament where singleton for update;
   if not found then
-    if p_expected_version <> 0 then
+    if p_expected_version is distinct from 0 then
       raise exception 'Tournament version conflict' using errcode = '40001';
     end if;
     insert into public.tournament (name) values (setup ->> 'tournamentName') returning * into tournament_row;
@@ -243,7 +257,7 @@ begin
   returning version into next_version;
 
   response := private.receipt(p_request_id, next_version);
-  return private.store_mutation(staff_session, p_request_id, 'save_setup', p_payload, response);
+  return private.store_mutation(staff_session, p_request_id, 'save_setup', p_expected_version, p_payload, response);
 end;
 $$;
 
@@ -272,7 +286,7 @@ declare
 begin
   staff_session := private.require_staff_access();
   perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, 'generate_fixtures', p_payload);
+  replay := private.replay_mutation(staff_session, p_request_id, 'generate_fixtures', p_expected_version, p_payload);
   if replay is not null then return replay; end if;
   tournament_row := private.require_tournament_version(p_expected_version);
 
@@ -357,7 +371,7 @@ begin
   returning version into next_version;
 
   response := private.receipt(p_request_id, next_version);
-  return private.store_mutation(staff_session, p_request_id, 'generate_fixtures', p_payload, response);
+  return private.store_mutation(staff_session, p_request_id, 'generate_fixtures', p_expected_version, p_payload, response);
 end;
 $$;
 
@@ -375,13 +389,12 @@ declare
   staff_session uuid;
   replay jsonb;
   tournament_row public.tournament%rowtype;
-  assignment jsonb;
   next_version integer;
   response jsonb;
 begin
   staff_session := private.require_staff_access();
   perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, 'assign_courts', p_payload);
+  replay := private.replay_mutation(staff_session, p_request_id, 'assign_courts', p_expected_version, p_payload);
   if replay is not null then return replay; end if;
   tournament_row := private.require_tournament_version(p_expected_version);
 
@@ -389,31 +402,48 @@ begin
     raise exception 'Assignments must be an array' using errcode = '22023';
   end if;
 
+  create temporary table desired_assignments (
+    match_id uuid primary key,
+    court smallint not null,
+    playing_order integer not null,
+    unique (playing_order, court)
+  ) on commit drop;
+
+  insert into desired_assignments (match_id, court, playing_order)
+  select
+    (item ->> 'matchId')::uuid,
+    (item ->> 'court')::smallint,
+    (item ->> 'playingOrder')::integer
+  from jsonb_array_elements(p_payload -> 'assignments') as item;
+
   if exists (
-    select 1
-    from jsonb_array_elements(p_payload -> 'assignments') as item
-    group by (item ->> 'playingOrder')::integer, (item ->> 'court')::integer
-    having count(*) > 1
+    select 1 from desired_assignments
+    where court not in (1, 2) or playing_order <= 0
   ) then
-    raise exception 'Court assignments must be unique' using errcode = '23505';
+    raise exception 'Invalid court assignment' using errcode = '22023';
   end if;
 
-  for assignment in select value from jsonb_array_elements(p_payload -> 'assignments') loop
-    if (assignment ->> 'court')::integer not in (1, 2)
-      or (assignment ->> 'playingOrder')::integer <= 0 then
-      raise exception 'Invalid court assignment' using errcode = '22023';
-    end if;
+  if exists (
+    select 1
+    from desired_assignments as desired
+    left join public.matches as match_row on match_row.id = desired.match_id
+    where match_row.id is null or match_row.state <> 'unstarted'
+  ) then
+    raise exception 'Only unstarted matches can be assigned' using errcode = '55000';
+  end if;
 
-    update public.matches
-    set court = (assignment ->> 'court')::integer,
-        playing_order = (assignment ->> 'playingOrder')::integer,
-        updated_at = clock_timestamp()
-    where id = (assignment ->> 'matchId')::uuid and state = 'unstarted';
+  update public.matches as match_row
+  set court = null
+  from desired_assignments as desired
+  where match_row.id = desired.match_id;
 
-    if not found then
-      raise exception 'Only unstarted matches can be assigned' using errcode = '55000';
-    end if;
-  end loop;
+  update public.matches as match_row
+  set court = desired.court,
+      playing_order = desired.playing_order,
+      version = match_row.version + 1,
+      updated_at = clock_timestamp()
+  from desired_assignments as desired
+  where match_row.id = desired.match_id;
 
   update public.tournament
   set version = version + 1, updated_at = clock_timestamp()
@@ -421,7 +451,7 @@ begin
   returning version into next_version;
 
   response := private.receipt(p_request_id, next_version);
-  return private.store_mutation(staff_session, p_request_id, 'assign_courts', p_payload, response);
+  return private.store_mutation(staff_session, p_request_id, 'assign_courts', p_expected_version, p_payload, response);
 end;
 $$;
 
@@ -435,8 +465,8 @@ grant execute on function public.generate_fixtures(uuid, integer, jsonb) to auth
 grant execute on function public.assign_courts(uuid, integer, jsonb) to authenticated;
 
 revoke all on function private.lock_mutations() from public, anon, authenticated, service_role;
-revoke all on function private.replay_mutation(uuid, uuid, text, jsonb) from public, anon, authenticated, service_role;
-revoke all on function private.store_mutation(uuid, uuid, text, jsonb, jsonb, uuid, text) from public, anon, authenticated, service_role;
+revoke all on function private.replay_mutation(uuid, uuid, text, integer, jsonb) from public, anon, authenticated, service_role;
+revoke all on function private.store_mutation(uuid, uuid, text, integer, jsonb, jsonb, uuid, text) from public, anon, authenticated, service_role;
 revoke all on function private.require_tournament_version(integer) from public, anon, authenticated, service_role;
 revoke all on function private.receipt(uuid, integer, uuid, integer) from public, anon, authenticated, service_role;
 
@@ -474,7 +504,7 @@ declare
 begin
   select * into current_match from public.matches where id = p_match_id for update;
   if not found then raise exception 'Match not found' using errcode = 'P0002'; end if;
-  if current_match.version <> p_expected_version then
+  if p_expected_version is null or current_match.version <> p_expected_version then
     raise exception 'Match version conflict' using errcode = '40001';
   end if;
   return current_match;
@@ -493,6 +523,34 @@ begin
     where match_id = p_match_id and session_id = p_session_id
   ) then
     raise exception 'Current session does not own this match' using errcode = '42501';
+  end if;
+end;
+$$;
+
+create or replace function private.require_scoring_replay(
+  p_match_id uuid,
+  p_session_id uuid,
+  p_response jsonb,
+  p_allow_completed boolean
+)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if p_allow_completed then
+    if not exists (
+      select 1
+      from public.matches
+      where id = p_match_id
+        and state = 'completed'
+        and version = (p_response ->> 'matchVersion')::integer
+    ) then
+      raise exception 'Completed match changed after this request' using errcode = '42501';
+    end if;
+  else
+    perform private.require_match_owner(p_match_id, p_session_id);
   end if;
 end;
 $$;
@@ -521,8 +579,11 @@ declare
   target_match_id uuid := (p_payload ->> 'matchId')::uuid;
 begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, 'start_scoring', p_payload);
-  if replay is not null then return replay; end if;
+  replay := private.replay_mutation(staff_session, p_request_id, 'start_scoring', p_expected_version, p_payload);
+  if replay is not null then
+    perform private.require_scoring_replay(target_match_id, staff_session, replay, false);
+    return replay;
+  end if;
   current_match := private.require_match_version(target_match_id, p_expected_version);
   if current_match.state <> 'unstarted' or current_match.pair_a_id is null
     or current_match.pair_b_id is null or current_match.court is null then
@@ -548,7 +609,7 @@ begin
   values (target_match_id, staff_session);
   next_tournament_version := private.bump_tournament();
   response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
-  return private.store_mutation(staff_session, p_request_id, 'start_scoring', p_payload, response, target_match_id);
+  return private.store_mutation(staff_session, p_request_id, 'start_scoring', p_expected_version, p_payload, response, target_match_id);
 end;
 $$;
 
@@ -560,8 +621,11 @@ declare
   target_match_id uuid := (p_payload ->> 'matchId')::uuid;
 begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, 'take_over', p_payload);
-  if replay is not null then return replay; end if;
+  replay := private.replay_mutation(staff_session, p_request_id, 'take_over', p_expected_version, p_payload);
+  if replay is not null then
+    perform private.require_scoring_replay(target_match_id, staff_session, replay, false);
+    return replay;
+  end if;
   current_match := private.require_match_version(target_match_id, p_expected_version);
   if current_match.state <> 'playing' then
     raise exception 'Only a playing match can be taken over' using errcode = '55000';
@@ -574,7 +638,7 @@ begin
   where id = target_match_id returning version into next_match_version;
   next_tournament_version := private.bump_tournament();
   response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
-  return private.store_mutation(staff_session, p_request_id, 'take_over', p_payload, response, target_match_id);
+  return private.store_mutation(staff_session, p_request_id, 'take_over', p_expected_version, p_payload, response, target_match_id);
 end;
 $$;
 
@@ -586,8 +650,11 @@ declare
   next_match_version integer; next_tournament_version integer; response jsonb;
 begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, 'add_point', p_payload);
-  if replay is not null then return replay; end if;
+  replay := private.replay_mutation(staff_session, p_request_id, 'add_point', p_expected_version, p_payload);
+  if replay is not null then
+    perform private.require_scoring_replay(target_match_id, staff_session, replay, false);
+    return replay;
+  end if;
   current_match := private.require_match_version(target_match_id, p_expected_version);
   perform private.require_match_owner(target_match_id, staff_session);
   if side not in ('a', 'b') or current_match.state <> 'playing'
@@ -601,7 +668,7 @@ begin
   where id = target_match_id returning version into next_match_version;
   next_tournament_version := private.bump_tournament();
   response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
-  return private.store_mutation(staff_session, p_request_id, 'add_point', p_payload, response, target_match_id, side);
+  return private.store_mutation(staff_session, p_request_id, 'add_point', p_expected_version, p_payload, response, target_match_id, side);
 end;
 $$;
 
@@ -613,8 +680,11 @@ declare
   next_match_version integer; next_tournament_version integer; response jsonb;
 begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, 'undo_point', p_payload);
-  if replay is not null then return replay; end if;
+  replay := private.replay_mutation(staff_session, p_request_id, 'undo_point', p_expected_version, p_payload);
+  if replay is not null then
+    perform private.require_scoring_replay(target_match_id, staff_session, replay, false);
+    return replay;
+  end if;
   current_match := private.require_match_version(target_match_id, p_expected_version);
   perform private.require_match_owner(target_match_id, staff_session);
   if current_match.state <> 'playing' then
@@ -637,7 +707,7 @@ begin
   where request_id = point_log.request_id and staff_session_id = point_log.staff_session_id;
   next_tournament_version := private.bump_tournament();
   response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
-  return private.store_mutation(staff_session, p_request_id, 'undo_point', p_payload, response, target_match_id);
+  return private.store_mutation(staff_session, p_request_id, 'undo_point', p_expected_version, p_payload, response, target_match_id);
 end;
 $$;
 
@@ -649,8 +719,11 @@ declare
   next_match_version integer; next_tournament_version integer; response jsonb;
 begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, 'confirm_result', p_payload);
-  if replay is not null then return replay; end if;
+  replay := private.replay_mutation(staff_session, p_request_id, 'confirm_result', p_expected_version, p_payload);
+  if replay is not null then
+    perform private.require_scoring_replay(target_match_id, staff_session, replay, true);
+    return replay;
+  end if;
   current_match := private.require_match_version(target_match_id, p_expected_version);
   perform private.require_match_owner(target_match_id, staff_session);
   if current_match.state <> 'playing'
@@ -680,13 +753,14 @@ begin
 
   next_tournament_version := private.bump_tournament();
   response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
-  return private.store_mutation(staff_session, p_request_id, 'confirm_result', p_payload, response, target_match_id);
+  return private.store_mutation(staff_session, p_request_id, 'confirm_result', p_expected_version, p_payload, response, target_match_id);
 end;
 $$;
 
 revoke all on function private.is_winning_score(integer, integer) from public, anon, authenticated, service_role;
 revoke all on function private.require_match_version(uuid, integer) from public, anon, authenticated, service_role;
 revoke all on function private.require_match_owner(uuid, uuid) from public, anon, authenticated, service_role;
+revoke all on function private.require_scoring_replay(uuid, uuid, jsonb, boolean) from public, anon, authenticated, service_role;
 revoke all on function private.bump_tournament() from public, anon, authenticated, service_role;
 revoke all on function public.start_scoring(uuid, integer, jsonb) from public, anon;
 revoke all on function public.take_over(uuid, integer, jsonb) from public, anon;
@@ -844,7 +918,7 @@ declare
   next_match_version integer; next_tournament_version integer; response jsonb;
 begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, p_operation, p_payload);
+  replay := private.replay_mutation(staff_session, p_request_id, p_operation, p_expected_version, p_payload);
   if replay is not null then return replay; end if;
   current_match := private.require_match_version(target_match_id, p_expected_version);
   if current_match.pair_a_id is null or current_match.pair_b_id is null
@@ -894,7 +968,7 @@ begin
   end if;
   next_tournament_version := private.bump_tournament();
   response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
-  return private.store_mutation(staff_session, p_request_id, p_operation, p_payload, response, target_match_id);
+  return private.store_mutation(staff_session, p_request_id, p_operation, p_expected_version, p_payload, response, target_match_id);
 end;
 $$;
 
@@ -919,7 +993,7 @@ declare
   next_version integer; response jsonb;
 begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, 'withdraw_pair', p_payload);
+  replay := private.replay_mutation(staff_session, p_request_id, 'withdraw_pair', p_expected_version, p_payload);
   if replay is not null then return replay; end if;
   tournament_row := private.require_tournament_version(p_expected_version);
   if exists (select 1 from public.matches where round <> 'group' and state <> 'unstarted') then
@@ -942,7 +1016,7 @@ begin
   perform private.invalidate_group_resolution(target_group);
   next_version := private.bump_tournament();
   response := private.receipt(p_request_id, next_version);
-  return private.store_mutation(staff_session, p_request_id, 'withdraw_pair', p_payload, response);
+  return private.store_mutation(staff_session, p_request_id, 'withdraw_pair', p_expected_version, p_payload, response);
 end;
 $$;
 
@@ -954,7 +1028,7 @@ declare
   next_version integer; response jsonb;
 begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, 'resolve_tie', p_payload);
+  replay := private.replay_mutation(staff_session, p_request_id, 'resolve_tie', p_expected_version, p_payload);
   if replay is not null then return replay; end if;
   tournament_row := private.require_tournament_version(p_expected_version);
   if tournament_row.stage <> 'groups' then
@@ -1006,7 +1080,7 @@ begin
       standings_revision = excluded.standings_revision, updated_at = clock_timestamp();
   next_version := private.bump_tournament();
   response := private.receipt(p_request_id, next_version);
-  return private.store_mutation(staff_session, p_request_id, 'resolve_tie', p_payload, response);
+  return private.store_mutation(staff_session, p_request_id, 'resolve_tie', p_expected_version, p_payload, response);
 end;
 $$;
 
@@ -1017,7 +1091,7 @@ declare
   next_version integer; response jsonb; unresolved_count integer;
 begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, 'confirm_groups', p_payload);
+  replay := private.replay_mutation(staff_session, p_request_id, 'confirm_groups', p_expected_version, p_payload);
   if replay is not null then return replay; end if;
   tournament_row := private.require_tournament_version(p_expected_version);
   if tournament_row.stage <> 'groups' or exists (
@@ -1067,7 +1141,7 @@ begin
   set stage = 'knockouts', version = version + 1, updated_at = clock_timestamp()
   where id = tournament_row.id returning version into next_version;
   response := private.receipt(p_request_id, next_version);
-  return private.store_mutation(staff_session, p_request_id, 'confirm_groups', p_payload, response);
+  return private.store_mutation(staff_session, p_request_id, 'confirm_groups', p_expected_version, p_payload, response);
 end;
 $$;
 
@@ -1078,7 +1152,7 @@ declare
   final_match public.matches%rowtype; next_version integer; response jsonb;
 begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
-  replay := private.replay_mutation(staff_session, p_request_id, 'reopen_tournament', p_payload);
+  replay := private.replay_mutation(staff_session, p_request_id, 'reopen_tournament', p_expected_version, p_payload);
   if replay is not null then return replay; end if;
   tournament_row := private.require_tournament_version(p_expected_version);
   if tournament_row.stage <> 'completed' then
@@ -1093,7 +1167,7 @@ begin
   set stage = 'knockouts', version = version + 1, updated_at = clock_timestamp()
   where id = tournament_row.id returning version into next_version;
   response := private.receipt(p_request_id, next_version, final_match.id, final_match.version + 1);
-  return private.store_mutation(staff_session, p_request_id, 'reopen_tournament', p_payload, response, final_match.id);
+  return private.store_mutation(staff_session, p_request_id, 'reopen_tournament', p_expected_version, p_payload, response, final_match.id);
 end;
 $$;
 
