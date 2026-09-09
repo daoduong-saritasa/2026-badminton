@@ -3,6 +3,22 @@
 Tournament operations for the company badminton event: setup, group play, live scoring,
 knockout progression, staff authorization, and public viewing.
 
+## What you must provision
+
+You do not need a hosted Supabase project to build or review the code. Create and connect the
+company-owned Supabase project only when you are ready to deploy:
+
+1. Create the Supabase project and enable anonymous sign-ins.
+2. Link this repository to that project and publish the checked-in migrations and Edge
+   Functions.
+3. Provision the initial staff PIN through a secured database session.
+4. Create the company-owned Cloudflare Pages project and add the two public Supabase build
+   variables.
+
+The exact commands, account settings, license checks, and smoke procedure are in
+[the deployment guide](docs/deployment.md). Nothing in this repository creates an external
+account or deploys automatically.
+
 ## Local development
 
 You need Node.js, Docker, and npm. Install dependencies and start the disposable Supabase
@@ -23,8 +39,9 @@ npm exec supabase -- functions serve
 npm run dev
 ~~~
 
-Supabase Studio runs at the URL printed by `supabase start`. The frontend uses only the local
-public API URL and public key; service-role credentials stay in the Edge runtime.
+Copy the local API URL and public key printed by `supabase start` into an untracked `.env.local`
+using `.env.example` as the template. Supabase Studio runs at the URL printed by the same
+command. Service-role credentials stay in the Edge runtime.
 
 ## Verification
 
