@@ -1,32 +1,52 @@
-# React + TypeScript + Vite
+# Badminton tournament
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Tournament operations for the company badminton event: setup, group play, live scoring,
+knockout progression, staff authorization, and public viewing.
 
-Currently, two official plugins are available:
+## Local development
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+You need Node.js, Docker, and npm. Install dependencies and start the disposable Supabase
+stack:
 
-## React Compiler
+~~~sh
+npm install
+npm exec supabase -- start
+npm exec supabase -- db reset
+~~~
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Provision a local staff PIN through the interactive procedure in
+[the deployment guide](docs/deployment.md), then serve the Edge Functions and frontend in
+separate terminals:
 
-## Expanding the Oxlint configuration
+~~~sh
+npm exec supabase -- functions serve
+npm run dev
+~~~
 
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
+Supabase Studio runs at the URL printed by `supabase start`. The frontend uses only the local
+public API URL and public key; service-role credentials stay in the Edge runtime.
 
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
+## Verification
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Run the project-wide checks and the local integration suite:
+
+~~~sh
+npm run typecheck
+npm run test:related -- <changed files>
+npm exec vitest -- run tests/integration
+~~~
+
+The integration suite intentionally fails with startup instructions when the Docker-backed
+Supabase services are unavailable. It never falls back or connects to a hosted project.
+
+Regenerate database types after every schema migration:
+
+~~~sh
+SUPABASE_TELEMETRY_DISABLED=1 npm exec supabase -- gen types typescript --local > src/lib/database.types.ts
+~~~
+
+## Deployment boundary
+
+This repository defines migrations, Edge Functions, and operator procedures. Production
+project creation, credentials, the initial PIN, custom domains, and deployment execution
+remain separate deployment inputs and are not provisioned from the repository.
