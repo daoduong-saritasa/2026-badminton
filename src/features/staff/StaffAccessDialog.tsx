@@ -56,7 +56,7 @@ export function StaffAccessDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="rounded-2xl bg-white sm:max-w-sm">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader>
           <DialogTitle>Staff access</DialogTitle>
           <DialogDescription>Enter the tournament staff PIN.</DialogDescription>
@@ -68,17 +68,18 @@ export function StaffAccessDialog({
               id="staff-pin"
               inputMode="numeric"
               autoComplete="one-time-code"
+              className="numeric h-14 text-center text-2xl font-semibold tracking-[0.35em]"
               value={pin}
               onChange={(event) => setPin(event.target.value)}
               autoFocus
             />
           </div>
           {signInMutation.isError ? (
-            <p className="text-sm text-destructive" role="alert">
+            <p className="rounded-chip bg-[#fdeceb] px-3.5 py-2.5 text-[0.75rem]/[1.6] text-[#a32118]" role="alert">
               {accessErrorMessage(signInMutation.error)}
             </p>
           ) : null}
-          <Button className="w-full rounded-full" disabled={signInMutation.isPending}>
+          <Button className="w-full" disabled={signInMutation.isPending || pin.trim().length === 0}>
             {signInMutation.isPending ? 'Checking…' : 'Continue'}
           </Button>
         </form>

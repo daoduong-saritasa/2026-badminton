@@ -25,6 +25,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { pairName } from '@/features/tournament/MatchTicket'
+import { cn } from '@/lib/utils'
 
 function failureReason(error: unknown): SaveFailureReason {
   if (typeof error === 'object' && error !== null && 'code' in error) {
@@ -105,7 +106,6 @@ function ScoringSurface({
         requestId: pending.requestId,
         matchVersion: receipt.matchVersion ?? pending.expectedVersion + 1,
       })
-      await queryClient.invalidateQueries({ queryKey: ['tournament'] })
     } catch (error) {
       const reason = failureReason(error)
       dispatch({
@@ -195,7 +195,6 @@ function ScoringSurface({
       expectedVersion: state.matchVersion,
       payload: { matchId: match.id },
     }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament'] }),
     onError: (error) => handleActionFailure('Undo', error),
   })
 
@@ -206,7 +205,6 @@ function ScoringSurface({
       expectedVersion: state.matchVersion,
       payload: { matchId: match.id },
     }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['tournament'] }),
     onError: (error) => handleActionFailure('Confirmation', error),
   })
 
@@ -218,14 +216,14 @@ function ScoringSurface({
   return (
     <main className="score-viewport grid grid-rows-[2.75rem_minmax(0,1fr)_auto] gap-2 overflow-hidden bg-background">
       <div className="flex items-center justify-between gap-3">
-        <Button variant="outline" size="sm" className="rounded-full bg-white" onClick={onExit}>
+        <Button variant="outline" size="sm" onClick={onExit}>
           <ArrowLeft /> Back
         </Button>
-        <div className="flex items-center gap-2 rounded-full border bg-white p-1 shadow-sm">
+        <div className="flex items-center gap-1 rounded-pill border border-line bg-white p-1 shadow-float">
           <Button
             variant="ghost"
             size="sm"
-            className="rounded-full"
+            className="min-w-22"
             disabled={actionPending || state.status === 'saving' || state.status === 'failed' || !state.hasOwnership}
             onClick={() => undoMutation.mutate()}
           >
@@ -233,7 +231,7 @@ function ScoringSurface({
           </Button>
           <Button
             size="sm"
-            className="rounded-full"
+            className="min-w-22"
             disabled={state.status !== 'reviewing' || actionPending}
             onClick={() => confirmMutation.mutate()}
           >
@@ -248,27 +246,28 @@ function ScoringSurface({
           <button
             type="button"
             key={side}
-            className={side === 'a'
-              ? 'grid min-h-0 touch-manipulation select-none grid-rows-[auto_1fr_auto] place-items-center rounded-[1.75rem] border border-[#bed0e2] bg-[#e5ecf3] p-4 text-primary'
-              : 'grid min-h-0 touch-manipulation select-none grid-rows-[auto_1fr_auto] place-items-center rounded-[1.75rem] border border-[#f7c1ad] bg-[#fcdfd4] p-4'}
+            className={cn(
+              'grid min-h-0 touch-manipulation select-none grid-rows-[auto_1fr_auto] place-items-center rounded-[1.75rem] border px-4 pt-[1.375rem] pb-3.5 transition-colors disabled:cursor-default',
+              side === 'a' ? 'border-navy-soft bg-mist text-navy' : 'border-peach-line bg-peach text-ink',
+            )}
             disabled={disabled}
             aria-label={`Add one point for ${pairName(snapshot, side === 'a' ? match.pairAId : match.pairBId)}`}
             onClick={() => handlePoint(side)}
           >
-            <span className="max-w-full truncate text-[clamp(0.75rem,2.5vw,1.5rem)] font-semibold">
+            <span className="max-w-full truncate text-[clamp(0.9375rem,2.4vw,1.625rem)]/[1.5] font-semibold tracking-[-0.023em]">
               {pairName(snapshot, side === 'a' ? match.pairAId : match.pairBId)}
             </span>
             <strong className="numeric self-center pr-[0.07em] text-[clamp(5rem,28dvh,16rem)] font-bold leading-none tracking-[-0.08em]">
               {state.score[side]}
             </strong>
-            <small className="text-[0.625rem] opacity-70">
+            <small className="text-[0.625rem] opacity-75">
               {pairSeedLabel(snapshot, side === 'a' ? match.pairAId : match.pairBId)}
             </small>
           </button>
         ))}
       </div>
 
-      <div className="min-h-8 text-center text-xs" aria-live="polite">
+      <div className="min-h-8 self-center text-center text-[0.6875rem] text-navy" aria-live="polite">
         {state.status === 'saving' ? 'Saving point…' : null}
         {failed ? (
           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -341,8 +340,8 @@ export function ScoreTracker({ snapshot, onExit }: { snapshot: TournamentSnapsho
     return (
       <main className="score-viewport grid place-items-center text-center">
         <div>
-          <h2 className="text-xl font-semibold">No match is currently scoring</h2>
-          <Button className="mt-4 rounded-full" variant="outline" onClick={onExit}>Back to matches</Button>
+          <h2 className="text-xl font-semibold tracking-[-0.028em]">No match is currently scoring</h2>
+          <Button className="mt-5" variant="outline" onClick={onExit}>Back to matches</Button>
         </div>
       </main>
     )
@@ -356,7 +355,7 @@ export function ScoreTracker({ snapshot, onExit }: { snapshot: TournamentSnapsho
     <div>
       {matches.length > 1 ? (
         <Select value={match.id} onValueChange={setMatchId}>
-          <SelectTrigger className="fixed right-4 top-4 z-20 w-36 rounded-full bg-white">
+          <SelectTrigger size="sm" className="fixed right-4 top-4 z-20 w-32 rounded-pill">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>

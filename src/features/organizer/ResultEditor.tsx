@@ -18,7 +18,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { pairName } from '@/features/tournament/MatchTicket'
+import { matchRoundLabel, pairName } from '@/features/tournament/MatchTicket'
 
 type PendingAction =
   | { kind: 'score'; match: Match; score: Score }
@@ -99,9 +99,9 @@ export function ResultEditor({ snapshot }: { snapshot: TournamentSnapshot }) {
   const blocked = match ? correctionBlocked(snapshot, match, proposedWinnerId) : false
 
   return (
-    <section className="rounded-[1.375rem] border bg-white p-5 shadow-[0_6px_0_rgb(15_43_41/0.03)]">
-      <h3 className="text-base font-semibold">Results and withdrawals</h3>
-      <p className="mt-1 text-xs text-muted-foreground">Enter an unstarted result or look up a completed match to correct it.</p>
+    <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
+      <h3 className="text-sm font-semibold">Results and withdrawals</h3>
+      <p className="mt-1.5 text-[0.6875rem] text-muted-ink">Enter an unstarted result or look up a completed match to correct it.</p>
 
       {match ? (
         <div className="mt-5 space-y-4">
@@ -112,7 +112,7 @@ export function ResultEditor({ snapshot }: { snapshot: TournamentSnapshot }) {
               <SelectContent>
                 {matches.map((candidate) => (
                   <SelectItem value={candidate.id} key={candidate.id}>
-                    {candidate.round} · {pairName(snapshot, candidate.pairAId)} vs {pairName(snapshot, candidate.pairBId)} · {candidate.state}
+                    {matchRoundLabel(candidate)} · {pairName(snapshot, candidate.pairAId)} vs {pairName(snapshot, candidate.pairBId)} · {candidate.state}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -129,7 +129,7 @@ export function ResultEditor({ snapshot }: { snapshot: TournamentSnapshot }) {
             </div>
           </div>
           {blocked ? <p className="text-xs text-destructive">Downstream play has started, so the existing winner cannot change. A same-winner score correction remains allowed.</p> : null}
-          {!scoreValid ? <p className="text-xs text-muted-foreground">Use a completed badminton score: win by two from 21, capped at 30.</p> : null}
+          {!scoreValid ? <p className="text-[0.6875rem] text-muted-ink">Use a completed badminton score: win by two from 21, capped at 30.</p> : null}
           <div className="flex flex-wrap gap-2">
             <Button disabled={!scoreValid || blocked} onClick={() => setPending({ kind: 'score', match, score })}>
               {match.state === 'completed' ? 'Review correction' : 'Review direct result'}
@@ -150,7 +150,7 @@ export function ResultEditor({ snapshot }: { snapshot: TournamentSnapshot }) {
             ) : null}
           </div>
         </div>
-      ) : <p className="mt-5 text-sm text-muted-foreground">No result is available to edit.</p>}
+      ) : <p className="mt-5 text-[0.8125rem] text-muted-ink">No result is available to edit.</p>}
 
       <div className="mt-6 border-t pt-5">
         <Label>Withdraw an active pair</Label>
@@ -167,7 +167,7 @@ export function ResultEditor({ snapshot }: { snapshot: TournamentSnapshot }) {
             </Button>
           ))}
         </div>
-        {withdrawalBlocked ? <p className="mt-2 text-xs text-muted-foreground">Withdrawals close when knockout play starts.</p> : null}
+        {withdrawalBlocked ? <p className="mt-2 text-[0.6875rem] text-muted-ink">Withdrawals close when knockout play starts.</p> : null}
       </div>
 
       {resultMutation.isError ? <p className="mt-4 text-sm text-destructive" role="alert">{resultMutation.error.message}</p> : null}

@@ -26,6 +26,13 @@ type AppView = PublicView | StaffView
 const tournamentQueryKey = ['tournament'] as const
 const staffQueryKey = ['staff-access'] as const
 
+/*
+ * Underlined tabs: a hairline rule with a 3px orange bar under the active tab.
+ * The `line` variant already renders the bar; these override its colour, weight
+ * and offset so it sits on the rule rather than 5px below it.
+ */
+const tabTriggerClass = 'min-h-11 min-w-[4.375rem] flex-none rounded-none px-0 pb-3 text-[0.8125rem] text-muted-ink data-active:font-semibold data-active:text-ink after:inset-x-0 after:-bottom-px after:h-[3px] after:rounded-[3px] after:bg-orange'
+
 function defaultView(stage: TournamentStage): PublicView {
   if (stage === 'knockouts' || stage === 'completed') return 'knockouts'
   return 'matches'
@@ -49,12 +56,12 @@ function LoadingScreen() {
 function ErrorScreen({ error, onRetry }: { error: Error; onRetry: () => void }) {
   return (
     <main className="grid min-h-svh place-items-center px-6">
-      <Alert variant="destructive" className="max-w-lg bg-white">
+      <Alert variant="destructive" className="max-w-lg rounded-card bg-white">
         <AlertCircle />
         <AlertTitle>Tournament unavailable</AlertTitle>
         <AlertDescription>
           <p>{error.message}</p>
-          <Button className="mt-4" variant="outline" onClick={onRetry}>
+          <Button className="mt-5" variant="outline" onClick={onRetry}>
             <RefreshCw /> Retry
           </Button>
         </AlertDescription>
@@ -77,17 +84,17 @@ function SetupRequiredScreen({
   return (
     <main className="app-shell">
       <header className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Tournament setup</p>
+        <p className="text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-muted-ink">Tournament setup</p>
         <h1 className="mt-2 text-2xl font-extrabold tracking-tight"><span className="brand-mark" aria-hidden="true" />Create the tournament</h1>
-        <p className="ml-10 mt-2 text-sm text-muted-foreground">Staff access is required for initial configuration.</p>
+        <p className="ml-[2.5625rem] mt-2 text-xs text-muted-ink">Staff access is required for initial configuration.</p>
       </header>
       {isStaff ? (
         <SetupForm snapshot={null} />
       ) : (
-        <section className="rounded-[1.375rem] border bg-white p-8 text-center shadow-[0_6px_0_rgb(15_43_41/0.03)]">
+        <section className="rounded-card border border-ink/5 bg-white p-8 text-center shadow-card">
           <KeyRound className="mx-auto size-6" />
           <h2 className="mt-4 text-lg font-semibold">Enter the staff PIN to begin</h2>
-          <Button className="mt-5 rounded-full" onClick={() => onStaffDialogChange(true)}>Staff access</Button>
+          <Button className="mt-6" onClick={() => onStaffDialogChange(true)}>Staff access</Button>
         </section>
       )}
       <StaffAccessDialog open={staffDialogOpen} onOpenChange={onStaffDialogChange} onGranted={onStaffGranted} />
@@ -129,8 +136,11 @@ export default function App() {
     setSelectedView('organizer')
   }
 
-  useEffect(() => subscribeTournament(() => {
-    void queryClient.invalidateQueries({ queryKey: tournamentQueryKey })
+  useEffect(() => subscribeTournament((snapshot) => {
+    // A local mutation hands over the snapshot it already fetched; a remote
+    // change only says that something moved, so that one has to go and look.
+    if (snapshot) queryClient.setQueryData(tournamentQueryKey, snapshot)
+    else void queryClient.invalidateQueries({ queryKey: tournamentQueryKey })
   }), [queryClient])
 
   useEffect(() => {
@@ -176,16 +186,22 @@ export default function App() {
     return <ScoreTracker snapshot={snapshot} onExit={() => setSelectedView('matches')} />
   }
   const viewContent = renderView(snapshot, view, () => setSelectedView('scoring'))
+  const tabs: { value: AppView; label: string }[] = [
+    { value: 'matches', label: 'Matches' },
+    { value: 'standings', label: 'Standings' },
+    { value: 'knockouts', label: 'Knockouts' },
+    ...(isStaff ? ([{ value: 'scoring', label: 'Referee' }, { value: 'organizer', label: 'Organizer' }] as const) : []),
+  ]
 
   return (
     <div className="app-shell">
-      <header className="mb-9 flex items-start justify-between gap-5">
+      <header className="mb-9 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-[clamp(1.45rem,4vw,1.9rem)] font-extrabold tracking-[-0.045em]">
+          <h1 className="text-[clamp(1.4375rem,4vw,1.875rem)] font-extrabold tracking-[-0.0433em]">
             <span className="brand-mark" aria-hidden="true" />
             {snapshot.tournament.name}
           </h1>
-          <p className="ml-10 mt-2 text-xs capitalize text-muted-foreground">
+          <p className="ml-[2.5625rem] mt-[7px] text-xs capitalize text-muted-ink">
             {snapshot.tournament.stage} stage
           </p>
         </div>
@@ -193,8 +209,8 @@ export default function App() {
           <StaffMenu onNavigate={setSelectedView} onSignedOut={handleSignedOut} />
         ) : (
           <Button
-            variant="ghost"
-            className="rounded-full text-xs text-muted-foreground"
+            variant="outline"
+            className="border-rule bg-transparent text-muted-ink hover:bg-white"
             onClick={handleStaffAction}
           >
             <KeyRound /> Staff access
@@ -202,18 +218,18 @@ export default function App() {
         )}
       </header>
 
-      <Tabs value={view} onValueChange={handleViewChange} className="gap-7">
-        <TabsList className="h-auto w-full justify-start overflow-x-auto rounded-none border-b bg-transparent p-0">
-          <TabsTrigger value="matches">Matches</TabsTrigger>
-          <TabsTrigger value="standings">Standings</TabsTrigger>
-          <TabsTrigger value="knockouts">Knockouts</TabsTrigger>
-          {isStaff ? <TabsTrigger value="scoring">Referee</TabsTrigger> : null}
-          {isStaff ? <TabsTrigger value="organizer">Organizer</TabsTrigger> : null}
+      <Tabs value={view} onValueChange={handleViewChange} className="gap-8">
+        <TabsList variant="line" className="h-auto w-full justify-start gap-[1.375rem] overflow-x-auto rounded-none border-b border-line p-0">
+          {tabs.map((tab) => (
+            <TabsTrigger className={tabTriggerClass} key={tab.value} value={tab.value}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
         </TabsList>
         {viewContent}
       </Tabs>
 
-      <footer className="mt-10 flex flex-wrap justify-between gap-3 text-[0.625rem] text-muted-foreground">
+      <footer className="mt-[2.625rem] flex flex-wrap justify-between gap-4 text-[0.625rem] text-muted-ink">
         <span>First to 21 · Win by 2 · Cap at 30</span>
         <span aria-live="polite">{tournamentQuery.isFetching ? 'Updating…' : 'Live updates ready'}</span>
       </footer>

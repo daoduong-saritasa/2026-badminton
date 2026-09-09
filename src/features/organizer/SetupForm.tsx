@@ -15,9 +15,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
+import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 
 function blankPair(index: number, count: number): SetupPairInput {
   const group: Group = index < Math.ceil(count / 2) ? 'A' : 'B'
@@ -137,24 +139,24 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
   }
 
   return (
-    <section className="rounded-[1.375rem] border bg-white p-5 shadow-[0_6px_0_rgb(15_43_41/0.03)]">
+    <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-base font-semibold">Players and groups</h3>
-          <p className="mt-1 text-xs text-muted-foreground">Six to eight pairs, split 3+3, 4+3, or 4+4.</p>
+          <h3 className="text-sm font-semibold">Players and groups</h3>
+          <p className="mt-1.5 text-[0.6875rem] text-muted-ink">Six to eight pairs, split 3+3, 4+3, or 4+4.</p>
         </div>
-        <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium">{setup.pairs.length} pairs</span>
+        <Badge variant="secondary">{setup.pairs.length} pairs</Badge>
       </div>
 
       {locked ? (
-        <Alert className="mt-4">
+        <Alert className="mt-4 rounded-field">
           <AlertTriangle />
           <AlertTitle>Setup is locked</AlertTitle>
           <AlertDescription>Player and group changes stop after play begins.</AlertDescription>
         </Alert>
       ) : null}
       {sameSeedPairs.length > 0 ? (
-        <Alert className="mt-4 border-[#e9a589] bg-[#fff7f3]">
+        <Alert className="mt-4 rounded-field border-peach-line bg-[#fff7f3]">
           <AlertTriangle />
           <AlertTitle>Seed advisory</AlertTitle>
           <AlertDescription>{sameSeedPairs.length} pair(s) contain players with the same seed. You can still save.</AlertDescription>
@@ -173,10 +175,10 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
         </div>
         <div className="grid gap-4 xl:grid-cols-2">
           {setup.pairs.map((pair, pairIndex) => (
-            <fieldset key={pairIndex} className="rounded-xl border p-4" disabled={locked}>
+            <fieldset key={pairIndex} className="rounded-field border border-hairline p-4" disabled={locked}>
               <legend className="sr-only">Pair {pairIndex + 1}</legend>
               <div className="mb-3 flex items-center justify-between gap-2">
-                <span className="text-sm font-semibold">Pair {pairIndex + 1}</span>
+                <span className="numeric text-[0.625rem] text-dim-ink">{String(pairIndex + 1).padStart(2, '0')}</span>
                 <Button
                   type="button"
                   size="icon-sm"
@@ -188,40 +190,52 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
                   <Minus />
                 </Button>
               </div>
-              <div className="grid grid-cols-[minmax(0,1fr)_6rem] gap-2">
+              <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2.5">
                 <Input
                   aria-label={`Pair ${pairIndex + 1} team name`}
                   placeholder="Team name (optional)"
                   value={pair.teamName ?? ''}
                   onChange={(event) => updatePair(pairIndex, (current) => ({ ...current, teamName: event.target.value }))}
                 />
-                <select
-                  className="h-9 rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={`Group for pair ${pairIndex + 1}`}
+                <Select
                   value={pair.group}
-                  onChange={(event) => updatePair(pairIndex, (current) => ({ ...current, group: event.target.value as Group }))}
+                  disabled={locked}
+                  onValueChange={(value) => updatePair(pairIndex, (current) => ({ ...current, group: value as Group }))}
                 >
-                  <option value="A">Group A</option>
-                  <option value="B">Group B</option>
-                </select>
+                  <SelectTrigger
+                    className="w-full"
+                    tone={pair.group === 'A' ? 'groupA' : 'groupB'}
+                    aria-label={`Group for pair ${pairIndex + 1}`}
+                  >
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="A">Group A</SelectItem>
+                    <SelectItem value="B">Group B</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               {[0, 1].map((playerIndex) => (
-                <div className="mt-3 grid grid-cols-[minmax(0,1fr)_5rem] gap-2" key={playerIndex}>
+                <div className="mt-2.5 grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2.5" key={playerIndex}>
                   <Input
                     aria-label={`Pair ${pairIndex + 1} player ${playerIndex + 1}`}
                     placeholder={`Player ${playerIndex + 1}`}
                     value={pair.players[playerIndex as 0 | 1].name}
                     onChange={(event) => updatePlayer(pairIndex, playerIndex as 0 | 1, 'name', event.target.value)}
                   />
-                  <select
-                    className="h-9 rounded-md border bg-transparent px-2 text-sm outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    aria-label={`Pair ${pairIndex + 1} player ${playerIndex + 1} seed`}
-                    value={pair.players[playerIndex as 0 | 1].seed}
-                    onChange={(event) => updatePlayer(pairIndex, playerIndex as 0 | 1, 'seed', event.target.value)}
+                  <Select
+                    value={String(pair.players[playerIndex as 0 | 1].seed)}
+                    disabled={locked}
+                    onValueChange={(value) => updatePlayer(pairIndex, playerIndex as 0 | 1, 'seed', value)}
                   >
-                    <option value="1">Seed 1</option>
-                    <option value="2">Seed 2</option>
-                  </select>
+                    <SelectTrigger className="w-full" aria-label={`Pair ${pairIndex + 1} player ${playerIndex + 1} seed`}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="1">Seed 1</SelectItem>
+                      <SelectItem value="2">Seed 2</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               ))}
             </fieldset>

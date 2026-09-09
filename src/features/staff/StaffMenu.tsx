@@ -64,11 +64,11 @@ export function StaffMenu({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="ghost" className="rounded-full text-xs text-muted-foreground">
+          <Button variant="outline" className="border-rule bg-transparent text-muted-ink hover:bg-white">
             <KeyRound /> Staff menu
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-52">
+        <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>Tournament staff</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => onNavigate('scoring')}>
@@ -89,7 +89,7 @@ export function StaffMenu({
             <LogOut /> Sign out
           </DropdownMenuItem>
           {signOutMutation.isError ? (
-            <p className="px-2 py-1.5 text-xs text-destructive" role="alert">
+            <p className="mx-1 mt-1 rounded-chip bg-[#fdeceb] px-3 py-2 text-[0.6875rem]/[1.5] text-[#a32118]" role="alert">
               {signOutMutation.error.message}
             </p>
           ) : null}
@@ -97,7 +97,7 @@ export function StaffMenu({
       </DropdownMenu>
 
       <Dialog open={rotationOpen} onOpenChange={setRotationOpen}>
-        <DialogContent className="rounded-2xl bg-white sm:max-w-sm">
+        <DialogContent className="sm:max-w-sm">
           <DialogHeader>
             <DialogTitle>Rotate staff PIN</DialogTitle>
             <DialogDescription>All other staff grants will be revoked immediately.</DialogDescription>
@@ -109,14 +109,15 @@ export function StaffMenu({
                 id="new-staff-pin"
                 inputMode="numeric"
                 autoComplete="new-password"
+                className="numeric h-14 text-center text-2xl font-semibold tracking-[0.35em]"
                 value={nextPin}
                 onChange={(event) => setNextPin(event.target.value)}
               />
             </div>
             {rotationMutation.isError ? (
-              <p className="text-sm text-destructive" role="alert">{rotationMutation.error.message}</p>
+              <p className="text-[0.75rem]/[1.6] text-[#a32118]" role="alert">{rotationMutation.error.message}</p>
             ) : null}
-            <Button className="w-full rounded-full">Review rotation</Button>
+            <Button className="w-full" disabled={nextPin.trim().length === 0}>Review rotation</Button>
           </form>
         </DialogContent>
       </Dialog>
