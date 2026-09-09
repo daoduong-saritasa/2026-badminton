@@ -869,6 +869,10 @@ begin
   end if;
 
   perform private.assert_correction_safe(current_match, new_winner);
+  update public.tournament
+  set setup_locked_at = coalesce(setup_locked_at, clock_timestamp()),
+      updated_at = clock_timestamp()
+  where singleton;
   update public.matches
   set state = 'completed', score_a = case when p_walkover then null else new_score_a end,
       score_b = case when p_walkover then null else new_score_b end,
