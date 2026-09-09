@@ -91,7 +91,7 @@ Fresh review: required — staff authorization and recovery paths protecting dur
 - [x] Install `zod` through npm in `package.json`/`package-lock.json` for runtime validation at the Supabase DTO boundary. (amended 2026-09-09)
 - [x] Create `src/data/tournament.ts` to map generated database responses into domain records, invoke named RPCs, and subscribe to public changes as invalidations; refetch on reconnect and mutation acknowledgement, reject stale responses, and clean up subscriptions.
 - [x] Create `src/data/staff.ts` for anonymous Auth plus PIN elevation, registry-backed access checks, current-session revocation before sign-out, PIN rotation, and private ownership checks; preserve explicit errors if server-side sign-out revocation fails.
-- [ ] Create `src/features/scoring/scoring-state.ts` with exported `ScoringState`, `ScoringEvent`, and `reduceScoring`; permit one in-flight point, retain its request/version through failures, retry the same request, pause until acknowledgement, and require explicit takeover after ownership conflicts.
+- [x] Create `src/features/scoring/scoring-state.ts` with exported `ScoringState`, `ScoringEvent`, and `reduceScoring`; permit one in-flight point, retain its request/version through failures, retry the same request, pause until acknowledgement, and require explicit takeover after ownership conflicts.
 - [ ] Create `src/features/scoring/scoring-state.test.ts` and `src/data/tournament.test.ts` for failed-save retry identity, duplicate acknowledgements, stale snapshots, winning-score review/dismiss/undo, reconnection, and revoked ownership; test logic without rendering components.
 
 **Phase gate (hard):**
