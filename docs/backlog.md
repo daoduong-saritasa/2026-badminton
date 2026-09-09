@@ -108,3 +108,28 @@ different consequences.
 **Worth confirming first:** how often results are actually entered this way. If nearly every
 match is scored live by a referee, this panel is a recovery tool and simplicity matters more
 than speed. Watching one real event would settle it.
+
+## Application icon and document title
+
+The browser tab still carries the Vite scaffold identity. `index.html` sets
+`<title>badminton</title>` — lowercase, the npm package name — and `public/favicon.svg` is
+the default purple Vite mark. Anyone who bookmarks the app, pins the tab, or adds it to a
+phone home screen gets a generic entry that says nothing about the tournament.
+
+**What it touches.** `index.html` (the `<title>` and the `<link rel="icon">`) and
+`public/favicon.svg`. Nothing in `src/` reads either, so this is self-contained unless a
+per-screen title is wanted. `public/icons.svg` is the interface sprite and is unrelated —
+it should not become the source of the favicon by accident.
+
+**Open decisions:**
+
+- What the app is called. The title is the name the audience sees first, and no name has
+  been settled — the repository, the package and the interface heading do not agree.
+- Whether the title stays fixed or reflects the current tournament and stage. A dynamic
+  title helps an organizer running two tabs at a live event; it also means the name lives
+  in `src/` rather than in `index.html`.
+- What the mark is. A shuttlecock is the obvious choice and also the choice everyone makes;
+  the tournament tokens already define a palette the icon should draw from.
+- Which formats to ship. An SVG favicon alone leaves older browsers and iOS home screens
+  with nothing, so a PNG set and a web app manifest may be in scope — that decision turns
+  on whether anyone is expected to install the app to a home screen.
