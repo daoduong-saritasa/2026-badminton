@@ -263,7 +263,7 @@ export function subscribeTournament(onChange: () => void): () => void {
     })
   }
   const handleOnline = () => refreshAfterReconnect()
-  window.addEventListener('online', handleOnline)
+  if (typeof window !== 'undefined') window.addEventListener('online', handleOnline)
 
   const channel = getSupabaseClient()
     .channel('public-tournament-invalidations')
@@ -282,7 +282,7 @@ export function subscribeTournament(onChange: () => void): () => void {
     if (!active) return
     active = false
     invalidationListeners.delete(onChange)
-    window.removeEventListener('online', handleOnline)
+    if (typeof window !== 'undefined') window.removeEventListener('online', handleOnline)
     void getSupabaseClient().removeChannel(channel)
   }
 }
