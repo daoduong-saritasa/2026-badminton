@@ -112,6 +112,13 @@ export class StaleTournamentSnapshotError extends Error {
   }
 }
 
+export class TournamentNotConfiguredError extends Error {
+  constructor() {
+    super('No tournament has been configured yet')
+    this.name = 'TournamentNotConfiguredError'
+  }
+}
+
 function parseDto<T>(schema: z.ZodType<T>, value: unknown, label: string): T {
   const result = schema.safeParse(value)
   if (!result.success) {
@@ -215,6 +222,7 @@ function toJson(value: unknown): Json {
 async function fetchAtLeast(requiredVersion: number): Promise<TournamentSnapshot> {
   const { data, error } = await getSupabaseClient().rpc('get_tournament_snapshot')
   if (error) throw error
+  if (data === null) throw new TournamentNotConfiguredError()
   const snapshot = mapSnapshot(data)
   const minimumVersion = Math.max(requiredVersion, newestTournamentVersion)
   if (snapshot.tournament.version < minimumVersion) {

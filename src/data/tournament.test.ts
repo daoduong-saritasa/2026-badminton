@@ -9,6 +9,7 @@ import {
   mutateTournament,
   StaleTournamentSnapshotError,
   subscribeTournament,
+  TournamentNotConfiguredError,
 } from './tournament'
 
 const tournamentId = '00000000-0000-4000-8000-000000000010'
@@ -69,6 +70,12 @@ describe('tournament data', () => {
 
     rpc.mockResolvedValueOnce({ data: snapshot(0), error: null })
     await expect(fetchTournament()).rejects.toBeInstanceOf(StaleTournamentSnapshotError)
+  })
+
+  it('reports an unconfigured tournament as a bootstrap state', async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: null })
+
+    await expect(fetchTournament()).rejects.toBeInstanceOf(TournamentNotConfiguredError)
   })
 
   it('refetches through the acknowledged version before resolving a mutation', async () => {
