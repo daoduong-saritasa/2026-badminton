@@ -131,6 +131,7 @@ Fresh review: required — staff access integration and score/result recovery co
 - [x] In `ScoreTracker.tsx`, `scoring-state.ts`/tests, `ResultEditor.tsx`, and the public tournament components, block independent score mutations during failed saves, reconcile equal-version takeover ownership without replacing newer revocation, permit safe same-winner corrections, and show both player names/seeds when a team name exists. (amended 2026-09-09)
 - [x] In `KnockoutBracket.tsx` and `ScoreTracker.tsx`, number semifinals independently of shared playing order and surface/reconcile failed Undo, Confirm, and takeover mutations before re-enabling score actions. (amended 2026-09-09)
 - [x] Use `import.meta.dirname` for the Vite alias in `vite.config.ts` so the production build remains compatible with Vite's future native configuration loader. (amended 2026-09-09)
+- [x] Add `202609090001_fix_pin_attempt_timestamp.sql` to prevent PostgreSQL from resolving the rate-limit function's timestamp variable as the `CURRENT_TIME` time-with-time-zone keyword. (amended 2026-09-09)
 - [x] Finish `README.md` and `docs/deployment.md` with company-account deployment configuration, public environment variables, Supabase migrations/Edge publication, current commercial-license checks, and the day-before-event resume/read/write/realtime smoke procedure; do not provision or deploy.
 
 **Phase gate (hard):**
