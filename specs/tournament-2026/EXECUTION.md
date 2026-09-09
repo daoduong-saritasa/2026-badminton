@@ -10,7 +10,7 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default; probe
 - Phase 2 — Database and staff authorization: in-progress
 - Phase 3 — Frontend data and scoring recovery: pending
 - Phase 4 — Tournament and staff screens: pending
-- Verification debt: Phase 2 local Supabase schema type generation and database/Edge integration execution are blocked because the Docker daemon is unavailable; `src/lib/database.types.ts` is migration-derived until CLI regeneration, while project-wide typechecking passes.
+- Verification debt: Phase 2 local Supabase schema type generation and database/Edge integration execution are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is unavailable; `src/lib/database.types.ts` is migration-derived until CLI regeneration. Project-wide typechecking and all 45 domain tests pass, but no database verification is claimed.
 
 ## Phase 1 — Domain contracts and logic
 
@@ -65,8 +65,8 @@ Fresh review: required — authentication, secrets, persistent migrations, and d
 - [x] Update `README.md` and `docs/deployment.md` with local Supabase/Edge commands, initial PIN hash handling and rotation; note that production credentials/provisioning remain separate deployment inputs.
 
 **Phase gate (hard):**
-- [ ] Run `npm run typecheck` project-wide, including Edge Function sources.
-- [ ] Run `npm run test:related -- <changed files>` from the actual diff and `npm exec vitest -- run tests/integration` as the SQL/Edge/configuration fallback suite. Local Docker/Supabase/Edge services are required; if unavailable, mark this check `[~]`, record the blocker and passing domain-test substitute in STATUS, and do not claim database verification.
+- [x] Run `npm run typecheck` project-wide, including Edge Function sources.
+- [~] Run `npm run test:related -- <changed files>` from the actual diff and `npm exec vitest -- run tests/integration` as the SQL/Edge/configuration fallback suite. Local Docker/Supabase/Edge services are required; if unavailable, mark this check `[~]`, record the blocker and passing domain-test substitute in STATUS, and do not claim database verification. Both commands reached the integration harness but could not connect to `/Users/thomasduong/.orbstack/run/docker.sock`; substitute `npm exec vitest -- run src/domain` passed all 45 tests.
 
 **Review checklist (user, at PR review):**
 - [ ] Review the authorization lifetime, PIN-rotation behavior, public data exposure, and correction restrictions against the agreed plan.
