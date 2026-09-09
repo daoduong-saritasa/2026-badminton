@@ -206,7 +206,7 @@ export default function App() {
           </p>
         </div>
         {isStaff ? (
-          <StaffMenu onNavigate={setSelectedView} onSignedOut={handleSignedOut} />
+          <StaffMenu onSignedOut={handleSignedOut} />
         ) : (
           <Button
             variant="outline"

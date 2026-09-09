@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { KeyRound, LogOut, Settings2, TabletSmartphone } from 'lucide-react'
+import { KeyRound, LogOut } from 'lucide-react'
 
 import { rotateStaffPin, signOutStaff } from '@/data/staff'
 import {
@@ -32,13 +32,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 
-export function StaffMenu({
-  onNavigate,
-  onSignedOut,
-}: {
-  onNavigate: (view: 'scoring' | 'organizer') => void
-  onSignedOut: () => void
-}) {
+export function StaffMenu({ onSignedOut }: { onSignedOut: () => void }) {
   const [rotationOpen, setRotationOpen] = useState(false)
   const [confirmationOpen, setConfirmationOpen] = useState(false)
   const [nextPin, setNextPin] = useState('')
@@ -71,12 +65,6 @@ export function StaffMenu({
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>Tournament staff</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => onNavigate('scoring')}>
-            <TabletSmartphone /> Referee scoring
-          </DropdownMenuItem>
-          <DropdownMenuItem onSelect={() => onNavigate('organizer')}>
-            <Settings2 /> Organizer
-          </DropdownMenuItem>
           <DropdownMenuItem onSelect={() => setRotationOpen(true)}>
             <KeyRound /> Rotate PIN
           </DropdownMenuItem>
