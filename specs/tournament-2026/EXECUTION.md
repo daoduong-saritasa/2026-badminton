@@ -5,12 +5,12 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default; probe
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — Domain contracts and logic: pending
-- Phase 2 — Database and staff authorization: pending
-- Phase 3 — Frontend data and scoring recovery: pending
-- Phase 4 — Tournament and staff screens: pending
-- Verification debt: none
+- Current phase: 4 — done-with-debt
+- Phase 1 — Domain contracts and logic: done
+- Phase 2 — Database and staff authorization: done-with-debt
+- Phase 3 — Frontend data and scoring recovery: done-with-debt
+- Phase 4 — Tournament and staff screens: done-with-debt
+- Verification debt: Phase 2 local Supabase schema type generation and database/Edge integration execution are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is unavailable; `src/lib/database.types.ts` is migration-derived until CLI regeneration. Phase 3's dependency-aware gate selected the integration suites after `package-lock.json` changed and hit the same unavailable socket. At the user's explicit direction, Phase 4 and the final spec gate did not restart that Docker-backed suite; project-wide typechecking, all 61 source tests, lint, and the production build pass. The linked hosted project records all five migrations and both Edge Functions as active, including the runtime correction to staff PIN rate limiting, but the disposable local integration suite and CLI-generated database types remain verification debt.
 
 ## Phase 1 — Domain contracts and logic
 
@@ -22,15 +22,18 @@ Produces: `isWinningScore(score: Score): boolean`, `generateFixtures(pairs: read
 
 Fresh review: required — test-gate infrastructure
 
-- [ ] In `package.json`, `package-lock.json`, `vitest.config.ts`, `tsconfig.app.json`, `tsconfig.node.json`, and `tsconfig.json`, install Vitest through npm, enable strict types, and add `typecheck` (project-wide `tsc -b`), `test` (`vitest run`), and `test:related` (`vitest related --run`); cover tests/tooling and rerun for shared configuration changes without adding UI test tooling.
-- [ ] Create `src/domain/types.ts` and `src/domain/commands.ts` with the exact exported records, command payloads, mutation envelope, and receipt in PLAN.md → API changes; use discriminated states and no loose `any`.
-- [ ] Create `src/domain/scoring.ts` and `src/domain/scoring.test.ts` for valid scores, symmetry, deuce, cap, impossible scores, and the transition that stops point entry.
-- [ ] Create `src/domain/fixtures.ts` and `src/domain/fixtures.test.ts` for 6/7/8 pairs, group membership, every group pairing exactly once, two courts, initial ordering, and best-effort avoidance of consecutive play; leave three knockout slots with the defined dependency labels.
-- [ ] Create `src/domain/standings.ts` and `src/domain/standings.test.ts` for confirmed wins, head-to-head, tied-pair point difference, manual residual ties, walkovers without fabricated points, and withdrawn-pair exclusion.
+- [x] In `package.json`, `package-lock.json`, `vitest.config.ts`, `tsconfig.app.json`, `tsconfig.node.json`, and `tsconfig.json`, install Vitest through npm, enable strict types, and add `typecheck` (project-wide `tsc -b`), `test` (`vitest run`), and `test:related` (`vitest related --run`); cover tests/tooling and rerun for shared configuration changes without adding UI test tooling.
+- [x] Create `src/domain/types.ts` and `src/domain/commands.ts` with the exact exported records, command payloads, mutation envelope, and receipt in PLAN.md → API changes; use discriminated states and no loose `any`.
+- [x] Create `src/domain/scoring.ts` and `src/domain/scoring.test.ts` for valid scores, symmetry, deuce, cap, impossible scores, and the transition that stops point entry.
+- [x] Create `src/domain/fixtures.ts` and `src/domain/fixtures.test.ts` for 6/7/8 pairs, group membership, every group pairing exactly once, two courts, initial ordering, and best-effort avoidance of consecutive play; leave three knockout slots with the defined dependency labels.
+- [x] Create `src/domain/standings.ts` and `src/domain/standings.test.ts` for confirmed wins, head-to-head, tied-pair point difference, manual residual ties, walkovers without fabricated points, and withdrawn-pair exclusion.
+- [x] In `src/domain/scoring.ts` and `src/domain/scoring.test.ts`, reject two-point margins below 21 symmetrically and prove point entry continues from those scores. (amended 2026-09-09)
+- [x] In `tsconfig.node.json` and `vitest.config.ts`, include Vitest configuration in strict project-wide typechecking and make `package-lock.json` force a complete related-test rerun. (amended 2026-09-09)
 
 **Phase gate (hard):**
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed files>` with paths derived from the real phase diff; configuration changes trigger the runner's configured rerun behavior.
+- [x] Run `npm run typecheck` project-wide.
+- [x] Run `npm run test:related -- <changed files>` with paths derived from the real phase diff; configuration changes trigger the runner's configured rerun behavior.
+- [x] Rerun `npm run typecheck` and `npm run test:related -- <changed files>` after the fresh-review corrections, deriving paths from the real phase diff; separately verify `npm run test:related -- package-lock.json` runs the complete suite. (amended 2026-09-09)
 
 **Review checklist (user, at PR review):**
 - [ ] Check the 6/7/8-pair fixture examples and tie examples against the organizer's rules.
@@ -48,20 +51,25 @@ Produces: the named RPC signatures in PLAN.md → API changes; `staff-pin` and `
 
 Fresh review: required — authentication, secrets, persistent migrations, and durable writes
 
-- [ ] Install the Supabase CLI through npm in `package.json`/`package-lock.json`; create `supabase/config.toml` for disposable local development with anonymous Auth and Edge Functions, and extend TypeScript configuration/runtime declarations to typecheck Edge Function sources project-wide.
-- [ ] Create `supabase/migrations/202609080001_schema.sql` for `public.tournament`, `players`, `pairs`, `matches`, `tie_resolutions`, and `private.staff_grants`, `staff_config`, `pin_attempts`, `match_ownership`, `mutation_log` per PLAN.md → Schema changes; enforce pair-slot uniqueness and keep private state outside public reads.
-- [ ] Create `supabase/migrations/202609080002_authorization.sql` with grants/RLS, `get_staff_access`, `get_score_access`, `revoke_staff_access`, and private grant/rate-limit/PIN helpers; check verified session/user, fixed seven-day expiry, revocation and PIN generation on every staff operation; restrict privileged helper execution and fix SECURITY DEFINER search paths.
-- [ ] Create `supabase/functions/staff-pin/index.ts` and `supabase/functions/rotate-pin/index.ts` using verified Auth identity, maintained password-hashing primitives, bounded PIN input, server-derived rate-limit buckets, atomic generation checks/grant issuance, and secret-free logs; document concrete rate-limit thresholds and trusted request metadata in `docs/deployment.md`.
-- [ ] Create `supabase/migrations/202609080003_tournament.sql` with `get_tournament_snapshot`, `save_setup`, `generate_fixtures`, and `assign_courts`; implement singleton locking, expected versions, scoped idempotency, 6–8-pair/group validation, immutable setup after play, and court/order editing only for unstarted matches.
-- [ ] In `supabase/migrations/202609080003_tournament.sql`, implement `start_scoring`, `take_over`, `add_point`, `undo_point`, and `confirm_result`; enforce one live match per court/pair, ownership on every write, reversible point history, stop at winning score, atomic result progression, and duplicate-request protection.
-- [ ] In `supabase/migrations/202609080003_tournament.sql`, implement `enter_result`, `correct_result`, `mark_walkover`, `withdraw_pair`, `resolve_tie`, `confirm_groups`, and `reopen_tournament`; recalculate affected standings/slots, invalidate stale tie resolutions, block changed participants after dependent play starts, and preserve setup locks after reopening.
-- [ ] Add `tests/integration/local-supabase.ts`, `tests/integration/auth.test.ts`, and `tests/integration/tournament.test.ts` covering anonymous denial, expired/revoked grants, PIN rotation, rate limits, concurrent claims/court conflicts, takeover, retry duplication, score/undo boundaries, correction dependencies, withdrawals, group confirmation, and final reopening; use local-only fixtures and fail clearly when services are unavailable.
-- [ ] Generate `src/lib/database.types.ts` through the Supabase CLI from the local schema; configure publication of public tournament tables for Realtime and verify that audit/ownership/PIN records cannot be read publicly.
-- [ ] Update `README.md` and `docs/deployment.md` with local Supabase/Edge commands, initial PIN hash handling and rotation; note that production credentials/provisioning remain separate deployment inputs.
+- [x] Install the Supabase CLI through npm in `package.json`/`package-lock.json`; create `supabase/config.toml` for disposable local development with anonymous Auth and Edge Functions, and extend TypeScript configuration/runtime declarations to typecheck Edge Function sources project-wide.
+- [x] Create `supabase/migrations/202609080001_schema.sql` for `public.tournament`, `players`, `pairs`, `matches`, `tie_resolutions`, and `private.staff_grants`, `staff_config`, `pin_attempts`, `match_ownership`, `mutation_log` per PLAN.md → Schema changes; enforce pair-slot uniqueness and keep private state outside public reads.
+- [x] Create `supabase/migrations/202609080002_authorization.sql` with grants/RLS, `get_staff_access`, `get_score_access`, `revoke_staff_access`, and private grant/rate-limit/PIN helpers; check verified session/user, fixed seven-day expiry, revocation and PIN generation on every staff operation; restrict privileged helper execution and fix SECURITY DEFINER search paths.
+- [x] Create `supabase/functions/staff-pin/index.ts` and `supabase/functions/rotate-pin/index.ts` using verified Auth identity, maintained password-hashing primitives, bounded PIN input, server-derived rate-limit buckets, atomic generation checks/grant issuance, and secret-free logs; document concrete rate-limit thresholds and trusted request metadata in `docs/deployment.md`.
+- [x] Create `supabase/migrations/202609080003_tournament.sql` with `get_tournament_snapshot`, `save_setup`, `generate_fixtures`, and `assign_courts`; implement singleton locking, expected versions, scoped idempotency, 6–8-pair/group validation, immutable setup after play, and court/order editing only for unstarted matches.
+- [x] In `supabase/migrations/202609080003_tournament.sql`, implement `start_scoring`, `take_over`, `add_point`, `undo_point`, and `confirm_result`; enforce one live match per court/pair, ownership on every write, reversible point history, stop at winning score, atomic result progression, and duplicate-request protection.
+- [x] In `supabase/migrations/202609080003_tournament.sql`, implement `enter_result`, `correct_result`, `mark_walkover`, `withdraw_pair`, `resolve_tie`, `confirm_groups`, and `reopen_tournament`; recalculate affected standings/slots, invalidate stale tie resolutions, block changed participants after dependent play starts, and preserve setup locks after reopening.
+- [x] In `supabase/migrations/202609080003_tournament.sql`, increment dependent knockout match versions when participant slots change and return group confirmation to review when corrected results or withdrawals invalidate seeded slots. (amended 2026-09-09)
+- [x] In `supabase/migrations/202609080003_tournament.sql`, lock setup when direct results or walkovers record tournament play so reopening cannot expose an unlocked setup. (amended 2026-09-09)
+- [x] In `supabase/migrations/202609080003_tournament.sql` and `tests/integration/tournament.test.ts`, apply court assignments collision-safely so occupied slots can be swapped while match versions advance. (amended 2026-09-09)
+- [x] In `supabase/migrations/202609080003_tournament.sql` and `tests/integration/tournament.test.ts`, require current scoring ownership before replay and permit a confirmed-result replay only while its completed match version remains unchanged. (amended 2026-09-09)
+- [x] In `supabase/migrations/202609080003_tournament.sql` and `tests/integration/tournament.test.ts`, include `expectedVersion` in the idempotency fingerprint and reject request-ID reuse with a changed version. (amended 2026-09-09)
+- [x] Add `tests/integration/local-supabase.ts`, `tests/integration/auth.test.ts`, and `tests/integration/tournament.test.ts` covering anonymous denial, expired/revoked grants, PIN rotation, rate limits, concurrent claims/court conflicts, takeover, retry duplication, score/undo boundaries, correction dependencies, withdrawals, group confirmation, and final reopening; use local-only fixtures and fail clearly when services are unavailable.
+- [~] Generate `src/lib/database.types.ts` through the Supabase CLI from the local schema; configure publication of public tournament tables for Realtime and verify that audit/ownership/PIN records cannot be read publicly. Docker unavailable at `/Users/thomasduong/.orbstack/run/docker.sock`; added migration-derived fallback types, `202609080004_realtime.sql`, and an executable private-table privilege check pending local runtime verification.
+- [x] Update `README.md` and `docs/deployment.md` with local Supabase/Edge commands, initial PIN hash handling and rotation; note that production credentials/provisioning remain separate deployment inputs.
 
 **Phase gate (hard):**
-- [ ] Run `npm run typecheck` project-wide, including Edge Function sources.
-- [ ] Run `npm run test:related -- <changed files>` from the actual diff and `npm exec vitest -- run tests/integration` as the SQL/Edge/configuration fallback suite. Local Docker/Supabase/Edge services are required; if unavailable, mark this check `[~]`, record the blocker and passing domain-test substitute in STATUS, and do not claim database verification.
+- [x] Run `npm run typecheck` project-wide, including Edge Function sources.
+- [~] Run `npm run test:related -- <changed files>` from the actual diff and `npm exec vitest -- run tests/integration` as the SQL/Edge/configuration fallback suite. Local Docker/Supabase/Edge services are required; if unavailable, mark this check `[~]`, record the blocker and passing domain-test substitute in STATUS, and do not claim database verification. Both commands reached the integration harness but could not connect to `/Users/thomasduong/.orbstack/run/docker.sock`; substitute `npm exec vitest -- run src/domain` passed all 45 tests.
 
 **Review checklist (user, at PR review):**
 - [ ] Review the authorization lifetime, PIN-rotation behavior, public data exposure, and correction restrictions against the agreed plan.
@@ -79,15 +87,22 @@ Produces: `fetchTournament(): Promise<TournamentSnapshot>`, `mutateTournament<K 
 
 Fresh review: required — staff authorization and recovery paths protecting durable score data
 
-- [ ] Install `@supabase/supabase-js` through npm; create `src/lib/supabase.ts` and `.env.example` using only the public URL/key in browser configuration, with explicit missing-configuration errors.
-- [ ] Create `src/data/tournament.ts` to map generated database responses into domain records, invoke named RPCs, and subscribe to public changes as invalidations; refetch on reconnect and mutation acknowledgement, reject stale responses, and clean up subscriptions.
-- [ ] Create `src/data/staff.ts` for anonymous Auth plus PIN elevation, registry-backed access checks, current-session revocation before sign-out, PIN rotation, and private ownership checks; preserve explicit errors if server-side sign-out revocation fails.
-- [ ] Create `src/features/scoring/scoring-state.ts` with exported `ScoringState`, `ScoringEvent`, and `reduceScoring`; permit one in-flight point, retain its request/version through failures, retry the same request, pause until acknowledgement, and require explicit takeover after ownership conflicts.
-- [ ] Create `src/features/scoring/scoring-state.test.ts` and `src/data/tournament.test.ts` for failed-save retry identity, duplicate acknowledgements, stale snapshots, winning-score review/dismiss/undo, reconnection, and revoked ownership; test logic without rendering components.
+- [x] Install `@supabase/supabase-js` through npm; create `src/lib/supabase.ts` and `.env.example` using only the public URL/key in browser configuration, with explicit missing-configuration errors.
+- [x] Install `zod` through npm in `package.json`/`package-lock.json` for runtime validation at the Supabase DTO boundary. (amended 2026-09-09)
+- [x] Create `src/data/tournament.ts` to map generated database responses into domain records, invoke named RPCs, and subscribe to public changes as invalidations; refetch on reconnect and mutation acknowledgement, reject stale responses, and clean up subscriptions.
+- [x] Create `src/data/staff.ts` for anonymous Auth plus PIN elevation, registry-backed access checks, current-session revocation before sign-out, PIN rotation, and private ownership checks; preserve explicit errors if server-side sign-out revocation fails.
+- [x] Create `src/features/scoring/scoring-state.ts` with exported `ScoringState`, `ScoringEvent`, and `reduceScoring`; permit one in-flight point, retain its request/version through failures, retry the same request, pause until acknowledgement, and require explicit takeover after ownership conflicts.
+- [x] Create `src/features/scoring/scoring-state.test.ts` and `src/data/tournament.test.ts` for failed-save retry identity, duplicate acknowledgements, stale snapshots, winning-score review/dismiss/undo, reconnection, and revoked ownership; test logic without rendering components.
+- [x] In `src/data/tournament.ts` and `src/data/tournament.test.ts`, keep Realtime cleanup and reconnect handling safe in the Node test runtime while retaining browser online recovery. (amended 2026-09-09)
+- [x] In `src/features/scoring/scoring-state.ts` and `src/features/scoring/scoring-state.test.ts`, preserve the original point mutation envelope through ownership recovery, retain newer authoritative observations until acknowledgement, and add explicit version-conflict reconciliation before a new request. (amended 2026-09-09)
+- [x] In `src/data/tournament.ts` and `src/data/tournament.test.ts`, isolate Realtime channels per subscriber so one cleanup cannot disconnect remaining subscribers. (amended 2026-09-09)
+- [x] In `src/features/scoring/scoring-state.ts` and `src/features/scoring/scoring-state.test.ts`, preserve equal-version authorization revocation and reject ownership-recovery results older than the current or retained authoritative observation. (amended 2026-09-09)
 
 **Phase gate (hard):**
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed files>` from the real phase diff; if SQL/Edge/configuration changes occur, also run the fallback `npm exec vitest -- run tests/integration` with the same explicit local-service debt rule as Phase 2.
+- [x] Run `npm run typecheck` project-wide.
+- [~] Run `npm run test:related -- <changed files>` from the real phase diff; if SQL/Edge/configuration changes occur, also run the fallback `npm exec vitest -- run tests/integration` with the same explicit local-service debt rule as Phase 2. The real Phase 3 diff selected both integration suites because `package-lock.json` changed; 54 tests passed and 9 integration tests could not connect to `/Users/thomasduong/.orbstack/run/docker.sock`. Substitute `npm exec vitest -- run src` passed all 54 source tests.
+- [~] Rerun `npm run typecheck` and `npm run test:related -- <changed files>` after fresh-review corrections, with the same explicit local-service debt rule and source-test substitute. Typechecking passed; 57 tests passed and 9 integration tests could not connect to `/Users/thomasduong/.orbstack/run/docker.sock`; substitute `npm exec vitest -- run src` passed all 57 source tests. (amended 2026-09-09)
+- [~] Rerun `npm run typecheck` and `npm run test:related -- <changed files>` after resolving the surviving re-review findings, with the same explicit local-service debt rule and source-test substitute. Typechecking passed; 59 tests passed and 9 integration tests could not connect to `/Users/thomasduong/.orbstack/run/docker.sock`; substitute `npm exec vitest -- run src` passed all 59 source tests. (amended 2026-09-09)
 
 **Review checklist (user, at PR review):**
 - [ ] Confirm that retries preserve one pending point and that a restored session can recover ownership without an automatic takeover.
@@ -104,18 +119,25 @@ Consumes: all exported data/staff functions and `reduceScoring(state: ScoringSta
 
 Fresh review: required — staff access integration and score/result recovery controls
 
-- [ ] Configure Tailwind and shadcn through their official installation commands in `package.json`, `package-lock.json`, `vite.config.ts`, TypeScript alias configuration, and `components.json`; consult the official catalog and install applicable button, dialog, alert-dialog, input, label, select, tabs, dropdown-menu, table, badge, and alert controls into `src/components/ui/` through the CLI; never reconstruct components from docs or `node_modules`.
-- [ ] Replace starter styling in `src/index.css`/`src/App.css`, self-host Be Vietnam Pro under `public/fonts/`, and retain required notices in `THIRD_PARTY_NOTICES.md`; implement company tokens, rounded ticket details, contrast, focus styles, responsive spacing and reduced-motion behavior.
-- [ ] Replace `src/App.tsx` with snapshot loading, error/retry states, public/staff navigation, and stage-driven default views; keep viewer access free of Auth creation and close protected controls when the staff grant expires or is revoked.
-- [ ] Create `src/features/tournament/TournamentPage.tsx`, `MatchTicket.tsx`, `StandingsTable.tsx`, and `KnockoutBracket.tsx` with current courts, upcoming order, explicit group-confirmation waiting state, named pairs plus both players/seeds, rounded knockout tickets, and champion priority; omit the deferred public results history.
-- [ ] Create `src/features/staff/StaffAccessDialog.tsx` and `StaffMenu.tsx` for PIN entry, actionable rate-limit feedback, staff-only navigation, sign-out, and confirmed PIN rotation; never embed secrets or treat hidden navigation as authorization.
-- [ ] Create `src/features/scoring/ScoreTracker.tsx` using `reduceScoring` and data functions: full-viewport side-by-side panels, player/seed labels, large scores, Undo/Confirm above scores, safe-area handling, winning-score confirmation, failed-save retry, reload recovery, and explicit takeover; omit tap instructions and direct live-score editing.
-- [ ] Create `src/features/organizer/OrganizerPage.tsx`, `SetupForm.tsx`, and `ResultEditor.tsx` for player/seed/team/group setup, advisory same-seed warnings, fixture generation, editable upcoming courts/order, completed-result lookup/correction, direct results, walkovers, withdrawals, tie explanations, group confirmation, and explicit reopening; mirror server restrictions and confirm consequential actions.
-- [ ] Finish `README.md` and `docs/deployment.md` with company-account deployment configuration, public environment variables, Supabase migrations/Edge publication, current commercial-license checks, and the day-before-event resume/read/write/realtime smoke procedure; do not provision or deploy.
+- [x] Configure Tailwind and shadcn through their official installation commands in `package.json`, `package-lock.json`, `vite.config.ts`, TypeScript alias configuration, and `components.json`; consult the official catalog and install applicable button, dialog, alert-dialog, input, label, select, tabs, dropdown-menu, table, badge, and alert controls into `src/components/ui/` through the CLI; never reconstruct components from docs or `node_modules`.
+- [x] Replace starter styling in `src/index.css`/`src/App.css`, self-host Be Vietnam Pro under `public/fonts/`, and retain required notices in `THIRD_PARTY_NOTICES.md`; implement company tokens, rounded ticket details, contrast, focus styles, responsive spacing and reduced-motion behavior.
+- [x] Install `@tanstack/react-query` through npm in `package.json`/`package-lock.json` and configure `src/main.tsx` with one application query client for cached tournament state. (amended 2026-09-09)
+- [x] Replace `src/App.tsx` with snapshot loading, error/retry states, public/staff navigation, and stage-driven default views; keep viewer access free of Auth creation and close protected controls when the staff grant expires or is revoked.
+- [x] Create `src/features/tournament/TournamentPage.tsx`, `MatchTicket.tsx`, `StandingsTable.tsx`, and `KnockoutBracket.tsx` with current courts, upcoming order, explicit group-confirmation waiting state, named pairs plus both players/seeds, rounded knockout tickets, and champion priority; omit the deferred public results history.
+- [x] Create `src/features/staff/StaffAccessDialog.tsx` and `StaffMenu.tsx` for PIN entry, actionable rate-limit feedback, staff-only navigation, sign-out, and confirmed PIN rotation; never embed secrets or treat hidden navigation as authorization.
+- [x] Create `src/features/scoring/ScoreTracker.tsx` using `reduceScoring` and data functions: full-viewport side-by-side panels, player/seed labels, large scores, Undo/Confirm above scores, safe-area handling, winning-score confirmation, failed-save retry, reload recovery, and explicit takeover; omit tap instructions and direct live-score editing.
+- [x] Create `src/features/organizer/OrganizerPage.tsx`, `SetupForm.tsx`, and `ResultEditor.tsx` for player/seed/team/group setup, advisory same-seed warnings, fixture generation, editable upcoming courts/order, completed-result lookup/correction, direct results, walkovers, withdrawals, tie explanations, group confirmation, and explicit reopening; mirror server restrictions and confirm consequential actions.
+- [x] Treat an absent tournament snapshot as the expected first-time bootstrap state in `src/data/tournament.ts`, cover it in `src/data/tournament.test.ts`, and route authenticated staff from `src/App.tsx` into `SetupForm.tsx` with expected version 0. (amended 2026-09-09)
+- [x] In `ScoreTracker.tsx`, `scoring-state.ts`/tests, `ResultEditor.tsx`, and the public tournament components, block independent score mutations during failed saves, reconcile equal-version takeover ownership without replacing newer revocation, permit safe same-winner corrections, and show both player names/seeds when a team name exists. (amended 2026-09-09)
+- [x] In `KnockoutBracket.tsx` and `ScoreTracker.tsx`, number semifinals independently of shared playing order and surface/reconcile failed Undo, Confirm, and takeover mutations before re-enabling score actions. (amended 2026-09-09)
+- [x] Use `import.meta.dirname` for the Vite alias in `vite.config.ts` so the production build remains compatible with Vite's future native configuration loader. (amended 2026-09-09)
+- [x] Add `202609090001_fix_pin_attempt_timestamp.sql` to prevent PostgreSQL from resolving the rate-limit function's timestamp variable as the `CURRENT_TIME` time-with-time-zone keyword. (amended 2026-09-09)
+- [x] Ignore root `.env` files in `.gitignore` after connecting the hosted Supabase project, while retaining `.env.example` and keeping `.env.local` untracked. (amended 2026-09-09)
+- [x] Finish `README.md` and `docs/deployment.md` with company-account deployment configuration, public environment variables, Supabase migrations/Edge publication, current commercial-license checks, and the day-before-event resume/read/write/realtime smoke procedure; do not provision or deploy.
 
 **Phase gate (hard):**
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed files>` from the real phase diff; pure presentation changes may have no related tests, which must be reported explicitly without adding UI tests. For SQL/Edge/configuration changes, also run `npm exec vitest -- run tests/integration`, recording local-service blockers as debt rather than silently skipping them.
+- [x] Run `npm run typecheck` project-wide. Passed on 2026-09-09 after the hosted PIN-rate-limit correction.
+- [~] Run `npm run test:related -- <changed files>` from the real phase diff; pure presentation changes may have no related tests, which must be reported explicitly without adding UI tests. For SQL/Edge/configuration changes, also run `npm exec vitest -- run tests/integration`, recording local-service blockers as debt rather than silently skipping them. The real Phase 4 diff includes dependency/configuration and SQL changes, so it selects the Docker-backed integration suites. Per the user's explicit instruction to skip the established unavailable-local-service debt, those suites were not restarted; substitute `npm exec vitest -- run src` passed all 61 source tests on 2026-09-09.
 
 **Review checklist (user, at PR review):**
 - [ ] Compare desktop and phone layouts to `references/tournament-prototype.html`: rounded tickets, company colors, Be Vietnam Pro, restrained content, and readable player/seed labels.
@@ -128,5 +150,5 @@ Fresh review: required — staff access integration and score/result recovery co
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] Run `npm test` over the accumulated spec, including local Supabase integration tests; if Docker/Supabase/Edge services remain unavailable, record `[~]` with explicit verification debt and passing logic-test substitute evidence.
-- [ ] Run `npm run build`.
+- [~] Run `npm test` over the accumulated spec, including local Supabase integration tests; if Docker/Supabase/Edge services remain unavailable, record `[~]` with explicit verification debt and passing logic-test substitute evidence. The user explicitly directed the workflow not to restart the established Docker/Supabase debt; substitute `npm exec vitest -- run src` passed all 61 source tests on 2026-09-09.
+- [x] Run `npm run build`. Passed on 2026-09-09; Vite emitted only the non-blocking 748 KB chunk-size advisory.

@@ -1,111 +1,280 @@
-:root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
 
-  --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --mono: ui-monospace, Consolas, monospace;
+@custom-variant dark (&:is(.dark *));
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
-  color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
+@font-face {
+  font-family: "Be Vietnam Pro";
+  src: url("/fonts/BeVietnamPro-Regular.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
-
-  #social .button-icon {
-    filter: invert(1) brightness(2);
-  }
-}
-
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
-  box-sizing: border-box;
-}
-
-body {
-  margin: 0;
-}
-
-h1,
-h2 {
-  font-family: var(--heading);
+@font-face {
+  font-family: "Be Vietnam Pro";
+  src: url("/fonts/BeVietnamPro-Medium.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
   font-weight: 500;
-  color: var(--text-h);
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
+@font-face {
+  font-family: "Be Vietnam Pro";
+  src: url("/fonts/BeVietnamPro-SemiBold.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 600;
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  src: url("/fonts/BeVietnamPro-Bold.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 700;
+}
+
+@font-face {
+  font-family: "Be Vietnam Pro";
+  src: url("/fonts/BeVietnamPro-ExtraBold.woff2") format("woff2");
+  font-display: swap;
+  font-style: normal;
+  font-weight: 800;
+}
+
+:root {
+  --paper: #f4f4e8;
+  --ink: #0f2b29;
+  --muted-ink: #596e6b;
+  --dim-ink: #727f7f;
+  --line: #d0d4d4;
+  --hairline: #e5e5e9;
+  --rule: #a1aaa9;
+  --well: #f8f8f9;
+  --navy: #00448c;
+  --navy-soft: #ccdae8;
+  --mist: #e5ecf3;
+  --orange: #f15d27;
+  --cyan: #23c0c3;
+  --peach: #fcdfd4;
+  --peach-line: #f9bea9;
+  --ice: #d3f2f3;
+  --background: oklch(0.958 0.018 105.2);
+  --foreground: oklch(0.265 0.043 180.8);
+  --card: oklch(1 0 0);
+  --card-foreground: var(--foreground);
+  --popover: oklch(1 0 0);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.399 0.142 256.6);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.925 0.037 190.7);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.93 0.011 184.4);
+  --muted-foreground: oklch(0.49 0.033 183.8);
+  --accent: oklch(0.708 0.178 44.5);
+  --accent-foreground: var(--foreground);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.853 0.011 190.1);
+  --input: var(--border);
+  --ring: var(--primary);
+  --radius: 0.875rem;
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
+  --sidebar-primary-foreground: var(--primary-foreground);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--ring);
+}
+
+@theme inline {
+  --font-sans: "Be Vietnam Pro", sans-serif;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) * 0.7);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) * 1.25);
+  --radius-xl: calc(var(--radius) * 1.65);
+  --radius-2xl: calc(var(--radius) * 2);
+
+  /* Named radii from the design. One radius per role, so a card is never
+     accidentally a field and a chip is never accidentally a pill. */
+  --radius-card: 22px;
+  --radius-field: 12px;
+  --radius-chip: 10px;
+  --radius-step: 9px;
+  --radius-pill: 30px;
+
+  /* Palette, addressable as utilities (bg-peach, text-navy, border-line). */
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted-ink: var(--muted-ink);
+  --color-dim-ink: var(--dim-ink);
+  --color-line: var(--line);
+  --color-hairline: var(--hairline);
+  --color-rule: var(--rule);
+  --color-well: var(--well);
+  --color-navy: var(--navy);
+  --color-navy-soft: var(--navy-soft);
+  --color-mist: var(--mist);
+  --color-orange: var(--orange);
+  --color-cyan: var(--cyan);
+  --color-peach: var(--peach);
+  --color-peach-line: var(--peach-line);
+  --color-ice: var(--ice);
+
+  /* Flat offset shadows — the design has no blurred card shadows. */
+  --shadow-card: 0 6px 0 rgb(15 43 41 / 2%);
+  --shadow-ticket: 0 7px 0 rgb(15 43 41 / 1.5%);
+  --shadow-final: 0 10px 24px rgb(0 68 140 / 8%);
+  --shadow-float: 0 7px 20px rgb(15 43 41 / 9%);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  html {
+    background: var(--paper);
+  }
+
+  body {
+    @apply m-0 min-w-80 bg-background font-sans text-foreground antialiased;
+    min-height: 100svh;
+  }
+
+  button,
+  a,
+  input,
+  select {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /*
+   * Buttons and links get an offset outline. Fields do not — they carry their
+   * own focus treatment (navy border plus a mist ring) so the indicator sits on
+   * the control's own edge instead of floating 3px outside a dense form row.
+   */
+  button:focus-visible,
+  a:focus-visible {
+    outline: 3px solid var(--navy);
+    outline-offset: 3px;
+  }
+
+  button:active:not(:disabled) {
+    transform: translateY(1px);
   }
 }
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
+
+@layer utilities {
+  .ticket {
+    position: relative;
+    isolation: isolate;
+  }
+
+  /*
+   * The tear strip: a full-bleed dashed rule with two paper-coloured notches
+   * punched at the card edge. Sits inside a `.ticket`, pulled out to the card
+   * edge with negative margins so the rule reaches both sides.
+   */
+  .tear {
+    position: relative;
+    border-top: 1px dashed var(--rule);
+  }
+
+  .tear::before,
+  .tear::after {
+    position: absolute;
+    top: -0.5rem;
+    width: 1rem;
+    height: 1rem;
+    border-radius: 999px;
+    background: var(--paper);
+    content: "";
+  }
+
+  .tear::before {
+    left: -0.5rem;
+  }
+
+  .tear::after {
+    right: -0.5rem;
+  }
+
+  /* Same motif at bracket-card scale. */
+  .tear-sm::before,
+  .tear-sm::after {
+    top: -0.4375rem;
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .tear-sm::before {
+    left: -0.4375rem;
+  }
+
+  .tear-sm::after {
+    right: -0.4375rem;
+  }
+
+  .numeric {
+    font-variant-numeric: tabular-nums;
   }
 }
-p {
-  margin: 0;
+
+@media (prefers-reduced-motion: no-preference) {
+  .view-enter {
+    animation: view-enter 240ms ease-out both;
+  }
+
+  .lift-card {
+    transition: transform 180ms ease, box-shadow 180ms ease;
+  }
+
+  .lift-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 14px 30px rgb(15 43 41 / 9%);
+  }
+
+  @keyframes view-enter {
+    from {
+      opacity: 0;
+      transform: translateY(6px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
-}
-
-code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
