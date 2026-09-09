@@ -160,4 +160,55 @@ describe('tournament data', () => {
     unsubscribeSecond()
     expect(removeChannel).toHaveBeenCalledWith(secondChannel)
   })
+  it('hands a mutation\'s snapshot to subscribers so one command costs one snapshot read', async () => {
+    let changeHandler: ((payload: unknown) => void) | undefined
+    channel.on.mockImplementation((_event: string, _filter: unknown, handler: (payload: unknown) => void) => {
+      changeHandler = handler
+      return channel
+    })
+    const onChange = vi.fn()
+    const unsubscribe = subscribeTournament(onChange)
+    rpc
+      .mockResolvedValueOnce({ data: { requestId, tournamentVersion: 10, matchId: null, matchVersion: null }, error: null })
+      .mockResolvedValueOnce({ data: snapshot(10), error: null })
+
+    await mutateTournament('generate_fixtures', { requestId, expectedVersion: 9, payload: {} })
+
+    expect(rpc).toHaveBeenCalledTimes(2)
+    expect(onChange).toHaveBeenCalledOnce()
+    expect(onChange).toHaveBeenCalledWith(expect.objectContaining({
+      tournament: expect.objectContaining({ version: 10 }),
+    }))
+    expect(changeHandler).toBeTypeOf('function')
+    unsubscribe()
+  })
+
+  it('ignores a Realtime echo of a version it already holds', () => {
+    let changeHandler: ((payload: unknown) => void) | undefined
+    channel.on.mockImplementation((_event: string, _filter: unknown, handler: (payload: unknown) => void) => {
+      changeHandler = handler
+      return channel
+    })
+    const onChange = vi.fn()
+    const unsubscribe = subscribeTournament(onChange)
+
+    changeHandler?.({ new: { version: 10 } })
+    expect(onChange).not.toHaveBeenCalled()
+
+    changeHandler?.({ new: { version: 11 } })
+    expect(onChange).toHaveBeenCalledExactlyOnceWith(undefined)
+
+    unsubscribe()
+  })
+
+  it('subscribes only to the tournament table, the one row every mutation bumps', () => {
+    const unsubscribe = subscribeTournament(vi.fn())
+
+    expect(channel.on).toHaveBeenCalledWith(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'tournament' },
+      expect.any(Function),
+    )
+    unsubscribe()
+  })
 })

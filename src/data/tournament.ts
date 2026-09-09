@@ -88,7 +88,15 @@ type MatchDto = z.infer<typeof matchDtoSchema>
 
 let newestTournamentVersion = -1
 let subscriptionSequence = 0
-const invalidationListeners = new Set<() => void>()
+
+/**
+ * Listeners receive the snapshot when one was just fetched, so a subscriber can
+ * write it straight into its cache instead of triggering a second fetch of data
+ * this module already holds. A bare call means "something changed, go and look".
+ */
+type InvalidationListener = (snapshot?: TournamentSnapshot) => void
+
+const invalidationListeners = new Set<InvalidationListener>()
 
 export class InvalidTournamentDataError extends Error {
   readonly issues: z.core.$ZodIssue[] | undefined
@@ -236,13 +244,12 @@ export function fetchTournament(): Promise<TournamentSnapshot> {
   return fetchAtLeast(0)
 }
 
-function notifyInvalidation(): void {
-  for (const listener of invalidationListeners) listener()
+function notifyInvalidation(snapshot?: TournamentSnapshot): void {
+  for (const listener of invalidationListeners) listener(snapshot)
 }
 
 async function refreshAndNotify(requiredVersion: number): Promise<void> {
-  await fetchAtLeast(requiredVersion)
-  notifyInvalidation()
+  notifyInvalidation(await fetchAtLeast(requiredVersion))
 }
 
 export async function mutateTournament<K extends keyof CommandPayloads>(
@@ -260,7 +267,19 @@ export async function mutateTournament<K extends keyof CommandPayloads>(
   return receipt
 }
 
-export function subscribeTournament(onChange: () => void): () => void {
+/**
+ * Digs the new row's version out of a realtime payload, tolerating every shape
+ * that carries no version: a delete event, or a payload we did not expect.
+ */
+function changedVersion(payload: unknown): number | null {
+  if (typeof payload !== 'object' || payload === null) return null
+  const { new: record } = payload as { new?: unknown }
+  if (typeof record !== 'object' || record === null) return null
+  const { version } = record as { version?: unknown }
+  return typeof version === 'number' ? version : null
+}
+
+export function subscribeTournament(onChange: InvalidationListener): () => void {
   invalidationListeners.add(onChange)
   let disconnectedAfterSubscription = false
   let subscribed = false
@@ -277,7 +296,18 @@ export function subscribeTournament(onChange: () => void): () => void {
   subscriptionSequence += 1
   const channel = getSupabaseClient()
     .channel(`public-tournament-invalidations-${subscriptionSequence}`)
-    .on('postgres_changes', { event: '*', schema: 'public' }, notifyInvalidation)
+    /*
+     * Every mutation bumps `tournament.version`, so this one table is a
+     * complete change signal. Watching the whole schema meant a single point
+     * produced two events — one for `matches`, one for `tournament`.
+     */
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament' }, (payload) => {
+      // A mutation made here already fetched and published this version through
+      // `refreshAndNotify`; its echo would only refetch what we already hold.
+      const version = changedVersion(payload)
+      if (version !== null && version <= newestTournamentVersion) return
+      notifyInvalidation()
+    })
     .subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         if (subscribed && disconnectedAfterSubscription) refreshAfterReconnect()
