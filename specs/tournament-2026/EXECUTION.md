@@ -5,9 +5,9 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default; probe
 
 ## STATUS
 
-- Current phase: 2 — in-progress
+- Current phase: 2 — done-with-debt
 - Phase 1 — Domain contracts and logic: done
-- Phase 2 — Database and staff authorization: in-progress
+- Phase 2 — Database and staff authorization: done-with-debt
 - Phase 3 — Frontend data and scoring recovery: pending
 - Phase 4 — Tournament and staff screens: pending
 - Verification debt: Phase 2 local Supabase schema type generation and database/Edge integration execution are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is unavailable; `src/lib/database.types.ts` is migration-derived until CLI regeneration. Project-wide typechecking and all 45 domain tests pass, but no database verification is claimed.
