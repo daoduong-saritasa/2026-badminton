@@ -5,12 +5,12 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default; probe
 
 ## STATUS
 
-- Current phase: 4 — in-progress
+- Current phase: 4 — done-with-debt
 - Phase 1 — Domain contracts and logic: done
 - Phase 2 — Database and staff authorization: done-with-debt
 - Phase 3 — Frontend data and scoring recovery: done-with-debt
-- Phase 4 — Tournament and staff screens: in-progress
-- Verification debt: Phase 2 local Supabase schema type generation and database/Edge integration execution are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is unavailable; `src/lib/database.types.ts` is migration-derived until CLI regeneration. Phase 3's dependency-aware gate selected the integration suites after `package-lock.json` changed and hit the same unavailable socket; project-wide typechecking and all 59 source tests pass after resolving the review findings, but no database verification is claimed.
+- Phase 4 — Tournament and staff screens: done-with-debt
+- Verification debt: Phase 2 local Supabase schema type generation and database/Edge integration execution are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is unavailable; `src/lib/database.types.ts` is migration-derived until CLI regeneration. Phase 3's dependency-aware gate selected the integration suites after `package-lock.json` changed and hit the same unavailable socket. At the user's explicit direction, Phase 4 and the final spec gate did not restart that Docker-backed suite; project-wide typechecking, all 61 source tests, lint, and the production build pass. The linked hosted project records all five migrations and both Edge Functions as active, including the runtime correction to staff PIN rate limiting, but the disposable local integration suite and CLI-generated database types remain verification debt.
 
 ## Phase 1 — Domain contracts and logic
 
@@ -132,11 +132,12 @@ Fresh review: required — staff access integration and score/result recovery co
 - [x] In `KnockoutBracket.tsx` and `ScoreTracker.tsx`, number semifinals independently of shared playing order and surface/reconcile failed Undo, Confirm, and takeover mutations before re-enabling score actions. (amended 2026-09-09)
 - [x] Use `import.meta.dirname` for the Vite alias in `vite.config.ts` so the production build remains compatible with Vite's future native configuration loader. (amended 2026-09-09)
 - [x] Add `202609090001_fix_pin_attempt_timestamp.sql` to prevent PostgreSQL from resolving the rate-limit function's timestamp variable as the `CURRENT_TIME` time-with-time-zone keyword. (amended 2026-09-09)
+- [x] Ignore root `.env` files in `.gitignore` after connecting the hosted Supabase project, while retaining `.env.example` and keeping `.env.local` untracked. (amended 2026-09-09)
 - [x] Finish `README.md` and `docs/deployment.md` with company-account deployment configuration, public environment variables, Supabase migrations/Edge publication, current commercial-license checks, and the day-before-event resume/read/write/realtime smoke procedure; do not provision or deploy.
 
 **Phase gate (hard):**
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed files>` from the real phase diff; pure presentation changes may have no related tests, which must be reported explicitly without adding UI tests. For SQL/Edge/configuration changes, also run `npm exec vitest -- run tests/integration`, recording local-service blockers as debt rather than silently skipping them.
+- [x] Run `npm run typecheck` project-wide. Passed on 2026-09-09 after the hosted PIN-rate-limit correction.
+- [~] Run `npm run test:related -- <changed files>` from the real phase diff; pure presentation changes may have no related tests, which must be reported explicitly without adding UI tests. For SQL/Edge/configuration changes, also run `npm exec vitest -- run tests/integration`, recording local-service blockers as debt rather than silently skipping them. The real Phase 4 diff includes dependency/configuration and SQL changes, so it selects the Docker-backed integration suites. Per the user's explicit instruction to skip the established unavailable-local-service debt, those suites were not restarted; substitute `npm exec vitest -- run src` passed all 61 source tests on 2026-09-09.
 
 **Review checklist (user, at PR review):**
 - [ ] Compare desktop and phone layouts to `references/tournament-prototype.html`: rounded tickets, company colors, Be Vietnam Pro, restrained content, and readable player/seed labels.
@@ -149,5 +150,5 @@ Fresh review: required — staff access integration and score/result recovery co
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] Run `npm test` over the accumulated spec, including local Supabase integration tests; if Docker/Supabase/Edge services remain unavailable, record `[~]` with explicit verification debt and passing logic-test substitute evidence.
-- [ ] Run `npm run build`.
+- [~] Run `npm test` over the accumulated spec, including local Supabase integration tests; if Docker/Supabase/Edge services remain unavailable, record `[~]` with explicit verification debt and passing logic-test substitute evidence. The user explicitly directed the workflow not to restart the established Docker/Supabase debt; substitute `npm exec vitest -- run src` passed all 61 source tests on 2026-09-09.
+- [x] Run `npm run build`. Passed on 2026-09-09; Vite emitted only the non-blocking 748 KB chunk-size advisory.
