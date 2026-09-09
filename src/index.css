@@ -48,11 +48,18 @@
   --paper: #f4f4e8;
   --ink: #0f2b29;
   --muted-ink: #596e6b;
+  --dim-ink: #727f7f;
   --line: #d0d4d4;
+  --hairline: #e5e5e9;
+  --rule: #a1aaa9;
+  --well: #f8f8f9;
   --navy: #00448c;
+  --navy-soft: #ccdae8;
+  --mist: #e5ecf3;
   --orange: #f15d27;
   --cyan: #23c0c3;
   --peach: #fcdfd4;
+  --peach-line: #f9bea9;
   --ice: #d3f2f3;
   --background: oklch(0.958 0.018 105.2);
   --foreground: oklch(0.265 0.043 180.8);
@@ -108,6 +115,38 @@
   --radius-lg: calc(var(--radius) * 1.25);
   --radius-xl: calc(var(--radius) * 1.65);
   --radius-2xl: calc(var(--radius) * 2);
+
+  /* Named radii from the design. One radius per role, so a card is never
+     accidentally a field and a chip is never accidentally a pill. */
+  --radius-card: 22px;
+  --radius-field: 12px;
+  --radius-chip: 10px;
+  --radius-step: 9px;
+  --radius-pill: 30px;
+
+  /* Palette, addressable as utilities (bg-peach, text-navy, border-line). */
+  --color-paper: var(--paper);
+  --color-ink: var(--ink);
+  --color-muted-ink: var(--muted-ink);
+  --color-dim-ink: var(--dim-ink);
+  --color-line: var(--line);
+  --color-hairline: var(--hairline);
+  --color-rule: var(--rule);
+  --color-well: var(--well);
+  --color-navy: var(--navy);
+  --color-navy-soft: var(--navy-soft);
+  --color-mist: var(--mist);
+  --color-orange: var(--orange);
+  --color-cyan: var(--cyan);
+  --color-peach: var(--peach);
+  --color-peach-line: var(--peach-line);
+  --color-ice: var(--ice);
+
+  /* Flat offset shadows — the design has no blurred card shadows. */
+  --shadow-card: 0 6px 0 rgb(15 43 41 / 2%);
+  --shadow-ticket: 0 7px 0 rgb(15 43 41 / 1.5%);
+  --shadow-final: 0 10px 24px rgb(0 68 140 / 8%);
+  --shadow-float: 0 7px 20px rgb(15 43 41 / 9%);
 }
 
 @layer base {
@@ -131,10 +170,13 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /*
+   * Buttons and links get an offset outline. Fields do not — they carry their
+   * own focus treatment (navy border plus a mist ring) so the indicator sits on
+   * the control's own edge instead of floating 3px outside a dense form row.
+   */
   button:focus-visible,
-  a:focus-visible,
-  input:focus-visible,
-  select:focus-visible {
+  a:focus-visible {
     outline: 3px solid var(--navy);
     outline-offset: 3px;
   }
@@ -150,25 +192,49 @@
     isolation: isolate;
   }
 
-  .ticket::before,
-  .ticket::after {
+  /*
+   * The tear strip: a full-bleed dashed rule with two paper-coloured notches
+   * punched at the card edge. Sits inside a `.ticket`, pulled out to the card
+   * edge with negative margins so the rule reaches both sides.
+   */
+  .tear {
+    position: relative;
+    border-top: 1px dashed var(--rule);
+  }
+
+  .tear::before,
+  .tear::after {
     position: absolute;
-    z-index: 2;
-    top: var(--ticket-cutout-top, 70%);
+    top: -0.5rem;
     width: 1rem;
     height: 1rem;
     border-radius: 999px;
     background: var(--paper);
     content: "";
-    transform: translateY(-50%);
   }
 
-  .ticket::before {
+  .tear::before {
     left: -0.5rem;
   }
 
-  .ticket::after {
+  .tear::after {
     right: -0.5rem;
+  }
+
+  /* Same motif at bracket-card scale. */
+  .tear-sm::before,
+  .tear-sm::after {
+    top: -0.4375rem;
+    width: 0.875rem;
+    height: 0.875rem;
+  }
+
+  .tear-sm::before {
+    left: -0.4375rem;
+  }
+
+  .tear-sm::after {
+    right: -0.4375rem;
   }
 
   .numeric {
