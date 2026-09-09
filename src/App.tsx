@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StaffAccessDialog } from '@/features/staff/StaffAccessDialog'
 import { StaffMenu } from '@/features/staff/StaffMenu'
+import { ScoreTracker } from '@/features/scoring/ScoreTracker'
 import { KnockoutBracket } from '@/features/tournament/KnockoutBracket'
 import { StandingsTable } from '@/features/tournament/StandingsTable'
 import { TournamentPage } from '@/features/tournament/TournamentPage'
@@ -143,6 +144,9 @@ export default function App() {
   const handleSignedOut = () => {
     queryClient.setQueryData(staffQueryKey, null)
     setSelectedView(null)
+  }
+  if (view === 'scoring') {
+    return <ScoreTracker snapshot={snapshot} onExit={() => setSelectedView('matches')} />
   }
   const viewContent = renderView(snapshot, view)
 
