@@ -439,3 +439,259 @@ revoke all on function private.replay_mutation(uuid, uuid, text, jsonb) from pub
 revoke all on function private.store_mutation(uuid, uuid, text, jsonb, jsonb, uuid, text) from public, anon, authenticated, service_role;
 revoke all on function private.require_tournament_version(integer) from public, anon, authenticated, service_role;
 revoke all on function private.receipt(uuid, integer, uuid, integer) from public, anon, authenticated, service_role;
+
+create or replace function private.is_winning_score(p_score_a integer, p_score_b integer)
+returns boolean
+language sql
+immutable
+set search_path = ''
+as $$
+  select case
+    when p_score_a is null or p_score_b is null
+      or p_score_a < 0 or p_score_b < 0
+      or p_score_a > 30 or p_score_b > 30
+      or p_score_a = p_score_b then false
+    when greatest(p_score_a, p_score_b) = 30
+      then least(p_score_a, p_score_b) in (28, 29)
+    when greatest(p_score_a, p_score_b) = 21
+      then least(p_score_a, p_score_b) <= 19
+    else greatest(p_score_a, p_score_b) between 22 and 29
+      and abs(p_score_a - p_score_b) = 2
+  end;
+$$;
+
+create or replace function private.require_match_version(
+  p_match_id uuid,
+  p_expected_version integer
+)
+returns public.matches
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  current_match public.matches%rowtype;
+begin
+  select * into current_match from public.matches where id = p_match_id for update;
+  if not found then raise exception 'Match not found' using errcode = 'P0002'; end if;
+  if current_match.version <> p_expected_version then
+    raise exception 'Match version conflict' using errcode = '40001';
+  end if;
+  return current_match;
+end;
+$$;
+
+create or replace function private.require_match_owner(p_match_id uuid, p_session_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+begin
+  if not exists (
+    select 1 from private.match_ownership
+    where match_id = p_match_id and session_id = p_session_id
+  ) then
+    raise exception 'Current session does not own this match' using errcode = '42501';
+  end if;
+end;
+$$;
+
+create or replace function private.bump_tournament()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare next_version integer;
+begin
+  update public.tournament
+  set version = version + 1, updated_at = clock_timestamp()
+  where singleton
+  returning version into strict next_version;
+  return next_version;
+end;
+$$;
+
+create or replace function public.start_scoring(p_request_id uuid, p_expected_version integer, p_payload jsonb)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  staff_session uuid; replay jsonb; current_match public.matches%rowtype;
+  next_match_version integer; next_tournament_version integer; response jsonb;
+  target_match_id uuid := (p_payload ->> 'matchId')::uuid;
+begin
+  staff_session := private.require_staff_access(); perform private.lock_mutations();
+  replay := private.replay_mutation(staff_session, p_request_id, 'start_scoring', p_payload);
+  if replay is not null then return replay; end if;
+  current_match := private.require_match_version(target_match_id, p_expected_version);
+  if current_match.state <> 'unstarted' or current_match.pair_a_id is null
+    or current_match.pair_b_id is null or current_match.court is null then
+    raise exception 'Match is not ready to start' using errcode = '55000';
+  end if;
+  if exists (
+    select 1 from public.matches as active
+    where active.state = 'playing' and (
+      active.court = current_match.court
+      or active.pair_a_id in (current_match.pair_a_id, current_match.pair_b_id)
+      or active.pair_b_id in (current_match.pair_a_id, current_match.pair_b_id)
+    )
+  ) then raise exception 'Court or pair is already playing' using errcode = '23505'; end if;
+
+  update public.tournament
+  set setup_locked_at = coalesce(setup_locked_at, clock_timestamp()), updated_at = clock_timestamp()
+  where singleton;
+  update public.matches
+  set state = 'playing', score_a = 0, score_b = 0, version = version + 1,
+      updated_at = clock_timestamp()
+  where id = target_match_id returning version into next_match_version;
+  insert into private.match_ownership (match_id, session_id)
+  values (target_match_id, staff_session);
+  next_tournament_version := private.bump_tournament();
+  response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
+  return private.store_mutation(staff_session, p_request_id, 'start_scoring', p_payload, response, target_match_id);
+end;
+$$;
+
+create or replace function public.take_over(p_request_id uuid, p_expected_version integer, p_payload jsonb)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  staff_session uuid; replay jsonb; current_match public.matches%rowtype;
+  next_match_version integer; next_tournament_version integer; response jsonb;
+  target_match_id uuid := (p_payload ->> 'matchId')::uuid;
+begin
+  staff_session := private.require_staff_access(); perform private.lock_mutations();
+  replay := private.replay_mutation(staff_session, p_request_id, 'take_over', p_payload);
+  if replay is not null then return replay; end if;
+  current_match := private.require_match_version(target_match_id, p_expected_version);
+  if current_match.state <> 'playing' then
+    raise exception 'Only a playing match can be taken over' using errcode = '55000';
+  end if;
+  insert into private.match_ownership (match_id, session_id, claimed_at)
+  values (target_match_id, staff_session, clock_timestamp())
+  on conflict (match_id) do update
+  set session_id = excluded.session_id, claimed_at = excluded.claimed_at;
+  update public.matches set version = version + 1, updated_at = clock_timestamp()
+  where id = target_match_id returning version into next_match_version;
+  next_tournament_version := private.bump_tournament();
+  response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
+  return private.store_mutation(staff_session, p_request_id, 'take_over', p_payload, response, target_match_id);
+end;
+$$;
+
+create or replace function public.add_point(p_request_id uuid, p_expected_version integer, p_payload jsonb)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  staff_session uuid; replay jsonb; current_match public.matches%rowtype;
+  side text := p_payload ->> 'side'; target_match_id uuid := (p_payload ->> 'matchId')::uuid;
+  next_match_version integer; next_tournament_version integer; response jsonb;
+begin
+  staff_session := private.require_staff_access(); perform private.lock_mutations();
+  replay := private.replay_mutation(staff_session, p_request_id, 'add_point', p_payload);
+  if replay is not null then return replay; end if;
+  current_match := private.require_match_version(target_match_id, p_expected_version);
+  perform private.require_match_owner(target_match_id, staff_session);
+  if side not in ('a', 'b') or current_match.state <> 'playing'
+    or private.is_winning_score(current_match.score_a, current_match.score_b) then
+    raise exception 'Point cannot be added' using errcode = '55000';
+  end if;
+  update public.matches
+  set score_a = score_a + case when side = 'a' then 1 else 0 end,
+      score_b = score_b + case when side = 'b' then 1 else 0 end,
+      version = version + 1, updated_at = clock_timestamp()
+  where id = target_match_id returning version into next_match_version;
+  next_tournament_version := private.bump_tournament();
+  response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
+  return private.store_mutation(staff_session, p_request_id, 'add_point', p_payload, response, target_match_id, side);
+end;
+$$;
+
+create or replace function public.undo_point(p_request_id uuid, p_expected_version integer, p_payload jsonb)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  staff_session uuid; replay jsonb; current_match public.matches%rowtype; point_log private.mutation_log%rowtype;
+  target_match_id uuid := (p_payload ->> 'matchId')::uuid;
+  next_match_version integer; next_tournament_version integer; response jsonb;
+begin
+  staff_session := private.require_staff_access(); perform private.lock_mutations();
+  replay := private.replay_mutation(staff_session, p_request_id, 'undo_point', p_payload);
+  if replay is not null then return replay; end if;
+  current_match := private.require_match_version(target_match_id, p_expected_version);
+  perform private.require_match_owner(target_match_id, staff_session);
+  if current_match.state <> 'playing' then
+    raise exception 'Only a playing match can be undone' using errcode = '55000';
+  end if;
+  select * into point_log from private.mutation_log as point_entry
+  where point_entry.match_id = target_match_id and point_entry.operation = 'add_point' and not point_entry.undone
+  order by created_at desc, request_id desc limit 1 for update;
+  if not found then raise exception 'No point is available to undo' using errcode = '55000'; end if;
+  if (point_log.point_side = 'a' and current_match.score_a <= 0)
+    or (point_log.point_side = 'b' and current_match.score_b <= 0) then
+    raise exception 'Score history is inconsistent' using errcode = '55000';
+  end if;
+  update public.matches
+  set score_a = score_a - case when point_log.point_side = 'a' then 1 else 0 end,
+      score_b = score_b - case when point_log.point_side = 'b' then 1 else 0 end,
+      version = version + 1, updated_at = clock_timestamp()
+  where id = target_match_id returning version into next_match_version;
+  update private.mutation_log set undone = true
+  where request_id = point_log.request_id and staff_session_id = point_log.staff_session_id;
+  next_tournament_version := private.bump_tournament();
+  response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
+  return private.store_mutation(staff_session, p_request_id, 'undo_point', p_payload, response, target_match_id);
+end;
+$$;
+
+create or replace function public.confirm_result(p_request_id uuid, p_expected_version integer, p_payload jsonb)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  staff_session uuid; replay jsonb; current_match public.matches%rowtype;
+  target_match_id uuid := (p_payload ->> 'matchId')::uuid; winner uuid;
+  next_match_version integer; next_tournament_version integer; response jsonb;
+begin
+  staff_session := private.require_staff_access(); perform private.lock_mutations();
+  replay := private.replay_mutation(staff_session, p_request_id, 'confirm_result', p_payload);
+  if replay is not null then return replay; end if;
+  current_match := private.require_match_version(target_match_id, p_expected_version);
+  perform private.require_match_owner(target_match_id, staff_session);
+  if current_match.state <> 'playing'
+    or not private.is_winning_score(current_match.score_a, current_match.score_b) then
+    raise exception 'Match has no winning score to confirm' using errcode = '55000';
+  end if;
+  winner := case when current_match.score_a > current_match.score_b
+    then current_match.pair_a_id else current_match.pair_b_id end;
+  update public.matches
+  set state = 'completed', result_kind = 'played', winner_id = winner,
+      version = version + 1, updated_at = clock_timestamp()
+  where id = target_match_id returning version into next_match_version;
+  delete from private.match_ownership where match_id = target_match_id;
+
+  if current_match.round = 'semifinal' then
+    update public.matches
+    set pair_a_id = case when source_a_match_id = target_match_id then winner else pair_a_id end,
+        pair_b_id = case when source_b_match_id = target_match_id then winner else pair_b_id end,
+        updated_at = clock_timestamp()
+    where round = 'final' and (source_a_match_id = target_match_id or source_b_match_id = target_match_id);
+  elsif current_match.round = 'final' then
+    update public.tournament set stage = 'completed' where singleton;
+  end if;
+
+  next_tournament_version := private.bump_tournament();
+  response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
+  return private.store_mutation(staff_session, p_request_id, 'confirm_result', p_payload, response, target_match_id);
+end;
+$$;
+
+revoke all on function private.is_winning_score(integer, integer) from public, anon, authenticated, service_role;
+revoke all on function private.require_match_version(uuid, integer) from public, anon, authenticated, service_role;
+revoke all on function private.require_match_owner(uuid, uuid) from public, anon, authenticated, service_role;
+revoke all on function private.bump_tournament() from public, anon, authenticated, service_role;
+revoke all on function public.start_scoring(uuid, integer, jsonb) from public, anon;
+revoke all on function public.take_over(uuid, integer, jsonb) from public, anon;
+revoke all on function public.add_point(uuid, integer, jsonb) from public, anon;
+revoke all on function public.undo_point(uuid, integer, jsonb) from public, anon;
+revoke all on function public.confirm_result(uuid, integer, jsonb) from public, anon;
+grant execute on function public.start_scoring(uuid, integer, jsonb) to authenticated;
+grant execute on function public.take_over(uuid, integer, jsonb) to authenticated;
+grant execute on function public.add_point(uuid, integer, jsonb) to authenticated;
+grant execute on function public.undo_point(uuid, integer, jsonb) to authenticated;
+grant execute on function public.confirm_result(uuid, integer, jsonb) to authenticated;
