@@ -5,11 +5,11 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default; probe
 
 ## STATUS
 
-- Current phase: 3 — done-with-debt
+- Current phase: 4 — in-progress
 - Phase 1 — Domain contracts and logic: done
 - Phase 2 — Database and staff authorization: done-with-debt
 - Phase 3 — Frontend data and scoring recovery: done-with-debt
-- Phase 4 — Tournament and staff screens: pending
+- Phase 4 — Tournament and staff screens: in-progress
 - Verification debt: Phase 2 local Supabase schema type generation and database/Edge integration execution are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is unavailable; `src/lib/database.types.ts` is migration-derived until CLI regeneration. Phase 3's dependency-aware gate selected the integration suites after `package-lock.json` changed and hit the same unavailable socket; project-wide typechecking and all 59 source tests pass after resolving the review findings, but no database verification is claimed.
 
 ## Phase 1 — Domain contracts and logic
@@ -119,7 +119,7 @@ Consumes: all exported data/staff functions and `reduceScoring(state: ScoringSta
 
 Fresh review: required — staff access integration and score/result recovery controls
 
-- [ ] Configure Tailwind and shadcn through their official installation commands in `package.json`, `package-lock.json`, `vite.config.ts`, TypeScript alias configuration, and `components.json`; consult the official catalog and install applicable button, dialog, alert-dialog, input, label, select, tabs, dropdown-menu, table, badge, and alert controls into `src/components/ui/` through the CLI; never reconstruct components from docs or `node_modules`.
+- [x] Configure Tailwind and shadcn through their official installation commands in `package.json`, `package-lock.json`, `vite.config.ts`, TypeScript alias configuration, and `components.json`; consult the official catalog and install applicable button, dialog, alert-dialog, input, label, select, tabs, dropdown-menu, table, badge, and alert controls into `src/components/ui/` through the CLI; never reconstruct components from docs or `node_modules`.
 - [ ] Replace starter styling in `src/index.css`/`src/App.css`, self-host Be Vietnam Pro under `public/fonts/`, and retain required notices in `THIRD_PARTY_NOTICES.md`; implement company tokens, rounded ticket details, contrast, focus styles, responsive spacing and reduced-motion behavior.
 - [ ] Replace `src/App.tsx` with snapshot loading, error/retry states, public/staff navigation, and stage-driven default views; keep viewer access free of Auth creation and close protected controls when the staff grant expires or is revoked.
 - [ ] Create `src/features/tournament/TournamentPage.tsx`, `MatchTicket.tsx`, `StandingsTable.tsx`, and `KnockoutBracket.tsx` with current courts, upcoming order, explicit group-confirmation waiting state, named pairs plus both players/seeds, rounded knockout tickets, and champion priority; omit the deferred public results history.
