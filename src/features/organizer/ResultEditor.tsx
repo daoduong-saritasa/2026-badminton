@@ -34,8 +34,9 @@ function editableResultMatches(snapshot: TournamentSnapshot): Match[] {
   )
 }
 
-function correctionBlocked(snapshot: TournamentSnapshot, match: Match): boolean {
+function correctionBlocked(snapshot: TournamentSnapshot, match: Match, proposedWinnerId: UUID | null): boolean {
   if (match.state !== 'completed') return false
+  if (proposedWinnerId === null || proposedWinnerId === match.winnerId) return false
   if (match.round === 'group') {
     return snapshot.matches.some((candidate) => candidate.round !== 'group' && candidate.state !== 'unstarted')
   }
@@ -90,9 +91,12 @@ export function ResultEditor({ snapshot }: { snapshot: TournamentSnapshot }) {
 
   const score = { a: Number(scoreA), b: Number(scoreB) }
   const scoreValid = Number.isInteger(score.a) && Number.isInteger(score.b) && isWinningScore(score)
+  const proposedWinnerId = match && scoreValid
+    ? (score.a > score.b ? match.pairAId : match.pairBId)
+    : null
   const activePairs = snapshot.pairs.filter((pair) => !pair.withdrawn)
   const withdrawalBlocked = snapshot.matches.some((candidate) => candidate.round !== 'group' && candidate.state !== 'unstarted')
-  const blocked = match ? correctionBlocked(snapshot, match) : false
+  const blocked = match ? correctionBlocked(snapshot, match, proposedWinnerId) : false
 
   return (
     <section className="rounded-[1.375rem] border bg-white p-5 shadow-[0_6px_0_rgb(15_43_41/0.03)]">
@@ -124,7 +128,7 @@ export function ResultEditor({ snapshot }: { snapshot: TournamentSnapshot }) {
               <Input id="score-b" type="number" min="0" max="30" value={scoreB} onChange={(event) => setScoreB(event.target.value)} />
             </div>
           </div>
-          {blocked ? <p className="text-xs text-destructive">Downstream play has started, so this result can no longer change.</p> : null}
+          {blocked ? <p className="text-xs text-destructive">Downstream play has started, so the existing winner cannot change. A same-winner score correction remains allowed.</p> : null}
           {!scoreValid ? <p className="text-xs text-muted-foreground">Use a completed badminton score: win by two from 21, capped at 30.</p> : null}
           <div className="flex flex-wrap gap-2">
             <Button disabled={!scoreValid || blocked} onClick={() => setPending({ kind: 'score', match, score })}>

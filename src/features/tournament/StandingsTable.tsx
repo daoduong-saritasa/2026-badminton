@@ -9,7 +9,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-import { pairName } from './MatchTicket'
+import { pairName, pairPlayers, pairSeeds, pairTeamName } from './MatchTicket'
 
 function GroupTable({ group, snapshot }: { group: Group; snapshot: TournamentSnapshot }) {
   const standings = calculateStandings(snapshot, group)
@@ -32,7 +32,10 @@ function GroupTable({ group, snapshot }: { group: Group; snapshot: TournamentSna
                 <span className="mr-2 text-[0.625rem] text-muted-foreground">
                   {standing.rank ?? '–'}
                 </span>
-                {pairName(snapshot, standing.pairId)}
+                <span>{pairName(snapshot, standing.pairId)}</span>
+                <span className="mt-0.5 block truncate text-[0.625rem] font-normal text-muted-foreground">
+                  {pairTeamName(snapshot, standing.pairId) ? `${pairPlayers(snapshot, standing.pairId)} · ` : ''}{pairSeeds(snapshot, standing.pairId)}
+                </span>
               </TableCell>
               <TableCell className="numeric text-right">{standing.played}</TableCell>
               <TableCell className="numeric text-right">{standing.wins}</TableCell>

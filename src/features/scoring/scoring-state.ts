@@ -174,7 +174,7 @@ export function reduceScoring(state: ScoringState, event: ScoringEvent): Scoring
         hasOwnership: true,
       }
       if (state.status === 'idle' || state.status === 'reviewing') {
-        if (event.matchVersion <= state.matchVersion) return state
+        if (event.matchVersion < state.matchVersion) return state
         if (isWinningScore(event.score)) {
           return { ...state, ...observation, status: 'reviewing', winningSide: winningSide(event.score) }
         }
@@ -182,12 +182,14 @@ export function reduceScoring(state: ScoringState, event: ScoringEvent): Scoring
       }
       if (state.status !== 'failed') return state
       if (event.matchVersion < state.matchVersion) return state
-      if (state.observed !== null && event.matchVersion <= state.observed.matchVersion) return state
+      if (state.observed !== null && event.matchVersion < state.observed.matchVersion) return state
       return {
         ...state,
         hasOwnership: true,
         matchVersion: event.matchVersion,
-        observed: observation,
+        observed: state.observed?.matchVersion === event.matchVersion
+          ? { ...state.observed, hasOwnership: true }
+          : observation,
       }
     }
     case 'snapshot-received':

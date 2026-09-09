@@ -201,6 +201,41 @@ describe('reduceScoring', () => {
     })
   })
 
+  it('accepts equal-version ownership recovery but not recovery older than a revocation', () => {
+    const failed = reduceScoring(
+      reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId }),
+      { type: 'point-failed', requestId, reason: 'ownership-conflict', message: 'taken over' },
+    )
+    const observed = reduceScoring(failed, {
+      type: 'snapshot-received',
+      score: { a: 10, b: 10 },
+      matchVersion: 8,
+      hasOwnership: false,
+    })
+    const recovered = reduceScoring(observed, {
+      type: 'ownership-recovered',
+      score: { a: 10, b: 10 },
+      matchVersion: 8,
+    })
+    expect(recovered).toMatchObject({
+      status: 'failed',
+      hasOwnership: true,
+      observed: { matchVersion: 8, hasOwnership: true },
+    })
+
+    const newerRevocation = reduceScoring(recovered, {
+      type: 'snapshot-received',
+      score: { a: 11, b: 10 },
+      matchVersion: 9,
+      hasOwnership: false,
+    })
+    expect(reduceScoring(newerRevocation, {
+      type: 'ownership-recovered',
+      score: { a: 10, b: 10 },
+      matchVersion: 8,
+    })).toBe(newerRevocation)
+  })
+
   it('preserves equal-version revocation through acknowledgement', () => {
     const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
     const ownedObservation = reduceScoring(saving, {

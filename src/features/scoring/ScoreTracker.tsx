@@ -71,16 +71,16 @@ async function latestMatch(matchId: string): Promise<PlayingMatch> {
 function ScoringSurface({
   match,
   snapshot,
-  initialOwnership,
+  ownership,
   onExit,
 }: {
   match: PlayingMatch
   snapshot: TournamentSnapshot
-  initialOwnership: boolean
+  ownership: boolean
   onExit: () => void
 }) {
   const queryClient = useQueryClient()
-  const [state, dispatch] = useReducer(reduceScoring, createInitialState(match, initialOwnership))
+  const [state, dispatch] = useReducer(reduceScoring, createInitialState(match, ownership))
   const [takeoverOpen, setTakeoverOpen] = useState(false)
 
   useEffect(() => {
@@ -88,9 +88,9 @@ function ScoringSurface({
       type: 'snapshot-received',
       score: match.score,
       matchVersion: match.version,
-      hasOwnership: state.hasOwnership,
+      hasOwnership: ownership,
     })
-  }, [match.score, match.version, state.hasOwnership])
+  }, [match.score, match.version, ownership])
 
   const runPoint = async (pending: PendingPoint) => {
     try {
@@ -144,10 +144,17 @@ function ScoringSurface({
         expectedVersion: match.version,
         payload: { matchId: match.id },
       })
-      return latestMatch(match.id)
+      const latest = await latestMatch(match.id)
+      const hasOwnership = await canScore(match.id)
+      return { latest, hasOwnership }
     },
-    onSuccess: (latest) => {
-      dispatch({ type: 'ownership-recovered', score: latest.score, matchVersion: latest.version })
+    onSuccess: ({ latest, hasOwnership }) => {
+      queryClient.setQueryData(['score-access', match.id], hasOwnership)
+      if (hasOwnership) {
+        dispatch({ type: 'ownership-recovered', score: latest.score, matchVersion: latest.version })
+      } else {
+        dispatch({ type: 'snapshot-received', score: latest.score, matchVersion: latest.version, hasOwnership: false })
+      }
       setTakeoverOpen(false)
     },
   })
@@ -185,7 +192,7 @@ function ScoringSurface({
             variant="ghost"
             size="sm"
             className="rounded-full"
-            disabled={undoMutation.isPending || state.status === 'saving'}
+            disabled={undoMutation.isPending || state.status === 'saving' || state.status === 'failed' || !state.hasOwnership}
             onClick={() => undoMutation.mutate()}
           >
             <RotateCcw /> Undo
@@ -193,7 +200,7 @@ function ScoringSurface({
           <Button
             size="sm"
             className="rounded-full"
-            disabled={!isWinningScore(state.score) || confirmMutation.isPending}
+            disabled={state.status !== 'reviewing' || confirmMutation.isPending}
             onClick={() => confirmMutation.mutate()}
           >
             Confirm
@@ -292,6 +299,7 @@ export function ScoreTracker({ snapshot, onExit }: { snapshot: TournamentSnapsho
     queryKey: ['score-access', match?.id],
     queryFn: () => canScore(match?.id ?? ''),
     enabled: match !== undefined,
+    refetchInterval: 5_000,
   })
 
   if (!match) {
@@ -327,7 +335,7 @@ export function ScoreTracker({ snapshot, onExit }: { snapshot: TournamentSnapsho
         key={match.id}
         match={match}
         snapshot={snapshot}
-        initialOwnership={ownershipQuery.data ?? false}
+        ownership={ownershipQuery.data ?? false}
         onExit={onExit}
       />
     </div>

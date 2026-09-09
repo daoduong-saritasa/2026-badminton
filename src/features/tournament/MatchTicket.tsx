@@ -10,10 +10,22 @@ export function pairName(snapshot: TournamentSnapshot, pairId: UUID | null): str
   if (pairId === null) return 'To be decided'
   const pair = snapshot.pairs.find((candidate) => candidate.id === pairId)
   if (!pair) return 'Unknown pair'
-  return pair.teamName ?? `${playerName(snapshot, pair.playerAId)} / ${playerName(snapshot, pair.playerBId)}`
+  return pair.teamName ?? pairPlayers(snapshot, pairId)
 }
 
-function pairSeeds(snapshot: TournamentSnapshot, pairId: UUID | null): string {
+export function pairPlayers(snapshot: TournamentSnapshot, pairId: UUID | null): string {
+  if (pairId === null) return 'Awaiting qualifier'
+  const pair = snapshot.pairs.find((candidate) => candidate.id === pairId)
+  if (!pair) return 'Unknown players'
+  return `${playerName(snapshot, pair.playerAId)} / ${playerName(snapshot, pair.playerBId)}`
+}
+
+export function pairTeamName(snapshot: TournamentSnapshot, pairId: UUID | null): string | null {
+  if (pairId === null) return null
+  return snapshot.pairs.find((candidate) => candidate.id === pairId)?.teamName ?? null
+}
+
+export function pairSeeds(snapshot: TournamentSnapshot, pairId: UUID | null): string {
   if (pairId === null) return 'Awaiting qualifier'
   const pair = snapshot.pairs.find((candidate) => candidate.id === pairId)
   if (!pair) return 'Seed unavailable'
@@ -37,9 +49,11 @@ function TicketSide({
 }) {
   const pairId = side === 'a' ? match.pairAId : match.pairBId
   const score = match.score?.[side] ?? '–'
+  const teamName = pairTeamName(snapshot, pairId)
   return (
     <div className="min-w-0 text-center">
       <p className="truncate text-sm font-semibold">{pairId ? pairName(snapshot, pairId) : sideLabel(match, side)}</p>
+      {teamName ? <p className="mt-1 truncate text-[0.6875rem] text-muted-foreground">{pairPlayers(snapshot, pairId)}</p> : null}
       <p className="mt-1 text-[0.625rem] uppercase tracking-wider text-muted-foreground">
         {pairSeeds(snapshot, pairId)}
       </p>

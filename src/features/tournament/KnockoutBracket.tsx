@@ -4,11 +4,13 @@ import type { Match, TournamentSnapshot } from '@/domain/types'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
 
-import { pairName } from './MatchTicket'
+import { pairName, pairPlayers, pairSeeds, pairTeamName } from './MatchTicket'
 
 function BracketMatch({ match, snapshot, final = false }: { match: Match; snapshot: TournamentSnapshot; final?: boolean }) {
-  const sideA = match.pairAId ? pairName(snapshot, match.pairAId) : match.sourceALabel
-  const sideB = match.pairBId ? pairName(snapshot, match.pairBId) : match.sourceBLabel
+  const sides = [
+    { pairId: match.pairAId, fallback: match.sourceALabel, score: match.score?.a },
+    { pairId: match.pairBId, fallback: match.sourceBLabel, score: match.score?.b },
+  ]
   return (
     <article className={cn('ticket rounded-[1.375rem] border p-5', final ? 'bg-primary text-primary-foreground' : 'bg-white')}>
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -17,12 +19,19 @@ function BracketMatch({ match, snapshot, final = false }: { match: Match; snapsh
           {match.court ? `Court ${match.court}` : 'Court pending'}
         </span>
       </div>
-      {[{ name: sideA, score: match.score?.a }, { name: sideB, score: match.score?.b }].map((side, index) => (
+      {sides.map((side, index) => (
         <div className="grid grid-cols-[2.25rem_1fr_2.25rem] items-center gap-3 border-t border-current/10 py-3" key={`${match.id}-${index}`}>
           <Badge className={cn('justify-center rounded-lg', final && 'bg-white/10 text-white')} variant="secondary">
             {index === 0 ? match.sourceALabel ?? 'A' : match.sourceBLabel ?? 'B'}
           </Badge>
-          <span className="truncate text-xs font-medium">{side.name}</span>
+          <div className="min-w-0">
+            <p className="truncate text-xs font-semibold">{side.pairId ? pairName(snapshot, side.pairId) : side.fallback}</p>
+            {side.pairId ? (
+              <p className={cn('mt-0.5 truncate text-[0.625rem]', final ? 'text-white/65' : 'text-muted-foreground')}>
+                {pairTeamName(snapshot, side.pairId) ? `${pairPlayers(snapshot, side.pairId)} · ` : ''}{pairSeeds(snapshot, side.pairId)}
+              </p>
+            ) : null}
+          </div>
           <strong className={cn('numeric rounded-lg p-2 text-center text-lg', final ? 'bg-white/10' : 'bg-muted')}>
             {side.score ?? '–'}
           </strong>
@@ -36,6 +45,7 @@ export function KnockoutBracket({ snapshot }: { snapshot: TournamentSnapshot }) 
   const semifinals = snapshot.matches.filter((match) => match.round === 'semifinal')
   const final = snapshot.matches.find((match) => match.round === 'final')
   const champion = final?.state === 'completed' && final.winnerId ? pairName(snapshot, final.winnerId) : null
+  const championId = final?.state === 'completed' ? final.winnerId : null
 
   if (champion) {
     return (
@@ -43,6 +53,11 @@ export function KnockoutBracket({ snapshot }: { snapshot: TournamentSnapshot }) 
         <Trophy className="mx-auto size-9 text-[#23c0c3]" aria-hidden="true" />
         <p className="mt-5 text-xs uppercase tracking-[0.25em] text-primary-foreground/70">Tournament champion</p>
         <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-5xl">{champion}</h2>
+        {championId ? (
+          <p className="mt-3 text-sm text-primary-foreground/70">
+            {pairTeamName(snapshot, championId) ? `${pairPlayers(snapshot, championId)} · ` : ''}{pairSeeds(snapshot, championId)}
+          </p>
+        ) : null}
       </section>
     )
   }
