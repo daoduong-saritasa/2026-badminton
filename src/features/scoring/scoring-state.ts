@@ -83,7 +83,7 @@ function winningSide(score: Score): Side {
 }
 
 function settlePoint(state: SavingScoringState, matchVersion: number): ScoringState {
-  const observation = state.observed !== null && state.observed.matchVersion > matchVersion
+  const observation = state.observed !== null && state.observed.matchVersion >= matchVersion
     ? state.observed
     : null
   const context: ScoringContext = observation === null
@@ -106,7 +106,7 @@ function restoreSnapshot(
 ): ScoringState {
   if (event.matchVersion < state.matchVersion) return state
   if (state.status === 'saving' || state.status === 'failed') {
-    if (state.observed !== null && event.matchVersion <= state.observed.matchVersion) return state
+    if (state.observed !== null && event.matchVersion < state.observed.matchVersion) return state
     return {
       ...state,
       observed: {
@@ -174,12 +174,15 @@ export function reduceScoring(state: ScoringState, event: ScoringEvent): Scoring
         hasOwnership: true,
       }
       if (state.status === 'idle' || state.status === 'reviewing') {
+        if (event.matchVersion <= state.matchVersion) return state
         if (isWinningScore(event.score)) {
           return { ...state, ...observation, status: 'reviewing', winningSide: winningSide(event.score) }
         }
         return { ...state, ...observation, status: 'idle' }
       }
       if (state.status !== 'failed') return state
+      if (event.matchVersion < state.matchVersion) return state
+      if (state.observed !== null && event.matchVersion <= state.observed.matchVersion) return state
       return {
         ...state,
         hasOwnership: true,

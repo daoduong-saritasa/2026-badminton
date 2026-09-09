@@ -201,6 +201,57 @@ describe('reduceScoring', () => {
     })
   })
 
+  it('preserves equal-version revocation through acknowledgement', () => {
+    const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
+    const ownedObservation = reduceScoring(saving, {
+      type: 'snapshot-received',
+      score: { a: 11, b: 10 },
+      matchVersion: 8,
+      hasOwnership: true,
+    })
+    const revokedObservation = reduceScoring(ownedObservation, {
+      type: 'snapshot-received',
+      score: { a: 11, b: 10 },
+      matchVersion: 8,
+      hasOwnership: false,
+    })
+    const acknowledged = reduceScoring(revokedObservation, {
+      type: 'point-acknowledged',
+      requestId,
+      matchVersion: 8,
+    })
+
+    expect(acknowledged).toMatchObject({
+      status: 'idle',
+      score: { a: 11, b: 10 },
+      matchVersion: 8,
+      hasOwnership: false,
+    })
+  })
+
+  it('rejects ownership recovery older than a retained revoked observation', () => {
+    const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
+    const conflicted = reduceScoring(saving, {
+      type: 'point-failed',
+      requestId,
+      reason: 'ownership-conflict',
+      message: 'Another scorer owns this match',
+    })
+    const newerObservation = reduceScoring(conflicted, {
+      type: 'snapshot-received',
+      score: { a: 12, b: 10 },
+      matchVersion: 13,
+      hasOwnership: false,
+    })
+    const delayedRecovery = reduceScoring(newerObservation, {
+      type: 'ownership-recovered',
+      score: { a: 11, b: 10 },
+      matchVersion: 12,
+    })
+
+    expect(delayedRecovery).toBe(newerObservation)
+  })
+
   it('rejects stale snapshots and point entry after ownership revocation', () => {
     const current = idle({ matchVersion: 9 })
     expect(
