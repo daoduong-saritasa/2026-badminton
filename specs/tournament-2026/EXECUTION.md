@@ -7,7 +7,7 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default; probe
 
 - Current phase: 2 — in-progress
 - Phase 1 — Domain contracts and logic: done
-- Phase 2 — Database and staff authorization: in-progress (parked after base schema; resume at authorization migration)
+- Phase 2 — Database and staff authorization: in-progress
 - Phase 3 — Frontend data and scoring recovery: pending
 - Phase 4 — Tournament and staff screens: pending
 - Verification debt: none
@@ -53,7 +53,7 @@ Fresh review: required — authentication, secrets, persistent migrations, and d
 
 - [x] Install the Supabase CLI through npm in `package.json`/`package-lock.json`; create `supabase/config.toml` for disposable local development with anonymous Auth and Edge Functions, and extend TypeScript configuration/runtime declarations to typecheck Edge Function sources project-wide.
 - [x] Create `supabase/migrations/202609080001_schema.sql` for `public.tournament`, `players`, `pairs`, `matches`, `tie_resolutions`, and `private.staff_grants`, `staff_config`, `pin_attempts`, `match_ownership`, `mutation_log` per PLAN.md → Schema changes; enforce pair-slot uniqueness and keep private state outside public reads.
-- [ ] Create `supabase/migrations/202609080002_authorization.sql` with grants/RLS, `get_staff_access`, `get_score_access`, `revoke_staff_access`, and private grant/rate-limit/PIN helpers; check verified session/user, fixed seven-day expiry, revocation and PIN generation on every staff operation; restrict privileged helper execution and fix SECURITY DEFINER search paths.
+- [x] Create `supabase/migrations/202609080002_authorization.sql` with grants/RLS, `get_staff_access`, `get_score_access`, `revoke_staff_access`, and private grant/rate-limit/PIN helpers; check verified session/user, fixed seven-day expiry, revocation and PIN generation on every staff operation; restrict privileged helper execution and fix SECURITY DEFINER search paths.
 - [ ] Create `supabase/functions/staff-pin/index.ts` and `supabase/functions/rotate-pin/index.ts` using verified Auth identity, maintained password-hashing primitives, bounded PIN input, server-derived rate-limit buckets, atomic generation checks/grant issuance, and secret-free logs; document concrete rate-limit thresholds and trusted request metadata in `docs/deployment.md`.
 - [ ] Create `supabase/migrations/202609080003_tournament.sql` with `get_tournament_snapshot`, `save_setup`, `generate_fixtures`, and `assign_courts`; implement singleton locking, expected versions, scoped idempotency, 6–8-pair/group validation, immutable setup after play, and court/order editing only for unstarted matches.
 - [ ] In `supabase/migrations/202609080003_tournament.sql`, implement `start_scoring`, `take_over`, `add_point`, `undo_point`, and `confirm_result`; enforce one live match per court/pair, ownership on every write, reversible point history, stop at winning score, atomic result progression, and duplicate-request protection.
