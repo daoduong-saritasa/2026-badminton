@@ -212,6 +212,24 @@ describe('tournament maintenance reset', () => {
     expect(replay.ok).toBe(true)
     expect(await replay.json()).toEqual(firstReceipt)
 
+    const audit = runSql(
+      "select concat_ws(',', request_id::text, staff_session_id is null, actor_kind, " +
+        "reset_generation, operation, maintenance_mode, target_tournament_id::text, " +
+        "target_tournament_name, database_role) from private.mutation_log " +
+        `where request_id = '${requestId}'::uuid;`,
+    )
+    expect(audit).toBe([
+      requestId,
+      'true',
+      'maintenance',
+      '1',
+      'reset_tournament',
+      'all',
+      before.snapshot?.tournament.id,
+      before.snapshot?.tournament.name,
+      'service_role',
+    ].join(','))
+
     const empty = await state(staff)
     expect(empty).toEqual({ resetGeneration: 1, snapshot: null })
     expect((await rpc('get_staff_access', {}, staff)).ok).toBe(true)
