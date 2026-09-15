@@ -286,4 +286,22 @@ describe('tournament data', () => {
     resolveEmpty?.({ data: { resetGeneration: 4, snapshot: null }, error: null })
     await expect(delayedEmpty).rejects.toBeInstanceOf(StaleTournamentSnapshotError)
   })
+
+  it('resolves a committed mutation when an overlapping refetch finishes first', async () => {
+    let resolveRefresh: ((value: { data: unknown; error: null }) => void) | undefined
+    const refresh = new Promise<{ data: unknown; error: null }>((resolve) => {
+      resolveRefresh = resolve
+    })
+    rpc
+      .mockResolvedValueOnce({ data: { requestId, resetGeneration: 5, tournamentVersion: 3, matchId: null, matchVersion: null }, error: null })
+      .mockReturnValueOnce(refresh)
+      .mockResolvedValueOnce({ data: state(3, 5), error: null })
+
+    const committed = mutateTournament('generate_fixtures', { requestId, resetGeneration: 5, expectedVersion: 2, payload: {} })
+    await vi.waitFor(() => expect(rpc).toHaveBeenCalledTimes(2))
+    await expect(fetchTournament()).resolves.toMatchObject({ resetGeneration: 5, snapshot: { tournament: { version: 3 } } })
+
+    resolveRefresh?.({ data: state(3, 5), error: null })
+    await expect(committed).resolves.toMatchObject({ requestId, resetGeneration: 5, tournamentVersion: 3 })
+  })
 })

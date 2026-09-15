@@ -255,11 +255,15 @@ async function fetchAtLeast(
   if (state.resetGeneration < minimumGeneration) {
     throw new StaleTournamentSnapshotError(state.resetGeneration, minimumGeneration)
   }
-  if (state.resetGeneration === newestResetGeneration && currentFetchSequence < newestAcceptedFetchSequence) {
+  const snapshotId = state.snapshot?.tournament.id ?? null
+  // Versions only order snapshots of one tournament; a later fetch that already
+  // replaced the identity makes an earlier response unorderable.
+  if (state.resetGeneration === newestResetGeneration
+    && snapshotId !== newestTournamentId
+    && currentFetchSequence < newestAcceptedFetchSequence) {
     throw new StaleTournamentSnapshotError(currentFetchSequence, newestAcceptedFetchSequence)
   }
 
-  const snapshotId = state.snapshot?.tournament.id ?? null
   const snapshotVersion = state.snapshot?.tournament.version ?? 0
   const sameKnownTournament = state.resetGeneration === newestResetGeneration
     && newestTournamentId !== null
@@ -277,7 +281,7 @@ async function fetchAtLeast(
   newestResetGeneration = state.resetGeneration
   newestTournamentId = snapshotId
   newestTournamentVersion = snapshotVersion
-  newestAcceptedFetchSequence = currentFetchSequence
+  newestAcceptedFetchSequence = Math.max(newestAcceptedFetchSequence, currentFetchSequence)
   return state
 }
 
