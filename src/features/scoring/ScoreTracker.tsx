@@ -54,18 +54,22 @@ function pairSeedLabel(snapshot: TournamentSnapshot, pairId: UUID | null): strin
   return firstSeed && secondSeed ? `Seeds ${firstSeed} + ${secondSeed}` : 'Seeds unavailable'
 }
 
-function createInitialState(match: PlayingMatch, hasOwnership: boolean): IdleScoringState {
+function createInitialState(match: PlayingMatch, resetGeneration: number, hasOwnership: boolean): IdleScoringState {
   return {
     status: 'idle',
     matchId: match.id,
+    resetGeneration,
     score: match.score,
     matchVersion: match.version,
     hasOwnership,
   }
 }
 
-async function latestMatch(matchId: string): Promise<PlayingMatch> {
-  const snapshot = await fetchTournament()
+async function latestMatch(matchId: string, resetGeneration: number): Promise<PlayingMatch> {
+  const state = await fetchTournament()
+  if (state.resetGeneration !== resetGeneration) throw new Error('The tournament was reset')
+  const snapshot = state.snapshot
+  if (snapshot === null) throw new Error('The tournament was reset')
   const match = snapshot.matches.find((candidate): candidate is PlayingMatch => candidate.id === matchId && candidate.state === 'playing')
   if (!match) throw new Error('The selected match is no longer available for scoring')
   return match
@@ -74,38 +78,43 @@ async function latestMatch(matchId: string): Promise<PlayingMatch> {
 function ScoringSurface({
   match,
   snapshot,
+  resetGeneration,
   ownership,
   onExit,
 }: {
   match: PlayingMatch
   snapshot: TournamentSnapshot
+  resetGeneration: number
   ownership: boolean
   onExit: () => void
 }) {
   const queryClient = useQueryClient()
-  const [state, dispatch] = useReducer(reduceScoring, createInitialState(match, ownership))
+  const [state, dispatch] = useReducer(reduceScoring, createInitialState(match, resetGeneration, ownership))
   const [takeoverOpen, setTakeoverOpen] = useState(false)
   const [actionFailure, setActionFailure] = useState<string | null>(null)
 
   useEffect(() => {
     dispatch({
       type: 'snapshot-received',
+      resetGeneration,
       score: match.score,
       matchVersion: match.version,
       hasOwnership: ownership,
     })
-  }, [match.score, match.version, ownership])
+  }, [match.score, match.version, ownership, resetGeneration])
 
   const runPoint = async (pending: PendingPoint) => {
     try {
       const receipt = await mutateTournament('add_point', {
         requestId: pending.requestId,
+        resetGeneration: pending.resetGeneration,
         expectedVersion: pending.expectedVersion,
         payload: { matchId: match.id, side: pending.side },
       })
       dispatch({
         type: 'point-acknowledged',
         requestId: pending.requestId,
+        resetGeneration: pending.resetGeneration,
         matchVersion: receipt.matchVersion ?? pending.expectedVersion + 1,
       })
     } catch (error) {
@@ -113,6 +122,7 @@ function ScoringSurface({
       dispatch({
         type: 'point-failed',
         requestId: pending.requestId,
+        resetGeneration: pending.resetGeneration,
         reason,
         message: message(error),
       })
@@ -126,6 +136,7 @@ function ScoringSurface({
     if (state.status !== 'idle' || !state.hasOwnership || isWinningScore(state.score)) return
     const pending: PendingPoint = {
       requestId: crypto.randomUUID(),
+      resetGeneration: state.resetGeneration,
       side,
       expectedVersion: state.matchVersion,
       previousScore: state.score,
@@ -141,9 +152,9 @@ function ScoringSurface({
   }
 
   const reconcileAfterAction = async (): Promise<void> => {
-    const latestSnapshot = await fetchTournament()
-    queryClient.setQueryData(['tournament'], latestSnapshot)
-    const latest = latestSnapshot.matches.find(
+    const latestState = await fetchTournament()
+    queryClient.setQueryData(['tournament'], latestState)
+    const latest = latestState.snapshot?.matches.find(
       (candidate): candidate is PlayingMatch => candidate.id === match.id && candidate.state === 'playing',
     )
     if (!latest) return
@@ -151,6 +162,7 @@ function ScoringSurface({
     queryClient.setQueryData(['score-access', match.id], hasOwnership)
     dispatch({
       type: 'snapshot-received',
+      resetGeneration: latestState.resetGeneration,
       score: latest.score,
       matchVersion: latest.version,
       hasOwnership,
@@ -171,19 +183,20 @@ function ScoringSurface({
     mutationFn: async () => {
       await mutateTournament('take_over', {
         requestId: crypto.randomUUID(),
+        resetGeneration,
         expectedVersion: match.version,
         payload: { matchId: match.id },
       })
-      const latest = await latestMatch(match.id)
+      const latest = await latestMatch(match.id, resetGeneration)
       const hasOwnership = await canScore(match.id)
       return { latest, hasOwnership }
     },
     onSuccess: ({ latest, hasOwnership }) => {
       queryClient.setQueryData(['score-access', match.id], hasOwnership)
       if (hasOwnership) {
-        dispatch({ type: 'ownership-recovered', score: latest.score, matchVersion: latest.version })
+        dispatch({ type: 'ownership-recovered', resetGeneration, score: latest.score, matchVersion: latest.version })
       } else {
-        dispatch({ type: 'snapshot-received', score: latest.score, matchVersion: latest.version, hasOwnership: false })
+        dispatch({ type: 'snapshot-received', resetGeneration, score: latest.score, matchVersion: latest.version, hasOwnership: false })
       }
       setTakeoverOpen(false)
     },
@@ -194,6 +207,7 @@ function ScoringSurface({
     onMutate: () => setActionFailure(null),
     mutationFn: () => mutateTournament('undo_point', {
       requestId: crypto.randomUUID(),
+      resetGeneration,
       expectedVersion: state.matchVersion,
       payload: { matchId: match.id },
     }),
@@ -204,6 +218,7 @@ function ScoringSurface({
     onMutate: () => setActionFailure(null),
     mutationFn: () => mutateTournament('confirm_result', {
       requestId: crypto.randomUUID(),
+      resetGeneration,
       expectedVersion: state.matchVersion,
       payload: { matchId: match.id },
     }),
@@ -327,7 +342,7 @@ function ScoringSurface({
   )
 }
 
-export function ScoreTracker({ snapshot, onExit }: { snapshot: TournamentSnapshot; onExit: () => void }) {
+export function ScoreTracker({ snapshot, resetGeneration, onExit }: { snapshot: TournamentSnapshot; resetGeneration: number; onExit: () => void }) {
   const matches = playableMatches(snapshot)
   const [matchId, setMatchId] = useState(matches[0]?.id ?? '')
   const match = matches.find((candidate) => candidate.id === matchId) ?? matches[0]
@@ -368,9 +383,10 @@ export function ScoreTracker({ snapshot, onExit }: { snapshot: TournamentSnapsho
         </Select>
       ) : null}
       <ScoringSurface
-        key={match.id}
+        key={`${resetGeneration}-${match.id}`}
         match={match}
         snapshot={snapshot}
+        resetGeneration={resetGeneration}
         ownership={ownershipQuery.data ?? false}
         onExit={onExit}
       />

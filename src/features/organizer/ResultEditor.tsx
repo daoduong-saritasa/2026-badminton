@@ -46,7 +46,7 @@ function correctionBlocked(snapshot: TournamentSnapshot, match: Match, proposedW
   return false
 }
 
-export function ResultEditor({ snapshot }: { snapshot: TournamentSnapshot }) {
+export function ResultEditor({ snapshot, resetGeneration }: { snapshot: TournamentSnapshot; resetGeneration: number }) {
   const matches = useMemo(() => editableResultMatches(snapshot), [snapshot])
   const [matchId, setMatchId] = useState(matches[0]?.id ?? '')
   const match = matches.find((candidate) => candidate.id === matchId) ?? matches[0]
@@ -68,6 +68,7 @@ export function ResultEditor({ snapshot }: { snapshot: TournamentSnapshot }) {
       if (action.kind === 'withdraw') {
         return mutateTournament('withdraw_pair', {
           requestId: crypto.randomUUID(),
+          resetGeneration,
           expectedVersion: snapshot.tournament.version,
           payload: { pairId: action.pairId },
         })
@@ -75,6 +76,7 @@ export function ResultEditor({ snapshot }: { snapshot: TournamentSnapshot }) {
       if (action.kind === 'walkover') {
         return mutateTournament('mark_walkover', {
           requestId: crypto.randomUUID(),
+          resetGeneration,
           expectedVersion: action.match.version,
           payload: { matchId: action.match.id, winnerId: action.winnerId },
         })
@@ -82,6 +84,7 @@ export function ResultEditor({ snapshot }: { snapshot: TournamentSnapshot }) {
       const operation = action.match.state === 'completed' ? 'correct_result' : 'enter_result'
       return mutateTournament(operation, {
         requestId: crypto.randomUUID(),
+        resetGeneration,
         expectedVersion: action.match.version,
         payload: { matchId: action.match.id, score: action.score },
       })

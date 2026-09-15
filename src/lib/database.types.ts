@@ -19,6 +19,7 @@ type MutationFunction = {
     p_expected_version: number
     p_payload: Json
     p_request_id: string
+    p_reset_generation: number
   }
   Returns: Json
 }
@@ -60,6 +61,12 @@ export type Database = {
           updated_at?: string
           version?: number
         }
+        Relationships: []
+      }
+      tournament_generation: {
+        Row: { reset_generation: number; singleton: boolean }
+        Insert: { reset_generation: number; singleton?: boolean }
+        Update: { reset_generation?: number; singleton?: boolean }
         Relationships: []
       }
       players: {
@@ -224,6 +231,18 @@ export type Database = {
       }
       save_setup: MutationFunction
       set_court_count: MutationFunction
+      set_reset_enabled: { Args: { p_enabled: boolean }; Returns: undefined }
+      reset_tournament: {
+        Args: {
+          p_confirmation_name: string
+          p_expected_generation: number
+          p_expected_tournament_id: string
+          p_expected_version: number
+          p_mode: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       start_scoring: MutationFunction
       take_over: MutationFunction
       undo_point: MutationFunction

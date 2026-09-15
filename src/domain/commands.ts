@@ -33,12 +33,14 @@ export interface CommandPayloads {
 
 export type MutationInput<K extends keyof CommandPayloads> = {
   requestId: UUID
+  resetGeneration: number
   expectedVersion: number
   payload: CommandPayloads[K]
 }
 
 export interface MutationReceipt {
   requestId: UUID
+  resetGeneration: number
   tournamentVersion: number
   matchId: UUID | null
   matchVersion: number | null

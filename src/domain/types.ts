@@ -112,6 +112,11 @@ export interface TournamentSnapshot {
   tieResolutions: TieResolution[]
 }
 
+export interface TournamentState {
+  resetGeneration: number
+  snapshot: TournamentSnapshot | null
+}
+
 export type StandingTieStatus =
   | 'clear'
   | 'head-to-head'

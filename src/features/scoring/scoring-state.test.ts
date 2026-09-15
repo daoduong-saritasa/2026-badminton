@@ -8,6 +8,7 @@ function idle(overrides: Partial<IdleScoringState> = {}): IdleScoringState {
   return {
     status: 'idle',
     matchId: '00000000-0000-4000-8000-000000000002',
+    resetGeneration: 0,
     score: { a: 10, b: 10 },
     matchVersion: 7,
     hasOwnership: true,
@@ -33,6 +34,7 @@ describe('reduceScoring', () => {
 
     const failed = reduceScoring(saving, {
       type: 'point-failed',
+      resetGeneration: 0,
       requestId,
       reason: 'network',
       message: 'Connection lost',
@@ -48,6 +50,7 @@ describe('reduceScoring', () => {
     const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
     const mismatch = reduceScoring(saving, {
       type: 'point-acknowledged',
+      resetGeneration: 0,
       requestId: '00000000-0000-4000-8000-000000000003',
       matchVersion: 8,
     })
@@ -55,12 +58,18 @@ describe('reduceScoring', () => {
 
     const acknowledged = reduceScoring(saving, {
       type: 'point-acknowledged',
+      resetGeneration: 0,
       requestId,
       matchVersion: 8,
     })
     expect(acknowledged).toMatchObject({ status: 'idle', score: { a: 11, b: 10 }, matchVersion: 8 })
     expect(
-      reduceScoring(acknowledged, { type: 'point-acknowledged', requestId, matchVersion: 8 }),
+      reduceScoring(acknowledged, {
+        type: 'point-acknowledged',
+        resetGeneration: 0,
+        requestId,
+        matchVersion: 8,
+      }),
     ).toBe(acknowledged)
   })
 
@@ -72,6 +81,7 @@ describe('reduceScoring', () => {
     })
     const reviewing = reduceScoring(saving, {
       type: 'point-acknowledged',
+      resetGeneration: 0,
       requestId,
       matchVersion: 8,
     })
@@ -81,6 +91,7 @@ describe('reduceScoring', () => {
     expect(dismissed).toMatchObject({ status: 'idle', score: { a: 21, b: 19 } })
     const undone = reduceScoring(dismissed, {
       type: 'snapshot-received',
+      resetGeneration: 0,
       score: { a: 20, b: 19 },
       matchVersion: 9,
       hasOwnership: true,
@@ -92,6 +103,7 @@ describe('reduceScoring', () => {
     const saving = reduceScoring(idle(), { type: 'point-requested', side: 'b', requestId })
     const conflicted = reduceScoring(saving, {
       type: 'point-failed',
+      resetGeneration: 0,
       requestId,
       reason: 'ownership-conflict',
       message: 'Another scorer owns this match',
@@ -101,6 +113,7 @@ describe('reduceScoring', () => {
 
     const recovered = reduceScoring(conflicted, {
       type: 'ownership-recovered',
+      resetGeneration: 0,
       score: { a: 12, b: 10 },
       matchVersion: 12,
     })
@@ -114,6 +127,7 @@ describe('reduceScoring', () => {
 
     const acknowledged = reduceScoring(retried, {
       type: 'point-acknowledged',
+      resetGeneration: 0,
       requestId,
       matchVersion: 8,
     })
@@ -129,12 +143,14 @@ describe('reduceScoring', () => {
     const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
     const observed = reduceScoring(saving, {
       type: 'snapshot-received',
+      resetGeneration: 0,
       score: { a: 10, b: 11 },
       matchVersion: 8,
       hasOwnership: false,
     })
     const conflicted = reduceScoring(observed, {
       type: 'point-failed',
+      resetGeneration: 0,
       requestId,
       reason: 'version-conflict',
       message: 'Match changed',
@@ -158,6 +174,7 @@ describe('reduceScoring', () => {
 
     const recovered = reduceScoring(reconciled, {
       type: 'ownership-recovered',
+      resetGeneration: 0,
       score: { a: 10, b: 11 },
       matchVersion: 9,
     })
@@ -179,6 +196,7 @@ describe('reduceScoring', () => {
     const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
     const observed = reduceScoring(saving, {
       type: 'snapshot-received',
+      resetGeneration: 0,
       score: { a: 12, b: 10 },
       matchVersion: 10,
       hasOwnership: false,
@@ -190,6 +208,7 @@ describe('reduceScoring', () => {
 
     const acknowledged = reduceScoring(observed, {
       type: 'point-acknowledged',
+      resetGeneration: 0,
       requestId,
       matchVersion: 8,
     })
@@ -204,16 +223,24 @@ describe('reduceScoring', () => {
   it('accepts equal-version ownership recovery but not recovery older than a revocation', () => {
     const failed = reduceScoring(
       reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId }),
-      { type: 'point-failed', requestId, reason: 'ownership-conflict', message: 'taken over' },
+      {
+        type: 'point-failed',
+        resetGeneration: 0,
+        requestId,
+        reason: 'ownership-conflict',
+        message: 'taken over',
+      },
     )
     const observed = reduceScoring(failed, {
       type: 'snapshot-received',
+        resetGeneration: 0,
       score: { a: 10, b: 10 },
       matchVersion: 8,
       hasOwnership: false,
     })
     const recovered = reduceScoring(observed, {
       type: 'ownership-recovered',
+      resetGeneration: 0,
       score: { a: 10, b: 10 },
       matchVersion: 8,
     })
@@ -225,12 +252,14 @@ describe('reduceScoring', () => {
 
     const newerRevocation = reduceScoring(recovered, {
       type: 'snapshot-received',
+      resetGeneration: 0,
       score: { a: 11, b: 10 },
       matchVersion: 9,
       hasOwnership: false,
     })
     expect(reduceScoring(newerRevocation, {
       type: 'ownership-recovered',
+      resetGeneration: 0,
       score: { a: 10, b: 10 },
       matchVersion: 8,
     })).toBe(newerRevocation)
@@ -240,18 +269,21 @@ describe('reduceScoring', () => {
     const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
     const ownedObservation = reduceScoring(saving, {
       type: 'snapshot-received',
+      resetGeneration: 0,
       score: { a: 11, b: 10 },
       matchVersion: 8,
       hasOwnership: true,
     })
     const revokedObservation = reduceScoring(ownedObservation, {
       type: 'snapshot-received',
+      resetGeneration: 0,
       score: { a: 11, b: 10 },
       matchVersion: 8,
       hasOwnership: false,
     })
     const acknowledged = reduceScoring(revokedObservation, {
       type: 'point-acknowledged',
+      resetGeneration: 0,
       requestId,
       matchVersion: 8,
     })
@@ -268,18 +300,21 @@ describe('reduceScoring', () => {
     const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
     const conflicted = reduceScoring(saving, {
       type: 'point-failed',
+      resetGeneration: 0,
       requestId,
       reason: 'ownership-conflict',
       message: 'Another scorer owns this match',
     })
     const newerObservation = reduceScoring(conflicted, {
       type: 'snapshot-received',
+      resetGeneration: 0,
       score: { a: 12, b: 10 },
       matchVersion: 13,
       hasOwnership: false,
     })
     const delayedRecovery = reduceScoring(newerObservation, {
       type: 'ownership-recovered',
+      resetGeneration: 0,
       score: { a: 11, b: 10 },
       matchVersion: 12,
     })
@@ -292,6 +327,7 @@ describe('reduceScoring', () => {
     expect(
       reduceScoring(current, {
         type: 'snapshot-received',
+      resetGeneration: 0,
         score: { a: 3, b: 2 },
         matchVersion: 8,
         hasOwnership: true,
@@ -300,6 +336,7 @@ describe('reduceScoring', () => {
 
     const revoked = reduceScoring(current, {
       type: 'snapshot-received',
+      resetGeneration: 0,
       score: current.score,
       matchVersion: 10,
       hasOwnership: false,
@@ -316,6 +353,7 @@ describe('reduceScoring', () => {
     })
     const snapshot = reduceScoring(saving, {
       type: 'snapshot-received',
+      resetGeneration: 0,
       score: { a: 50, b: 50 },
       matchVersion: 50,
       hasOwnership: false,
@@ -329,5 +367,30 @@ describe('reduceScoring', () => {
         hasOwnership: false,
       },
     })
+  })
+
+  it('discards pending work when a newer reset generation arrives', () => {
+    const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
+    const afterReset = reduceScoring(saving, {
+      type: 'snapshot-received',
+      resetGeneration: 1,
+      score: { a: 0, b: 0 },
+      matchVersion: 0,
+      hasOwnership: false,
+    })
+
+    expect(afterReset).toMatchObject({
+      status: 'idle',
+      resetGeneration: 1,
+      score: { a: 0, b: 0 },
+      matchVersion: 0,
+      hasOwnership: false,
+    })
+    expect(reduceScoring(afterReset, {
+      type: 'point-acknowledged',
+      requestId,
+      resetGeneration: 0,
+      matchVersion: 8,
+    })).toBe(afterReset)
   })
 })

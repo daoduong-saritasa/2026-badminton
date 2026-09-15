@@ -82,7 +82,7 @@ function matchName(snapshot: TournamentSnapshot, matchId: UUID): string {
   return `${matchRoundLabel(match)} · ${matchPairs(snapshot, matchId)}`
 }
 
-function UpcomingSchedule({ snapshot, onStartScoring }: { snapshot: TournamentSnapshot; onStartScoring: () => void }) {
+function UpcomingSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot: TournamentSnapshot; resetGeneration: number; onStartScoring: () => void }) {
   const courts = availableCourts(snapshot.tournament.courtCount)
   const unstarted = useMemo(
     () => snapshot.matches.filter((match) => match.state === 'unstarted'),
@@ -99,6 +99,7 @@ function UpcomingSchedule({ snapshot, onStartScoring }: { snapshot: TournamentSn
   const assignmentMutation = useMutation({
     mutationFn: () => mutateTournament('assign_courts', {
       requestId: crypto.randomUUID(),
+      resetGeneration,
       expectedVersion: snapshot.tournament.version,
       payload: { assignments },
     }),
@@ -110,6 +111,7 @@ function UpcomingSchedule({ snapshot, onStartScoring }: { snapshot: TournamentSn
       if (!match) throw new Error('Match no longer exists')
       return mutateTournament('start_scoring', {
         requestId: crypto.randomUUID(),
+        resetGeneration,
         expectedVersion: match.version,
         payload: { matchId },
       })
@@ -229,12 +231,13 @@ function UpcomingSchedule({ snapshot, onStartScoring }: { snapshot: TournamentSn
   )
 }
 
-function CourtConfiguration({ snapshot }: { snapshot: TournamentSnapshot }) {
+function CourtConfiguration({ snapshot, resetGeneration }: { snapshot: TournamentSnapshot; resetGeneration: number }) {
   const [nextCount, setNextCount] = useState<CourtCount>(snapshot.tournament.courtCount ?? 1)
   const [confirmationOpen, setConfirmationOpen] = useState(false)
   const mutation = useMutation({
     mutationFn: () => mutateTournament('set_court_count', {
       requestId: crypto.randomUUID(),
+      resetGeneration,
       expectedVersion: snapshot.tournament.version,
       payload: { courtCount: nextCount },
     }),
@@ -287,7 +290,7 @@ function CourtConfiguration({ snapshot }: { snapshot: TournamentSnapshot }) {
   )
 }
 
-function TieResolutionEditor({ snapshot, group }: { snapshot: TournamentSnapshot; group: Group }) {
+function TieResolutionEditor({ snapshot, resetGeneration, group }: { snapshot: TournamentSnapshot; resetGeneration: number; group: Group }) {
   const manual = useMemo(
     () => calculateStandings(snapshot, group).filter((standing) => standing.tieStatus === 'manual'),
     [snapshot, group],
@@ -301,6 +304,7 @@ function TieResolutionEditor({ snapshot, group }: { snapshot: TournamentSnapshot
   const mutation = useMutation({
     mutationFn: () => mutateTournament('resolve_tie', {
       requestId: crypto.randomUUID(),
+      resetGeneration,
       expectedVersion: snapshot.tournament.version,
       payload: { group, orderedPairIds: orderedIds, explanation: explanation.trim() },
     }),
@@ -358,7 +362,7 @@ function TieResolutionEditor({ snapshot, group }: { snapshot: TournamentSnapshot
   )
 }
 
-export function OrganizerPage({ snapshot, onStartScoring }: { snapshot: TournamentSnapshot; onStartScoring: () => void }) {
+export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { snapshot: TournamentSnapshot; resetGeneration: number; onStartScoring: () => void }) {
   const [pendingAction, setPendingAction] = useState<OrganizerAction | null>(null)
   const hasFixtures = snapshot.matches.length > 0
   const allActiveGroupsComplete = snapshot.matches
@@ -370,7 +374,7 @@ export function OrganizerPage({ snapshot, onStartScoring }: { snapshot: Tourname
 
   const actionMutation = useMutation({
     mutationFn: (action: OrganizerAction) => {
-      const envelope = { requestId: crypto.randomUUID(), expectedVersion: snapshot.tournament.version, payload: {} }
+      const envelope = { requestId: crypto.randomUUID(), resetGeneration, expectedVersion: snapshot.tournament.version, payload: {} }
       if (action === 'fixtures') {
         if (snapshot.tournament.courtCount === null) throw new Error('Select one or two courts before generating fixtures')
         return mutateTournament('generate_fixtures', envelope)
@@ -405,7 +409,7 @@ export function OrganizerPage({ snapshot, onStartScoring }: { snapshot: Tourname
    * Once play is scheduled it drops to the bottom: it is the tallest panel on
    * the page and the one an organizer needs least often during a tournament.
    */
-  const setupPanel = <SetupForm key={`setup-${snapshot.tournament.version}`} snapshot={snapshot} />
+  const setupPanel = <SetupForm key={`setup-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} />
 
   return (
     <section className="view-enter space-y-6">
@@ -432,9 +436,9 @@ export function OrganizerPage({ snapshot, onStartScoring }: { snapshot: Tourname
         </section>
       ) : null}
 
-      {hasFixtures ? <CourtConfiguration key={`courts-${snapshot.tournament.version}`} snapshot={snapshot} /> : null}
-      {hasFixtures ? <UpcomingSchedule key={`schedule-${snapshot.tournament.version}`} snapshot={snapshot} onStartScoring={onStartScoring} /> : null}
-      {hasFixtures ? <ResultEditor key={`results-${snapshot.tournament.version}`} snapshot={snapshot} /> : null}
+      {hasFixtures ? <CourtConfiguration key={`courts-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
+      {hasFixtures ? <UpcomingSchedule key={`schedule-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} onStartScoring={onStartScoring} /> : null}
+      {hasFixtures ? <ResultEditor key={`results-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
 
       {snapshot.tournament.stage === 'groups' && allActiveGroupsComplete ? (
         <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
@@ -448,8 +452,8 @@ export function OrganizerPage({ snapshot, onStartScoring }: { snapshot: Tourname
             </div>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <TieResolutionEditor key={`tie-A-${snapshot.tournament.version}`} snapshot={snapshot} group="A" />
-            <TieResolutionEditor key={`tie-B-${snapshot.tournament.version}`} snapshot={snapshot} group="B" />
+            <TieResolutionEditor key={`tie-A-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} group="A" />
+            <TieResolutionEditor key={`tie-B-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} group="B" />
           </div>
           <Button className="mt-5" disabled={unresolvedTie} onClick={() => setPendingAction('confirm-groups')}>Review group confirmation</Button>
           {unresolvedTie ? <p className="mt-2 text-xs text-destructive">Record every unresolved tie before confirming groups.</p> : null}

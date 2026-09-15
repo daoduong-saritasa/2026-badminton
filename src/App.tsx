@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertCircle, KeyRound, RefreshCw } from 'lucide-react'
 
-import { fetchTournament, subscribeTournament, TournamentNotConfiguredError } from '@/data/tournament'
+import { fetchTournament, subscribeTournament } from '@/data/tournament'
 import { getStaffAccess } from '@/data/staff'
 import type { StaffAccess, TournamentSnapshot, TournamentStage } from '@/domain/types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
@@ -75,11 +75,13 @@ function SetupRequiredScreen({
   staffDialogOpen,
   onStaffDialogChange,
   onStaffGranted,
+  resetGeneration,
 }: {
   isStaff: boolean
   staffDialogOpen: boolean
   onStaffDialogChange: (open: boolean) => void
   onStaffGranted: (access: StaffAccess) => void
+  resetGeneration: number
 }) {
   return (
     <main className="app-shell">
@@ -89,7 +91,7 @@ function SetupRequiredScreen({
         <p className="ml-[2.5625rem] mt-2 text-xs text-muted-ink">Staff access is required for initial configuration.</p>
       </header>
       {isStaff ? (
-        <SetupForm snapshot={null} />
+        <SetupForm snapshot={null} resetGeneration={resetGeneration} />
       ) : (
         <section className="rounded-card border border-ink/5 bg-white p-8 text-center shadow-card">
           <KeyRound className="mx-auto size-6" />
@@ -102,7 +104,7 @@ function SetupRequiredScreen({
   )
 }
 
-function renderView(snapshot: TournamentSnapshot, view: AppView, onStartScoring: () => void) {
+function renderView(snapshot: TournamentSnapshot, resetGeneration: number, view: AppView, onStartScoring: () => void) {
   switch (view) {
     case 'matches':
       return <TournamentPage snapshot={snapshot} />
@@ -113,7 +115,7 @@ function renderView(snapshot: TournamentSnapshot, view: AppView, onStartScoring:
     case 'scoring':
       return null
     case 'organizer':
-      return <OrganizerPage snapshot={snapshot} onStartScoring={onStartScoring} />
+      return <OrganizerPage snapshot={snapshot} resetGeneration={resetGeneration} onStartScoring={onStartScoring} />
   }
 }
 
@@ -136,10 +138,10 @@ export default function App() {
     setSelectedView('organizer')
   }
 
-  useEffect(() => subscribeTournament((snapshot) => {
-    // A local mutation hands over the snapshot it already fetched; a remote
+  useEffect(() => subscribeTournament((state) => {
+    // A local mutation hands over the state it already fetched; a remote
     // change only says that something moved, so that one has to go and look.
-    if (snapshot) queryClient.setQueryData(tournamentQueryKey, snapshot)
+    if (state) queryClient.setQueryData(tournamentQueryKey, state)
     else void queryClient.invalidateQueries({ queryKey: tournamentQueryKey })
   }), [queryClient])
 
@@ -154,21 +156,21 @@ export default function App() {
   }, [queryClient, staffAccess])
 
   if (tournamentQuery.isPending) return <LoadingScreen />
-  if (tournamentQuery.isError) {
-    if (tournamentQuery.error instanceof TournamentNotConfiguredError) {
-      return (
-        <SetupRequiredScreen
-          isStaff={isStaff}
-          staffDialogOpen={staffDialogOpen}
-          onStaffDialogChange={setStaffDialogOpen}
-          onStaffGranted={handleStaffGranted}
-        />
-      )
-    }
-    return <ErrorScreen error={tournamentQuery.error} onRetry={() => void tournamentQuery.refetch()} />
-  }
+  if (tournamentQuery.isError) return <ErrorScreen error={tournamentQuery.error} onRetry={() => void tournamentQuery.refetch()} />
 
-  const snapshot = tournamentQuery.data
+  const tournamentState = tournamentQuery.data
+  const snapshot = tournamentState.snapshot
+  if (snapshot === null) {
+    return (
+      <SetupRequiredScreen
+        isStaff={isStaff}
+        staffDialogOpen={staffDialogOpen}
+        onStaffDialogChange={setStaffDialogOpen}
+        onStaffGranted={handleStaffGranted}
+        resetGeneration={tournamentState.resetGeneration}
+      />
+    )
+  }
   const accessibleSelection = selectedView !== null && isStaffView(selectedView) && !isStaff
     ? null
     : selectedView
@@ -183,9 +185,9 @@ export default function App() {
     setSelectedView(null)
   }
   if (view === 'scoring') {
-    return <ScoreTracker snapshot={snapshot} onExit={() => setSelectedView('matches')} />
+    return <ScoreTracker snapshot={snapshot} resetGeneration={tournamentState.resetGeneration} onExit={() => setSelectedView('matches')} />
   }
-  const viewContent = renderView(snapshot, view, () => setSelectedView('scoring'))
+  const viewContent = renderView(snapshot, tournamentState.resetGeneration, view, () => setSelectedView('scoring'))
   const tabs: { value: AppView; label: string }[] = [
     { value: 'matches', label: 'Matches' },
     { value: 'standings', label: 'Standings' },

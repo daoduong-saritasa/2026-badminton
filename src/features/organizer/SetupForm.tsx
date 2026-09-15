@@ -58,7 +58,7 @@ function setupFromSnapshot(snapshot: TournamentSnapshot | null): SetupInput {
   }
 }
 
-export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null }) {
+export function SetupForm({ snapshot, resetGeneration }: { snapshot: TournamentSnapshot | null; resetGeneration: number }) {
   const initial = useMemo(() => setupFromSnapshot(snapshot), [snapshot])
   const [setup, setSetup] = useState(initial)
   const [confirmationOpen, setConfirmationOpen] = useState(false)
@@ -76,6 +76,7 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
   const saveMutation = useMutation({
     mutationFn: () => mutateTournament('save_setup', {
       requestId: crypto.randomUUID(),
+      resetGeneration,
       expectedVersion: snapshot?.tournament.version ?? 0,
       payload: {
         setup: {
