@@ -425,7 +425,10 @@ begin
     perform private.require_scoring_replay(target_match_id, staff_session, replay, false);
     return replay;
   end if;
-  tournament_row := private.require_tournament_version(p_expected_version);
+  select * into strict tournament_row
+  from public.tournament
+  where singleton
+  for update;
   current_match := private.require_match_version(target_match_id, p_expected_version);
   if current_match.state <> 'unstarted' or current_match.pair_a_id is null
     or current_match.pair_b_id is null or current_match.court is null
