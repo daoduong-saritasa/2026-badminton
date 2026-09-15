@@ -319,6 +319,9 @@ begin
     where id = tournament_row.id
     returning version into next_version;
   else
+    update public.matches
+    set source_a_match_id = null, source_b_match_id = null
+    where tournament_id = tournament_row.id;
     delete from public.matches where tournament_id = tournament_row.id;
     delete from public.tie_resolutions where tournament_id = tournament_row.id;
     delete from public.pairs where id is not null;
