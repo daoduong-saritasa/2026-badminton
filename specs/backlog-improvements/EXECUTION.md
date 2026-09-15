@@ -75,8 +75,8 @@ Fresh review: required — destructive operations, privileged authorization, per
 
 **Phase gate (hard):**
 
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed files>` using the real phase diff; package changes use the configured rerun behavior, and unavailable local Supabase checks require explicit debt with substitute evidence.
+- [x] Run `npm run typecheck` project-wide. Passed on 2026-09-15.
+- [~] Run `npm run test:related -- <changed files>` using the real phase diff; package changes use the configured rerun behavior, and unavailable local Supabase checks require explicit debt with substitute evidence. The exact 23-file Phase 2 diff selected 123 tests: 95 passed and 28 integration scenarios were skipped because `/Users/thomasduong/.orbstack/run/docker.sock` is absent.
 
 **Review checklist (user, at PR review):**
 
