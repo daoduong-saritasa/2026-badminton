@@ -5,13 +5,13 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default); exte
 
 ## STATUS
 
-- Current phase: 2 — in-progress
+- Current phase: 2 — done-with-debt
 - Phase 1 — Flexible pair count and courts: done-with-debt
-- Phase 2 — Tournament reset: in-progress — fresh review found 2 P1 + 2 P2, corrected in 7624db9/d7471c5; the one allowed re-review (2026-09-16) confirmed those and raised a new P2, awaiting user direction: Reset progress restores formerly completed Court 2 matches as unstarted on a removed court after a reduction to one court, where `start_scoring` and `assign_courts` reject them.
+- Phase 2 — Tournament reset: done-with-debt — fresh review found 2 P1 + 2 P2, corrected in 7624db9/d7471c5; the one allowed re-review (2026-09-16) confirmed those and raised a new P2 (formerly completed Court 2 matches restored onto a removed court). The user approved the recommended correction on 2026-09-16; it is not independently re-reviewed under the one-re-review cap.
 - Phase 3 — Results and withdrawals: pending
 - Phase 4 — Vietnamese translation: pending
 - Phase 5 — Application icon and title: pending
-- Verification debt: Phase 1 and Phase 2 local database type generation, Phase 1's 19 selected integration scenarios, and Phase 2's 28 selected integration scenarios are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is absent; `src/lib/database.types.ts` carries a schema-derived fallback, while project-wide typechecking and 95 non-database tests provide substitute evidence. Never target production for integration tests.
+- Verification debt: Phase 1 and Phase 2 local database type generation, Phase 1's 19 selected integration scenarios, and Phase 2's 30 selected integration scenarios are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is absent; `src/lib/database.types.ts` carries a schema-derived fallback, while project-wide typechecking and 96 non-database tests provide substitute evidence. No Phase 2 SQL, including the fresh-review corrections, has executed against a database. Never target production for integration tests.
 
 ## Phase 1 — Flexible pair count and courts
 
@@ -59,7 +59,7 @@ Ship the maintenance operation with request isolation and client recovery so res
 Consumes: `Tournament.courtCount`, `SetupInput.courtCount`, `CommandPayloads.set_court_count`, and phase 1 fixture generation.
 Produces: `TournamentState = { resetGeneration: number; snapshot: TournamentSnapshot | null }`; `fetchTournament(): Promise<TournamentState>`; required `MutationInput<K>.resetGeneration` and `MutationReceipt.resetGeneration`; `set_reset_enabled(p_enabled boolean)` and `reset_tournament(...)` per PLAN.md → “Phase 2 contracts”.
 
-Fresh review: required — destructive operations, privileged authorization, persistent audit migration, and stale-request recovery
+Fresh review: required — destructive operations, privileged authorization, persistent audit migration, and stale-request recovery; initial review raised 2 P1 + 2 P2, re-review on 2026-09-16 confirmed those corrections and raised 1 P2, corrected with user approval in aabc621 without further review
 
 - [x] Add `supabase/migrations/202609150002_maintenance_reset.sql` with private `maintenance_state`, generation-aware `mutation_log` migration and explicit maintenance actors per PLAN.md; preserve staff logs, staff request/session uniqueness, PIN configuration, grants, and auth sessions.
 - [x] In that migration, implement service-role-only `set_reset_enabled` and `reset_tournament` with the exact PLAN.md signatures; validate mode, target ID/name/version/generation, disable flag by default, use the shared transaction lock, retain reset receipts for safe retries, and atomically reset/log/disable without weakening staff authorization.
@@ -77,6 +77,7 @@ Fresh review: required — destructive operations, privileged authorization, per
 - [x] Fresh-review P1: qualify Reset progress's bulk `match_ownership` delete and `pairs` update for the hosted safe-update guard (amended 2026-09-16).
 - [x] Fresh-review P2: move restored void fixtures whose slot was reused, or whose court was removed, to the end of an active court's queue; cover a real `withdraw_pair` plus reassignment in `tests/integration/reset.test.ts` (amended 2026-09-16).
 - [x] Fresh-review P2: in `src/data/tournament.ts`, reject an earlier fetch only when a later one changed the tournament identity, so an overlapping refetch cannot fail a committed mutation; cover the overlap in `src/data/tournament.test.ts` (amended 2026-09-16).
+- [x] Re-review P2, user-approved: in `supabase/migrations/202609150002_maintenance_reset.sql`, move every fixture on a removed court, not only void ones, to the end of an active court's queue during Reset progress; in `tests/integration/reset.test.ts`, complete a Court 2 match, reduce to one court, reset, and start it (amended 2026-09-16).
 - [~] Add `tests/integration/reset.test.ts` importing the new SQL migration; update `tests/integration/local-supabase.ts`, `tests/integration/tournament.test.ts`, and `tests/integration/auth.test.ts` for the envelope, generation, and maintenance fixtures; verify anonymous/staff denial, service-role access, flag behavior, both modes in active/completed stages, audit retention, rollback, stale requests, and replay after reset. All 28 selected scenarios were discovered but skipped because `/Users/thomasduong/.orbstack/run/docker.sock` is absent; project-wide typechecking and 95 non-database tests pass as substitute evidence only.
 - [x] Document command usage and coordinated server/client rollout in `docs/deployment.md`, including old-client refresh, explicit enabling, credential redaction, and disposable test targets; update `src/data/tournament.test.ts` for rapid reset/recreate and out-of-order responses from both generations.
 
@@ -86,6 +87,7 @@ Fresh review: required — destructive operations, privileged authorization, per
 - [~] Run `npm run test:related -- <changed files>` using the real phase diff; package changes use the configured rerun behavior, and unavailable local Supabase checks require explicit debt with substitute evidence. The exact 23-file Phase 2 diff selected 123 tests: 95 passed and 28 integration scenarios were skipped because `/Users/thomasduong/.orbstack/run/docker.sock` is absent.
 - [~] Re-run the complete phase gate after the 2026-09-16 amendments: `npm run typecheck` exited 0; `npm run test:related` over the 23-file diff selected 123 tests, 95 passed and the same 28 integration scenarios were skipped because `/Users/thomasduong/.orbstack/run/docker.sock` is absent (amended 2026-09-16).
 - [~] Re-run the complete phase gate after the fresh-review corrections (commits 7624db9, d7471c5): `npm run typecheck` exited 0; `npm run test:related` over the 23-file diff selected 125 tests, 96 passed and 29 integration scenarios, including the new progress-reset withdrawal scenario, were skipped because `/Users/thomasduong/.orbstack/run/docker.sock` is absent (amended 2026-09-16).
+- [~] Re-run the complete phase gate after the re-review correction (commit aabc621): `npm run typecheck` exited 0; `npm run test:related` over the 23-file diff selected 126 tests, 96 passed and 30 integration scenarios, including the new removed-court scenario, were skipped because `/Users/thomasduong/.orbstack/run/docker.sock` is absent (amended 2026-09-16).
 
 **Review checklist (user, at PR review):**
 
