@@ -4,6 +4,7 @@ export type Group = 'A' | 'B'
 export type Side = 'a' | 'b'
 export type Seed = 1 | 2
 export type Court = 1 | 2
+export type CourtCount = 1 | 2
 
 export interface Score {
   a: number
@@ -17,6 +18,7 @@ export interface Tournament {
   name: string
   stage: TournamentStage
   setupLockedAt: string | null
+  courtCount: CourtCount | null
   version: number
 }
 
@@ -169,6 +171,7 @@ export interface SetupPairInput {
 export interface SetupInput {
   tournamentName: string
   pairs: SetupPairInput[]
+  courtCount: CourtCount | null
 }
 
 export interface CourtAssignment {

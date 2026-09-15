@@ -1,5 +1,6 @@
 import type {
   CourtAssignment,
+  CourtCount,
   Group,
   Score,
   SetupInput,
@@ -9,6 +10,7 @@ import type {
 
 export interface CommandPayloads {
   save_setup: { setup: SetupInput }
+  set_court_count: { courtCount: CourtCount }
   generate_fixtures: Record<string, never>
   assign_courts: { assignments: CourtAssignment[] }
   start_scoring: { matchId: UUID }

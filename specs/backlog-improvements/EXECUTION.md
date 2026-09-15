@@ -5,8 +5,8 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default); exte
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — Flexible pair count and courts: pending
+- Current phase: 1 — in-progress
+- Phase 1 — Flexible pair count and courts: in-progress
 - Phase 2 — Tournament reset: pending
 - Phase 3 — Results and withdrawals: pending
 - Phase 4 — Vietnamese translation: pending
@@ -24,7 +24,7 @@ Produces: `CourtCount = 1 | 2`; `Tournament.courtCount: CourtCount | null`; `Set
 
 Fresh review: required — persistent-data migration, durable scheduling writes, and integration-test dependency wiring
 
-- [ ] In `src/domain/types.ts`, `src/domain/commands.ts`, and new `src/domain/setup.ts`, implement the phase 1 contracts in PLAN.md → “Schema, API, and frontend changes”; add `src/domain/setup.test.ts` for 4–10 pairs, either larger group, invalid splits, and explicit court choices.
+- [x] In `src/domain/types.ts`, `src/domain/commands.ts`, and new `src/domain/setup.ts`, implement the phase 1 contracts in PLAN.md → “Schema, API, and frontend changes”; add `src/domain/setup.test.ts` for 4–10 pairs, either larger group, invalid splits, and explicit court choices.
 - [ ] Update `src/domain/fixtures.ts` and `src/domain/fixtures.test.ts` for every accepted split and both court counts; assert unique group pairings, totals 5/7/9/12/15/19/23, per-court order uniqueness, existing rest heuristic, and semifinal/final ordering.
 - [ ] Add `supabase/migrations/202609150001_flexible_setup.sql`: nullable checked `tournament.court_count`, existing-row backfill to 2, extended snapshot/setup validation, selected-court fixture generation, and versioned `set_court_count`; reject inactive-court assignment/start, active-Court-2 reduction, and reassignment of started matches.
 - [ ] In that migration, reduce courts atomically by appending Court 2's unstarted queue beyond Court 1's maximum occupied order, preserving relative order and historical assignments; increasing count preserves queues; retain locking, idempotency, pair exclusivity, and fixture dependency checks.
