@@ -5,9 +5,9 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default); exte
 
 ## STATUS
 
-- Current phase: 1 — done-with-debt
+- Current phase: 2 — in-progress
 - Phase 1 — Flexible pair count and courts: done-with-debt
-- Phase 2 — Tournament reset: pending
+- Phase 2 — Tournament reset: in-progress
 - Phase 3 — Results and withdrawals: pending
 - Phase 4 — Vietnamese translation: pending
 - Phase 5 — Application icon and title: pending
@@ -61,11 +61,11 @@ Produces: `TournamentState = { resetGeneration: number; snapshot: TournamentSnap
 
 Fresh review: required — destructive operations, privileged authorization, persistent audit migration, and stale-request recovery
 
-- [ ] Add `supabase/migrations/202609150002_maintenance_reset.sql` with private `maintenance_state`, generation-aware `mutation_log` migration and explicit maintenance actors per PLAN.md; preserve staff logs, staff request/session uniqueness, PIN configuration, grants, and auth sessions.
-- [ ] In that migration, implement service-role-only `set_reset_enabled` and `reset_tournament` with the exact PLAN.md signatures; validate mode, target ID/name/version/generation, disable flag by default, use the shared transaction lock, retain reset receipts for safe retries, and atomically reset/log/disable without weakening staff authorization.
-- [ ] Implement progress reset preserving fixtures and schedule but clearing play/ownership/ties/withdrawals/knockout participants and setup lock; scope undo history to the current generation while preserving old audit rows. Implement all reset removing fixtures, pairs, players, and tournament in FK-safe order while retaining maintenance state and staff access.
-- [ ] Extend every tournament mutation RPC, `private.replay_mutation`, `private.store_mutation`, and undo selection in the new migration with required generation checks before replay; remove unsafe old overloads; test missing-generation requests fail and old requests cannot recreate setup after Reset all.
-- [ ] Extend `get_tournament_snapshot()` to return generation even with no tournament; add `public.tournament_generation` per PLAN.md, update it transactionally, grant read-only browser access, and add it to the existing Realtime publication without exposing the private enable flag.
+- [x] Add `supabase/migrations/202609150002_maintenance_reset.sql` with private `maintenance_state`, generation-aware `mutation_log` migration and explicit maintenance actors per PLAN.md; preserve staff logs, staff request/session uniqueness, PIN configuration, grants, and auth sessions.
+- [x] In that migration, implement service-role-only `set_reset_enabled` and `reset_tournament` with the exact PLAN.md signatures; validate mode, target ID/name/version/generation, disable flag by default, use the shared transaction lock, retain reset receipts for safe retries, and atomically reset/log/disable without weakening staff authorization.
+- [x] Implement progress reset preserving fixtures and schedule but clearing play/ownership/ties/withdrawals/knockout participants and setup lock; scope undo history to the current generation while preserving old audit rows. Implement all reset removing fixtures, pairs, players, and tournament in FK-safe order while retaining maintenance state and staff access.
+- [x] Extend every tournament mutation RPC, `private.replay_mutation`, `private.store_mutation`, and undo selection in the new migration with required generation checks before replay; remove unsafe old overloads; test missing-generation requests fail and old requests cannot recreate setup after Reset all.
+- [x] Extend `get_tournament_snapshot()` to return generation even with no tournament; add `public.tournament_generation` per PLAN.md, update it transactionally, grant read-only browser access, and add it to the existing Realtime publication without exposing the private enable flag.
 - [ ] Update `src/domain/types.ts`, `src/domain/commands.ts`, `src/data/tournament.ts`, `src/data/tournament.test.ts`, and `src/lib/database.types.ts` for `TournamentState`, generation-bound requests/receipts, identity-scoped version tracking, empty snapshots, reset notification, reconnect recovery, and discarded late responses; regenerate local database types when available.
 - [ ] Update `src/App.tsx`, `src/features/organizer/SetupForm.tsx`, `src/features/organizer/OrganizerPage.tsx`, `src/features/organizer/ResultEditor.tsx`, and `src/features/scoring/ScoreTracker.tsx` to carry the observed generation into actions and remount stale forms when it changes; empty setup must keep staff signed in and display public empty state.
 - [ ] Update `src/features/scoring/scoring-state.ts` and `src/features/scoring/scoring-state.test.ts` to retain generation on pending points and discard pending state/ownership on reset; ensure retries retain the original generation rather than adopting the newest one.
