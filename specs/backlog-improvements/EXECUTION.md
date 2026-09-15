@@ -7,7 +7,7 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default); exte
 
 - Current phase: 2 — in-progress
 - Phase 1 — Flexible pair count and courts: done-with-debt
-- Phase 2 — Tournament reset: in-progress
+- Phase 2 — Tournament reset: in-progress — fresh review found 2 P1 + 2 P2, corrected in 7624db9/d7471c5; the one allowed re-review (2026-09-16) confirmed those and raised a new P2, awaiting user direction: Reset progress restores formerly completed Court 2 matches as unstarted on a removed court after a reduction to one court, where `start_scoring` and `assign_courts` reject them.
 - Phase 3 — Results and withdrawals: pending
 - Phase 4 — Vietnamese translation: pending
 - Phase 5 — Application icon and title: pending
