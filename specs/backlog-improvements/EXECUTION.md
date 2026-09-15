@@ -5,8 +5,8 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default); exte
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — Flexible pair count and courts: in-progress
+- Current phase: 1 — done-with-debt
+- Phase 1 — Flexible pair count and courts: done-with-debt
 - Phase 2 — Tournament reset: pending
 - Phase 3 — Results and withdrawals: pending
 - Phase 4 — Vietnamese translation: pending
@@ -22,7 +22,7 @@ Keep schema, domain validation, fixture generation, and UI together so the expan
 Consumes: existing `Pair`, `Fixture`, `SetupInput`, `TournamentSnapshot`, `MutationInput<K>`, and `MutationReceipt`.
 Produces: `CourtCount = 1 | 2`; `Tournament.courtCount: CourtCount | null`; `SetupInput.courtCount: CourtCount | null`; `generateFixtures(pairs: readonly Pair[], courtCount: CourtCount): Fixture[]`; `isValidGroupSplit(pairs: readonly Pick<Pair, 'group'>[]): boolean`; `availableCourts(courtCount: CourtCount | null): readonly Court[]`; `CommandPayloads.set_court_count: { courtCount: CourtCount }`.
 
-Fresh review: required — persistent-data migration, durable scheduling writes, and integration-test dependency wiring
+Fresh review: required — persistent-data migration, durable scheduling writes, and integration-test dependency wiring; re-review passed with no P0–P2 findings on 2026-09-15 after one P1 correction
 
 - [x] In `src/domain/types.ts`, `src/domain/commands.ts`, and new `src/domain/setup.ts`, implement the phase 1 contracts in PLAN.md → “Schema, API, and frontend changes”; add `src/domain/setup.test.ts` for 4–10 pairs, either larger group, invalid splits, and explicit court choices.
 - [x] Update `src/domain/fixtures.ts` and `src/domain/fixtures.test.ts` for every accepted split and both court counts; assert unique group pairings, totals 5/7/9/12/15/19/23, per-court order uniqueness, existing rest heuristic, and semifinal/final ordering.
