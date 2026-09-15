@@ -150,6 +150,63 @@ and [Edge Function deployment](https://supabase.com/docs/guides/functions/deploy
 Supabase GitHub integration or an approved CI pipeline for repeat deployments; require production
 approval before migrations run.
 
+## Roll out snapshot-generation changes
+
+Migration `202609150002_maintenance_reset.sql` and its frontend must ship as one coordinated
+release. The migration changes `get_tournament_snapshot` from a bare snapshot to a
+`{ resetGeneration, snapshot }` envelope and requires `p_reset_generation` on every tournament
+mutation.
+
+1. Announce a short maintenance window and stop organizer and referee writes.
+2. Apply the database migration before publishing the matching frontend.
+3. Publish the frontend immediately after the migration succeeds.
+4. Tell every organizer and referee to refresh existing tabs. An old tab cannot parse the new
+   envelope or submit the new mutation signature.
+5. Verify an anonymous snapshot read, a staff mutation, and a Realtime update before reopening
+   scoring.
+
+If the migration fails, keep the existing frontend. If the frontend publish fails after the
+migration succeeds, restore service by fixing or republishing the matching frontend; do not point
+integration tests at production.
+
+## Run a maintenance reset
+
+Use the command only against a target whose URL and tournament identity you have reviewed. Test
+both modes on a disposable local or staging tournament before using the production target.
+Credentials come from the environment and must never use a `VITE_` prefix:
+
+~~~sh
+export BADMINTON_MAINTENANCE_URL='https://<project-ref>.supabase.co'
+export BADMINTON_MAINTENANCE_SERVICE_ROLE_KEY='<service-role-key>'
+~~~
+
+Enable one reset, then run the chosen mode:
+
+~~~sh
+npm run maintenance -- enable
+npm run maintenance -- reset --mode progress
+~~~
+
+Use `--mode all` only when setup, fixtures, and play data must all be removed. The command prints
+the sanitized project host, tournament name and ID, mode, and affected data. It proceeds only when
+the operator types the exact displayed confirmation. A successful reset records the target and
+mode and disables reset in the same transaction.
+
+If you cancel after enabling, disable reset explicitly:
+
+~~~sh
+npm run maintenance -- disable
+~~~
+
+Do not rerun a failed reset with a new request ID until you have inspected the failure and current
+snapshot. Repeating the same committed request is safe, but the command intentionally does not
+retry automatically. Remove the service-role key from the shell environment after the operation:
+
+~~~sh
+unset BADMINTON_MAINTENANCE_SERVICE_ROLE_KEY
+unset BADMINTON_MAINTENANCE_URL
+~~~
+
 ## Configure Cloudflare Pages
 
 After Supabase is published, create the Pages project in the company Cloudflare account:

@@ -1,6 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import flexibleSetupMigration from '../../supabase/migrations/202609150001_flexible_setup.sql?raw'
+import resetMigration from '../../supabase/migrations/202609150002_maintenance_reset.sql?raw'
 
 import {
   elevate,
@@ -17,6 +18,7 @@ interface Receipt {
   matchId: string | null
   matchVersion: number | null
   requestId: string
+  resetGeneration: number
   tournamentVersion: number
 }
 
@@ -54,6 +56,11 @@ interface Snapshot {
   }
 }
 
+interface TournamentState {
+  resetGeneration: number
+  snapshot: Snapshot | null
+}
+
 function setupPayload(
   pairCount = 6,
   courtCount: 1 | 2 | null = 2,
@@ -82,7 +89,9 @@ function setupPayload(
 async function readSnapshot(session: LocalSession): Promise<Snapshot> {
   const response = await rpc('get_tournament_snapshot', {}, session)
   expect(response.ok).toBe(true)
-  return (await response.json()) as Snapshot
+  const state = (await response.json()) as TournamentState
+  if (state.snapshot === null) throw new Error('Tournament snapshot is empty')
+  return state.snapshot
 }
 
 async function callMutation(
@@ -168,6 +177,7 @@ async function enterGroupResults(
 describe('tournament transactions', () => {
   beforeAll(async () => {
     expect(flexibleSetupMigration).toContain('create or replace function public.set_court_count')
+    expect(resetMigration).toContain('create or replace function public.reset_tournament')
     await requireLocalSupabase()
   })
 

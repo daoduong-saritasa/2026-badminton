@@ -145,6 +145,10 @@ export function resetLocalDatabase(pin = '2468'): void {
     cascade;
     insert into private.staff_config (singleton, pin_hash, generation)
     values (true, extensions.crypt('${pin}', extensions.gen_salt('bf', 4)), 1);
+    update private.maintenance_state
+    set reset_enabled = false, reset_generation = 0, updated_at = clock_timestamp()
+    where singleton;
+    update public.tournament_generation set reset_generation = 0 where singleton;
   `)
 }
 
@@ -230,9 +234,11 @@ export function mutation(
   expectedVersion: number,
   payload: Record<string, unknown>,
   requestId: string = crypto.randomUUID(),
+  resetGeneration = 0,
 ): Record<string, unknown> {
   return {
     p_request_id: requestId,
+    p_reset_generation: resetGeneration,
     p_expected_version: expectedVersion,
     p_payload: payload,
   }

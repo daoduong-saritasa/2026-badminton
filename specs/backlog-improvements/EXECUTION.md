@@ -11,7 +11,7 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default); exte
 - Phase 3 — Results and withdrawals: pending
 - Phase 4 — Vietnamese translation: pending
 - Phase 5 — Application icon and title: pending
-- Verification debt: Phase 1 and Phase 2 local database type generation and Phase 1's 19 selected integration scenarios are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is absent; `src/lib/database.types.ts` carries a schema-derived fallback, while project-wide typechecking and non-database related tests provide substitute evidence. Never target production for integration tests.
+- Verification debt: Phase 1 and Phase 2 local database type generation, Phase 1's 19 selected integration scenarios, and Phase 2's 28 selected integration scenarios are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is absent; `src/lib/database.types.ts` carries a schema-derived fallback, while project-wide typechecking and 95 non-database tests provide substitute evidence. Never target production for integration tests.
 
 ## Phase 1 — Flexible pair count and courts
 
@@ -70,8 +70,8 @@ Fresh review: required — destructive operations, privileged authorization, per
 - [x] Update `src/App.tsx`, `src/features/organizer/SetupForm.tsx`, `src/features/organizer/OrganizerPage.tsx`, `src/features/organizer/ResultEditor.tsx`, and `src/features/scoring/ScoreTracker.tsx` to carry the observed generation into actions and remount stale forms when it changes; empty setup must keep staff signed in and display public empty state.
 - [x] Update `src/features/scoring/scoring-state.ts` and `src/features/scoring/scoring-state.test.ts` to retain generation on pending points and discard pending state/ownership on reset; ensure retries retain the original generation rather than adopting the newest one.
 - [x] Add `scripts/reset-tournament.ts` and `scripts/reset-tournament.test.ts`, include `scripts/**/*.ts` in `tsconfig.node.json`, and add `maintenance` in `package.json` invoking `node --experimental-strip-types scripts/reset-tournament.ts`; implement separate enable/disable/reset actions, environment-only credentials, sanitized target display, typed confirmation, and no automatic retry with a new request ID.
-- [ ] Add `tests/integration/reset.test.ts` importing the new SQL migration; update `tests/integration/local-supabase.ts`, `tests/integration/tournament.test.ts`, and `tests/integration/auth.test.ts` for the envelope, generation, and maintenance fixtures; verify anonymous/staff denial, service-role access, flag behavior, both modes in active/completed stages, audit retention, rollback, stale requests, and replay after reset.
-- [ ] Document command usage and coordinated server/client rollout in `docs/deployment.md`, including old-client refresh, explicit enabling, credential redaction, and disposable test targets; update `src/data/tournament.test.ts` for rapid reset/recreate and out-of-order responses from both generations.
+- [~] Add `tests/integration/reset.test.ts` importing the new SQL migration; update `tests/integration/local-supabase.ts`, `tests/integration/tournament.test.ts`, and `tests/integration/auth.test.ts` for the envelope, generation, and maintenance fixtures; verify anonymous/staff denial, service-role access, flag behavior, both modes in active/completed stages, audit retention, rollback, stale requests, and replay after reset. All 28 selected scenarios were discovered but skipped because `/Users/thomasduong/.orbstack/run/docker.sock` is absent; project-wide typechecking and 95 non-database tests pass as substitute evidence only.
+- [x] Document command usage and coordinated server/client rollout in `docs/deployment.md`, including old-client refresh, explicit enabling, credential redaction, and disposable test targets; update `src/data/tournament.test.ts` for rapid reset/recreate and out-of-order responses from both generations.
 
 **Phase gate (hard):**
 
