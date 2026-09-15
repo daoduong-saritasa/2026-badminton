@@ -177,6 +177,21 @@ describe('tournament maintenance reset', () => {
     expect(runSql('select count(*) from private.match_ownership;')).toBe('0')
     expect(runSql("select count(*) from private.mutation_log where actor_kind = 'maintenance' and maintenance_mode = 'progress';")).toBe('1')
     expect(runSql('select reset_enabled from private.maintenance_state where singleton;')).toBe('f')
+
+    const resetMatch = after.snapshot?.matches.find((candidate) => candidate.id === match.id)
+    if (!resetMatch) throw new Error('Progress reset removed a fixture')
+    const restarted = await rpc(
+      'start_scoring',
+      mutation(resetMatch.version, { matchId: resetMatch.id }, crypto.randomUUID(), 1),
+      staff,
+    )
+    expect(restarted.ok).toBe(true)
+    const restartedReceipt = await restarted.json() as { matchVersion: number }
+    expect((await rpc(
+      'undo_point',
+      mutation(restartedReceipt.matchVersion, { matchId: resetMatch.id }, crypto.randomUUID(), 1),
+      staff,
+    )).ok).toBe(false)
   })
 
   it('clears completed setup, retains access and history, rejects stale writes, and safely replays the reset', async () => {
