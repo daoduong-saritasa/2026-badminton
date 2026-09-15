@@ -3,8 +3,9 @@ import { useMutation } from '@tanstack/react-query'
 import { ArrowDown, ArrowUp, CalendarRange, LockKeyhole, Play, RotateCcw } from 'lucide-react'
 
 import { mutateTournament } from '@/data/tournament'
+import { availableCourts } from '@/domain/setup'
 import { calculateStandings } from '@/domain/standings'
-import type { Court, CourtAssignment, Group, MatchRound, TournamentSnapshot, UUID } from '@/domain/types'
+import type { Court, CourtAssignment, CourtCount, Group, MatchRound, TournamentSnapshot, UUID } from '@/domain/types'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -82,6 +83,7 @@ function matchName(snapshot: TournamentSnapshot, matchId: UUID): string {
 }
 
 function UpcomingSchedule({ snapshot, onStartScoring }: { snapshot: TournamentSnapshot; onStartScoring: () => void }) {
+  const courts = availableCourts(snapshot.tournament.courtCount)
   const unstarted = useMemo(
     () => snapshot.matches.filter((match) => match.state === 'unstarted'),
     [snapshot.matches],
@@ -170,8 +172,7 @@ function UpcomingSchedule({ snapshot, onStartScoring }: { snapshot: TournamentSn
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="1">Court 1</SelectItem>
-                  <SelectItem value="2">Court 2</SelectItem>
+                  {courts.map((court) => <SelectItem value={String(court)} key={court}>Court {court}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Input
@@ -220,6 +221,64 @@ function UpcomingSchedule({ snapshot, onStartScoring }: { snapshot: TournamentSn
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction disabled={startMutation.isPending || startMatchId === null} onClick={() => { if (startMatchId) startMutation.mutate(startMatchId) }}>
               {startMutation.isPending ? 'Starting…' : 'Start scoring'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  )
+}
+
+function CourtConfiguration({ snapshot }: { snapshot: TournamentSnapshot }) {
+  const [nextCount, setNextCount] = useState<CourtCount>(snapshot.tournament.courtCount ?? 1)
+  const [confirmationOpen, setConfirmationOpen] = useState(false)
+  const mutation = useMutation({
+    mutationFn: () => mutateTournament('set_court_count', {
+      requestId: crypto.randomUUID(),
+      expectedVersion: snapshot.tournament.version,
+      payload: { courtCount: nextCount },
+    }),
+    onSuccess: () => setConfirmationOpen(false),
+  })
+  const changed = nextCount !== snapshot.tournament.courtCount
+
+  return (
+    <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
+      <h3 className="text-sm font-semibold">Available courts</h3>
+      <p className="mt-1.5 text-[0.6875rem] text-muted-ink">
+        Adding Court 2 keeps the current queues. Reducing to one court appends Court 2&apos;s waiting matches to Court 1.
+      </p>
+      <div className="mt-4 flex flex-wrap items-end gap-3">
+        <div className="min-w-44 space-y-2">
+          <Label htmlFor="active-court-count">Court count</Label>
+          <Select value={String(nextCount)} onValueChange={(value) => setNextCount(Number(value) as CourtCount)}>
+            <SelectTrigger id="active-court-count" className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1 court</SelectItem>
+              <SelectItem value="2">2 courts</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+        <Button variant="outline" disabled={!changed || mutation.isPending} onClick={() => setConfirmationOpen(true)}>
+          Review court change
+        </Button>
+      </div>
+      {mutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{mutation.error.message}</p> : null}
+
+      <AlertDialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Use {nextCount} court{nextCount === 1 ? '' : 's'}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {nextCount === 1
+                ? 'Court 2 must have no active match. Its waiting queue will move after Court 1 while completed Court 2 matches keep their history.'
+                : 'Existing assignments and playing order will stay unchanged. Move waiting matches to Court 2 manually.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Keep current courts</AlertDialogCancel>
+            <AlertDialogAction disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+              {mutation.isPending ? 'Saving…' : 'Change courts'}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -312,7 +371,10 @@ export function OrganizerPage({ snapshot, onStartScoring }: { snapshot: Tourname
   const actionMutation = useMutation({
     mutationFn: (action: OrganizerAction) => {
       const envelope = { requestId: crypto.randomUUID(), expectedVersion: snapshot.tournament.version, payload: {} }
-      if (action === 'fixtures') return mutateTournament('generate_fixtures', envelope)
+      if (action === 'fixtures') {
+        if (snapshot.tournament.courtCount === null) throw new Error('Select one or two courts before generating fixtures')
+        return mutateTournament('generate_fixtures', envelope)
+      }
       if (action === 'confirm-groups') return mutateTournament('confirm_groups', envelope)
       return mutateTournament('reopen_tournament', envelope)
     },
@@ -363,13 +425,14 @@ export function OrganizerPage({ snapshot, onStartScoring }: { snapshot: Tourname
       {!hasFixtures ? (
         <section className="rounded-card bg-navy p-6 text-white shadow-final">
           <h3 className="text-sm font-semibold">Fixture generation</h3>
-          <p className="mt-1.5 text-[0.6875rem] text-navy-soft">Generate fixtures after the setup contains the final six to eight pairs.</p>
-          <Button className="mt-5 bg-white text-navy hover:bg-navy-soft" onClick={() => setPendingAction('fixtures')}>
+          <p className="mt-1.5 text-[0.6875rem] text-navy-soft">Generate fixtures after the setup contains four to ten balanced pairs and an explicit court choice.</p>
+          <Button className="mt-5 bg-white text-navy hover:bg-navy-soft" disabled={snapshot.tournament.courtCount === null} onClick={() => setPendingAction('fixtures')}>
             <CalendarRange /> Review fixture generation
           </Button>
         </section>
       ) : null}
 
+      {hasFixtures ? <CourtConfiguration key={`courts-${snapshot.tournament.version}`} snapshot={snapshot} /> : null}
       {hasFixtures ? <UpcomingSchedule key={`schedule-${snapshot.tournament.version}`} snapshot={snapshot} onStartScoring={onStartScoring} /> : null}
       {hasFixtures ? <ResultEditor key={`results-${snapshot.tournament.version}`} snapshot={snapshot} /> : null}
 

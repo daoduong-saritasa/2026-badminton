@@ -1,6 +1,7 @@
 import { Clock3 } from 'lucide-react'
 
 import type { Match, TournamentSnapshot } from '@/domain/types'
+import { availableCourts } from '@/domain/setup'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 
 import { cn } from '@/lib/utils'
@@ -13,14 +14,19 @@ function currentMatch(matches: Match[], court: 1 | 2): Match | undefined {
 }
 
 export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
-  const courtOne = currentMatch(snapshot.matches, 1)
-  const courtTwo = currentMatch(snapshot.matches, 2)
-  const visibleIds = new Set([courtOne?.id, courtTwo?.id])
+  const courts = availableCourts(snapshot.tournament.courtCount)
+  const current = courts.map((court) => currentMatch(snapshot.matches, court)).filter((match): match is Match => match !== undefined)
+  const visibleIds = new Set(current.map((match) => match.id))
   const upcoming = snapshot.matches
     .filter((match) => match.state === 'unstarted' && !visibleIds.has(match.id))
     .sort((a, b) => a.playingOrder - b.playingOrder)
   const allGroupsFinished = snapshot.matches.some((match) => match.round === 'group')
     && snapshot.matches.filter((match) => match.round === 'group').every((match) => match.state === 'completed' || match.state === 'void')
+
+  const completed = snapshot.matches
+    .filter((match) => match.state === 'completed')
+    .toSorted((first, second) => second.playingOrder - first.playingOrder)
+    .slice(0, 6)
 
   const nextLabel = (court: 1 | 2) => {
     const next = upcoming.find((match) => match.court === court)
@@ -39,10 +45,9 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
       <div>
         <h2 className="mb-[1.125rem] text-sm font-medium">Playing now</h2>
         <div className="grid gap-6 md:grid-cols-2">
-          {courtOne ? <MatchTicket match={courtOne} snapshot={snapshot} nextLabel={nextLabel(1)} /> : null}
-          {courtTwo ? <MatchTicket match={courtTwo} snapshot={snapshot} nextLabel={nextLabel(2)} /> : null}
+          {current.map((match) => <MatchTicket match={match} snapshot={snapshot} nextLabel={match.court ? nextLabel(match.court) : undefined} key={match.id} />)}
         </div>
-        {!courtOne && !courtTwo ? (
+        {current.length === 0 ? (
           <p className="rounded-card border border-dashed border-rule bg-white/60 p-8 text-center text-[0.8125rem] text-muted-ink">
             No matches are assigned to a court yet.
           </p>
@@ -66,6 +71,19 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
                   ) : null}
                   {match.court ? `Court ${match.court}` : 'Court pending'}
                 </span>
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : null}
+      {completed.length > 0 ? (
+        <div>
+          <h2 className="mb-[1.125rem] text-sm font-medium">Recent results</h2>
+          <ol className="rounded-card border border-ink/5 bg-white px-5 shadow-card">
+            {completed.map((match) => (
+              <li className="grid grid-cols-[minmax(0,1fr)_auto] gap-3 border-t border-hairline py-4 text-xs first:border-t-0" key={match.id}>
+                <span className="min-w-0 truncate font-medium">{pairName(snapshot, match.pairAId)} vs {pairName(snapshot, match.pairBId)}</span>
+                <span className="shrink-0 text-muted-ink">Court {match.court ?? '–'} · {match.score ? `${match.score.a}–${match.score.b}` : 'Walkover'}</span>
               </li>
             ))}
           </ol>

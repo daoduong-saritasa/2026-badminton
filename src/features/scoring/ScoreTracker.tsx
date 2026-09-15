@@ -5,6 +5,7 @@ import { ArrowLeft, RefreshCw, RotateCcw, ShieldAlert } from 'lucide-react'
 import { canScore } from '@/data/staff'
 import { fetchTournament, mutateTournament } from '@/data/tournament'
 import { isWinningScore } from '@/domain/scoring'
+import { availableCourts } from '@/domain/setup'
 import type { PlayingMatch, Side, TournamentSnapshot, UUID } from '@/domain/types'
 import {
   reduceScoring,
@@ -41,7 +42,8 @@ function message(error: unknown): string {
 }
 
 function playableMatches(snapshot: TournamentSnapshot): PlayingMatch[] {
-  return snapshot.matches.filter((match): match is PlayingMatch => match.state === 'playing')
+  const courts = new Set(availableCourts(snapshot.tournament.courtCount))
+  return snapshot.matches.filter((match): match is PlayingMatch => match.state === 'playing' && match.court !== null && courts.has(match.court))
 }
 
 function pairSeedLabel(snapshot: TournamentSnapshot, pairId: UUID | null): string {
