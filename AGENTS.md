@@ -12,6 +12,11 @@ repository root. Create the directory if needed.
 For spec work, read `specs/RULEBOOK.md` first. It defines the state model,
 verification gates, branch model, and checkpoints. Do not improvise substitutes.
 
+Starting or resuming a phase through `/spec-phase` authorizes the local commits
+required by that workflow. Commit each completed logical sub-step without asking
+for separate approval. Pushes, pull requests, merges, and destructive Git actions
+still require the checkpoints defined in `specs/RULEBOOK.md`.
+
 ## Domain Model & Decisions
 <!-- domain-rulebook v1 -->
 
