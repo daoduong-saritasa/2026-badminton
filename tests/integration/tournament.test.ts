@@ -1,5 +1,7 @@
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
+import flexibleSetupMigration from '../../supabase/migrations/202609150001_flexible_setup.sql?raw'
+
 import {
   elevate,
   type LocalSession,
@@ -45,20 +47,29 @@ interface Snapshot {
   pairs: SnapshotPair[]
   tieResolutions: unknown[]
   tournament: {
+    court_count: 1 | 2 | null
     setup_locked_at: string | null
     stage: 'setup' | 'groups' | 'knockouts' | 'completed'
     version: number
   }
 }
 
-function setupPayload(): Record<string, unknown> {
+function setupPayload(
+  pairCount = 6,
+  courtCount: 1 | 2 | null = 2,
+  largerGroup: 'A' | 'B' = 'A',
+): Record<string, unknown> {
+  const smallerGroupSize = Math.floor(pairCount / 2)
+  const groupASize = pairCount % 2 === 0 || largerGroup === 'A'
+    ? pairCount - smallerGroupSize
+    : smallerGroupSize
   return {
     setup: {
       tournamentName: 'Integration tournament',
-      courtCount: 2,
-      pairs: Array.from({ length: 6 }, (_, pairIndex) => ({
+      courtCount,
+      pairs: Array.from({ length: pairCount }, (_, pairIndex) => ({
         teamName: `Pair ${pairIndex + 1}`,
-        group: pairIndex < 3 ? 'A' : 'B',
+        group: pairIndex < groupASize ? 'A' : 'B',
         players: [
           { name: `Player ${pairIndex * 2 + 1}`, seed: 1 },
           { name: `Player ${pairIndex * 2 + 2}`, seed: 2 },
@@ -86,8 +97,12 @@ async function callMutation(
   return (await response.json()) as Receipt
 }
 
-async function createTournament(session: LocalSession): Promise<Snapshot> {
-  const setup = await callMutation('save_setup', session, 0, setupPayload())
+async function createTournament(
+  session: LocalSession,
+  pairCount = 6,
+  courtCount: 1 | 2 = 2,
+): Promise<Snapshot> {
+  const setup = await callMutation('save_setup', session, 0, setupPayload(pairCount, courtCount))
   await callMutation('generate_fixtures', session, setup.tournamentVersion, {})
   return readSnapshot(session)
 }
@@ -152,11 +167,112 @@ async function enterGroupResults(
 
 describe('tournament transactions', () => {
   beforeAll(async () => {
+    expect(flexibleSetupMigration).toContain('create or replace function public.set_court_count')
     await requireLocalSupabase()
   })
 
   beforeEach(() => {
     resetLocalDatabase()
+  })
+
+  it.each([
+    [4, 'A'], [5, 'A'], [5, 'B'], [6, 'A'], [7, 'A'], [7, 'B'],
+    [8, 'A'], [9, 'A'], [9, 'B'], [10, 'A'],
+  ] as const)('accepts %i balanced pairs with Group %s larger when needed', async (pairCount, largerGroup) => {
+    const staff = await signInAnonymously()
+    await elevate(staff)
+    const receipt = await callMutation('save_setup', staff, 0, setupPayload(pairCount, 2, largerGroup))
+    expect(receipt.tournamentVersion).toBe(1)
+  })
+
+  it('rejects unsupported and unbalanced setup and requires a court choice for fixtures', async () => {
+    const staff = await signInAnonymously()
+    await elevate(staff)
+
+    for (const pairCount of [3, 11]) {
+      const response = await rpc('save_setup', mutation(0, setupPayload(pairCount)), staff)
+      expect(response.ok).toBe(false)
+    }
+
+    const unbalanced = setupPayload(6) as { setup: { pairs: { group: string }[] } }
+    unbalanced.setup.pairs[4]!.group = 'A'
+    expect((await rpc('save_setup', mutation(0, unbalanced), staff)).ok).toBe(false)
+
+    const setup = await callMutation('save_setup', staff, 0, setupPayload(6, null))
+    expect((await rpc('generate_fixtures', mutation(setup.tournamentVersion, {}), staff)).ok).toBe(false)
+  })
+
+  it.each([1, 2] as const)('generates fixtures for the configured %i-court schedule', async (courtCount) => {
+    const staff = await signInAnonymously()
+    await elevate(staff)
+    const snapshot = await createTournament(staff, 10, courtCount)
+
+    expect(snapshot.matches).toHaveLength(23)
+    expect(snapshot.matches.every((match) => match.court !== null && match.court <= courtCount)).toBe(true)
+    if (courtCount === 2) expect(snapshot.matches.some((match) => match.court === 2)).toBe(true)
+
+    const final = snapshot.matches.find((match) => match.round === 'final')
+    if (!final) throw new Error('Final fixture was not generated')
+    expect((await rpc('start_scoring', mutation(final.version, { matchId: final.id }), staff)).ok).toBe(false)
+  })
+
+  it('changes court count idempotently and preserves completed Court 2 history', async () => {
+    const staff = await signInAnonymously()
+    await elevate(staff)
+    let snapshot = await createTournament(staff)
+    const courtTwo = snapshot.matches.filter((match) => match.court === 2 && match.round === 'group')
+    const completed = courtTwo[0]
+    const queued = courtTwo[1]
+    if (!completed || !queued) throw new Error('Court 2 queue is incomplete')
+
+    await callMutation('enter_result', staff, completed.version, {
+      matchId: completed.id,
+      score: { a: 21, b: 10 },
+    })
+    snapshot = await readSnapshot(staff)
+    const requestId = crypto.randomUUID()
+    const reduced = await callMutation('set_court_count', staff, snapshot.tournament.version, { courtCount: 1 }, requestId)
+    const replay = await callMutation('set_court_count', staff, snapshot.tournament.version, { courtCount: 1 }, requestId)
+    expect(replay).toEqual(reduced)
+
+    snapshot = await readSnapshot(staff)
+    expect(snapshot.tournament.court_count).toBe(1)
+    expect(snapshot.matches.find((match) => match.id === completed.id)?.court).toBe(2)
+    expect(snapshot.matches.find((match) => match.id === queued.id)?.court).toBe(1)
+    expect((await rpc('set_court_count', mutation(snapshot.tournament.version - 1, { courtCount: 2 }), staff)).ok).toBe(false)
+
+    const assignmentsBeforeIncrease = snapshot.matches.map(({ id, court, playing_order }) => ({ id, court, playing_order }))
+    await callMutation('set_court_count', staff, snapshot.tournament.version, { courtCount: 2 })
+    snapshot = await readSnapshot(staff)
+    expect(snapshot.matches.map(({ id, court, playing_order }) => ({ id, court, playing_order }))).toEqual(assignmentsBeforeIncrease)
+  })
+
+  it('blocks reduction while Court 2 plays and serializes start against reassignment', async () => {
+    const staff = await signInAnonymously()
+    await elevate(staff)
+    let snapshot = await createTournament(staff)
+    const courtTwo = snapshot.matches.find((match) => match.court === 2 && match.round === 'group')
+    if (!courtTwo) throw new Error('Court 2 fixture was not generated')
+
+    await callMutation('start_scoring', staff, courtTwo.version, { matchId: courtTwo.id })
+    snapshot = await readSnapshot(staff)
+    expect((await rpc('set_court_count', mutation(snapshot.tournament.version, { courtCount: 1 }), staff)).ok).toBe(false)
+    expect((await rpc('assign_courts', mutation(snapshot.tournament.version, {
+      assignments: [{ matchId: courtTwo.id, court: 1, playingOrder: 99 }],
+    }), staff)).ok).toBe(false)
+
+    resetLocalDatabase()
+    await elevate(staff)
+    snapshot = await createTournament(staff)
+    const unstarted = snapshot.matches.find((match) => match.round === 'group')
+    if (!unstarted) throw new Error('Group fixture was not generated')
+    const outcomes = await Promise.all([
+      rpc('start_scoring', mutation(unstarted.version, { matchId: unstarted.id }), staff),
+      rpc('assign_courts', mutation(snapshot.tournament.version, {
+        assignments: [{ matchId: unstarted.id, court: unstarted.court, playingOrder: 99 }],
+      }), staff),
+    ])
+    expect(outcomes.filter((response) => response.ok)).toHaveLength(1)
   })
 
   it('serializes claims, rejects court conflicts, and transfers ownership explicitly', async () => {
