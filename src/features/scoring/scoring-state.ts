@@ -117,7 +117,7 @@ function restoreSnapshot(
       resetGeneration: event.resetGeneration,
       score: event.score,
       matchVersion: event.matchVersion,
-      hasOwnership: event.hasOwnership,
+      hasOwnership: false,
     }
     if (isWinningScore(event.score)) {
       return { ...context, status: 'reviewing', winningSide: winningSide(event.score) }

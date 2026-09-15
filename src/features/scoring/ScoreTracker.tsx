@@ -159,7 +159,7 @@ function ScoringSurface({
     )
     if (!latest) return
     const hasOwnership = await canScore(match.id)
-    queryClient.setQueryData(['score-access', match.id], hasOwnership)
+    queryClient.setQueryData(['score-access', latestState.resetGeneration, match.id], hasOwnership)
     dispatch({
       type: 'snapshot-received',
       resetGeneration: latestState.resetGeneration,
@@ -192,7 +192,7 @@ function ScoringSurface({
       return { latest, hasOwnership }
     },
     onSuccess: ({ latest, hasOwnership }) => {
-      queryClient.setQueryData(['score-access', match.id], hasOwnership)
+      queryClient.setQueryData(['score-access', resetGeneration, match.id], hasOwnership)
       if (hasOwnership) {
         dispatch({ type: 'ownership-recovered', resetGeneration, score: latest.score, matchVersion: latest.version })
       } else {
@@ -347,7 +347,7 @@ export function ScoreTracker({ snapshot, resetGeneration, onExit }: { snapshot: 
   const [matchId, setMatchId] = useState(matches[0]?.id ?? '')
   const match = matches.find((candidate) => candidate.id === matchId) ?? matches[0]
   const ownershipQuery = useQuery({
-    queryKey: ['score-access', match?.id],
+    queryKey: ['score-access', resetGeneration, match?.id],
     queryFn: () => canScore(match?.id ?? ''),
     enabled: match !== undefined,
     refetchInterval: 5_000,

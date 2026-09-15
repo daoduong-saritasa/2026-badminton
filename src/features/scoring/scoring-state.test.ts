@@ -376,7 +376,7 @@ describe('reduceScoring', () => {
       resetGeneration: 1,
       score: { a: 0, b: 0 },
       matchVersion: 0,
-      hasOwnership: false,
+      hasOwnership: true,
     })
 
     expect(afterReset).toMatchObject({
