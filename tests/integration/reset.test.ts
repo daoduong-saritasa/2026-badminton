@@ -18,13 +18,16 @@ interface Snapshot {
   matches: Array<{
     court: number | null
     id: string
+    pair_a_id: string | null
+    pair_b_id: string | null
     playing_order: number
+    round: string
     score_a: number | null
     score_b: number | null
     state: string
     version: number
   }>
-  pairs: Array<{ id: string; withdrawn: boolean }>
+  pairs: Array<{ group_code: string; id: string; withdrawn: boolean }>
   players: Array<{ id: string }>
   tieResolutions: unknown[]
   tournament: {
@@ -42,14 +45,14 @@ interface TournamentState {
   snapshot: Snapshot | null
 }
 
-function setupPayload(): Record<string, unknown> {
+function setupPayload(pairCount = 4): Record<string, unknown> {
   return {
     setup: {
       tournamentName: 'Reset integration',
       courtCount: 2,
-      pairs: Array.from({ length: 4 }, (_, index) => ({
+      pairs: Array.from({ length: pairCount }, (_, index) => ({
         teamName: `Pair ${index + 1}`,
-        group: index < 2 ? 'A' : 'B',
+        group: index < pairCount / 2 ? 'A' : 'B',
         players: [
           { name: `Player ${index * 2 + 1}`, seed: 1 },
           { name: `Player ${index * 2 + 2}`, seed: 2 },
@@ -65,8 +68,8 @@ async function state(session?: LocalSession): Promise<TournamentState> {
   return (await response.json()) as TournamentState
 }
 
-async function createTournament(session: LocalSession): Promise<Snapshot> {
-  const setup = await rpc('save_setup', mutation(0, setupPayload()), session)
+async function createTournament(session: LocalSession, pairCount = 4): Promise<Snapshot> {
+  const setup = await rpc('save_setup', mutation(0, setupPayload(pairCount)), session)
   expect(setup.ok).toBe(true)
   const receipt = await setup.json() as { tournamentVersion: number }
   const fixtures = await rpc('generate_fixtures', mutation(receipt.tournamentVersion, {}), session)
@@ -137,6 +140,55 @@ describe('tournament maintenance reset', () => {
     expect(runSql('select reset_enabled from private.maintenance_state where singleton;')).toBe('t')
   })
 
+  it('restores withdrawn fixtures without slot collisions and resumes group play after progress reset', async () => {
+    const staff = await signInAnonymously()
+    await elevate(staff)
+    const created = await createTournament(staff, 6)
+    const withdrawn = created.pairs.find((pair) => pair.group_code === 'A')
+    if (!withdrawn) throw new Error('Reset fixture has no group A pair')
+    expect((await rpc('withdraw_pair', mutation(created.tournament.version, { pairId: withdrawn.id }), staff)).ok).toBe(true)
+
+    const afterWithdrawal = (await state(staff)).snapshot
+    const voided = afterWithdrawal?.matches.find((match) => match.state === 'void' && match.court !== null)
+    const moved = afterWithdrawal?.matches.find((match) => match.state === 'unstarted' && match.round === 'group')
+    if (!afterWithdrawal || !voided || voided.court === null || !moved) {
+      throw new Error('Reset fixture has no reusable void slot')
+    }
+    const slot = { court: voided.court, playingOrder: voided.playing_order }
+    expect((await rpc('assign_courts', mutation(afterWithdrawal.tournament.version, {
+      assignments: [{ matchId: moved.id, ...slot }],
+    }), staff)).ok).toBe(true)
+
+    const before = await state(staff)
+    expect((await rpc('set_reset_enabled', { p_enabled: true })).ok).toBe(true)
+    expect((await rpc('reset_tournament', resetBody(before, 'progress'))).ok).toBe(true)
+
+    const restored = await state(staff)
+    const matches = restored.snapshot?.matches ?? []
+    expect(restored.snapshot?.tournament.stage).toBe('groups')
+    expect(matches.every((match) => match.state === 'unstarted')).toBe(true)
+    expect(matches.find((match) => match.id === moved.id)).toMatchObject({ court: slot.court, playing_order: slot.playingOrder })
+    const slots = matches.filter((match) => match.court !== null).map((match) => `${match.court}:${match.playing_order}`)
+    expect(new Set(slots).size).toBe(slots.length)
+
+    const pairOrder = new Map(restored.snapshot?.pairs.map((pair, index) => [pair.id, index]))
+    for (const fixture of matches.filter((match) => match.round === 'group')) {
+      const current = (await state(staff)).snapshot?.matches.find((match) => match.id === fixture.id)
+      if (!current || current.pair_a_id === null || current.pair_b_id === null) {
+        throw new Error('Group fixture is missing a pair')
+      }
+      const sideAWins = (pairOrder.get(current.pair_a_id) ?? 0) < (pairOrder.get(current.pair_b_id) ?? 0)
+      expect((await rpc('enter_result', mutation(current.version, {
+        matchId: current.id,
+        score: sideAWins ? { a: 21, b: 10 } : { a: 10, b: 21 },
+      }, undefined, 1), staff)).ok).toBe(true)
+    }
+
+    const completed = await state(staff)
+    expect((await rpc('confirm_groups', mutation(completed.snapshot?.tournament.version ?? -1, {}, undefined, 1), staff)).ok).toBe(true)
+    expect((await state(staff)).snapshot?.tournament.stage).toBe('knockouts')
+  })
+
   it('resets active progress while preserving setup, fixtures, schedule, staff, and audit history', async () => {
     const staff = await signInAnonymously()
     await elevate(staff)
@@ -164,7 +216,7 @@ describe('tournament maintenance reset', () => {
         name: 'Reset integration',
         court_count: 2,
         setup_locked_at: null,
-        stage: 'setup',
+        stage: 'groups',
       },
     })
     expect(after.snapshot?.matches.map(({ id, court, playing_order }) => ({ id, court, playing_order }))).toEqual(schedule)

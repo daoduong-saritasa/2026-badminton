@@ -303,9 +303,47 @@ begin
 
   next_generation := state_row.reset_generation + 1;
   if p_mode = 'progress' then
-    delete from private.match_ownership;
+    delete from private.match_ownership where match_id is not null;
     delete from public.tie_resolutions where tournament_id = tournament_row.id;
-    update public.pairs set withdrawn = false;
+    update public.pairs set withdrawn = false where withdrawn;
+    -- Void fixtures keep a slot the schedule may since have reused, or a court
+    -- since removed; restoring them in place would collide, so they rejoin
+    -- the end of an active court's queue.
+    with displaced as (
+      select match_row.id,
+        least(match_row.court, tournament_row.court_count) as target_court,
+        row_number() over (
+          partition by least(match_row.court, tournament_row.court_count)
+          order by match_row.court, match_row.playing_order, match_row.id
+        ) as queue_offset
+      from public.matches as match_row
+      where match_row.tournament_id = tournament_row.id
+        and match_row.state = 'void'
+        and match_row.court is not null
+        and (
+          match_row.court > tournament_row.court_count
+          or exists (
+            select 1 from public.matches as occupant
+            where occupant.tournament_id = match_row.tournament_id
+              and occupant.id <> match_row.id
+              and occupant.court = match_row.court
+              and occupant.playing_order = match_row.playing_order
+              and (occupant.state <> 'void' or occupant.id < match_row.id)
+          )
+        )
+    ),
+    queue_end as (
+      select court, max(playing_order) as last_order
+      from public.matches
+      where tournament_id = tournament_row.id and court is not null
+      group by court
+    )
+    update public.matches as match_row
+    set court = displaced.target_court,
+        playing_order = coalesce(queue_end.last_order, 0) + displaced.queue_offset
+    from displaced
+    left join queue_end on queue_end.court = displaced.target_court
+    where match_row.id = displaced.id;
     update public.matches
     set pair_a_id = case when round = 'group' then pair_a_id else null end,
         pair_b_id = case when round = 'group' then pair_b_id else null end,
@@ -313,11 +351,21 @@ begin
         result_kind = null, winner_id = null, version = version + 1,
         updated_at = clock_timestamp()
     where tournament_id = tournament_row.id;
-    update public.tournament
-    set stage = 'setup', setup_locked_at = null, version = version + 1,
-        updated_at = clock_timestamp()
-    where id = tournament_row.id
-    returning version into next_version;
+    -- Unlocked groups with unstarted fixtures is the state fixture generation
+    -- leaves: setup stays editable and play can continue without a rebuild.
+    if exists (select 1 from public.matches where tournament_id = tournament_row.id) then
+      update public.tournament
+      set stage = 'groups', setup_locked_at = null, version = version + 1,
+          updated_at = clock_timestamp()
+      where id = tournament_row.id
+      returning version into next_version;
+    else
+      update public.tournament
+      set stage = 'setup', setup_locked_at = null, version = version + 1,
+          updated_at = clock_timestamp()
+      where id = tournament_row.id
+      returning version into next_version;
+    end if;
   else
     update public.matches
     set source_a_match_id = null, source_b_match_id = null
