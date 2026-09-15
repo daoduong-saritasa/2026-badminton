@@ -33,7 +33,7 @@ Fresh review: required — persistent-data migration, durable scheduling writes,
 - [x] Update `src/features/organizer/OrganizerPage.tsx`, `src/features/tournament/TournamentPage.tsx`, and `src/features/scoring/ScoreTracker.tsx` to use selected courts, expose court-count changes, and reset stale schedule drafts after authoritative changes; retain visibility of historical Court 2 matches after reduction.
 - [~] In `tests/integration/tournament.test.ts`, verify accepted/rejected setup, both court counts, queue reduction/increase, historical-court preservation, version conflicts, duplicate requests, concurrent start/reassignment, and final dependencies against local Supabase. Blocked on 2026-09-15: all 19 selected scenarios were discovered but skipped because `/Users/thomasduong/.orbstack/run/docker.sock` is absent; project-wide typechecking and non-database related tests are substitute evidence only.
 - [x] Add `tests/integration/sql.d.ts` declaring `*.sql?raw`; import and use the new migration in `tests/integration/tournament.test.ts` as fixture evidence, so Vitest's reverse dependency selection includes integration tests for SQL changes; do not treat text assertions as a substitute for live database scenarios.
-- [ ] Adjust affected setup/schedule markup and `src/App.css` or `src/index.css` for PLAN.md → “Responsive requirements across phases”; retain usable controls and full-name access on narrow screens.
+- [x] Adjust affected setup/schedule markup and `src/App.css` or `src/index.css` for PLAN.md → “Responsive requirements across phases”; retain usable controls and full-name access on narrow screens.
 
 **Phase gate (hard):**
 

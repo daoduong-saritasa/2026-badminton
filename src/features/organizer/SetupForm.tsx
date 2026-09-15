@@ -207,7 +207,7 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
                   <Minus />
                 </Button>
               </div>
-              <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2.5">
+              <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_7.5rem]">
                 <Input
                   aria-label={`Pair ${pairIndex + 1} team name`}
                   placeholder="Team name (optional)"
@@ -233,7 +233,7 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
                 </Select>
               </div>
               {[0, 1].map((playerIndex) => (
-                <div className="mt-2.5 grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2.5" key={playerIndex}>
+                <div className="mt-2.5 grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_7.5rem]" key={playerIndex}>
                   <Input
                     aria-label={`Pair ${pairIndex + 1} player ${playerIndex + 1}`}
                     placeholder={`Player ${playerIndex + 1}`}

@@ -162,7 +162,7 @@ function UpcomingSchedule({ snapshot, onStartScoring }: { snapshot: TournamentSn
                     {match ? matchRoundLabel(match) : '–'}
                   </span>
                 )}
-                <span className="truncate text-[0.8125rem] font-medium">{matchPairs(snapshot, assignment.matchId)}</span>
+                <span className="min-w-0 [overflow-wrap:anywhere] text-[0.8125rem] font-medium">{matchPairs(snapshot, assignment.matchId)}</span>
               </span>
               <Select
                 value={String(assignment.court)}

@@ -63,16 +63,16 @@ function TicketSide({
   const teamName = pairTeamName(snapshot, pairId)
   return (
     <div className="flex min-w-0 flex-col items-center text-center">
-      <p className="truncate text-[0.9375rem] font-medium tracking-[-0.027em]">
+      <p className="max-w-full [overflow-wrap:anywhere] text-[0.9375rem] font-medium tracking-[-0.027em]">
         {pairId ? pairName(snapshot, pairId) : sideLabel(match, side)}
       </p>
-      {teamName ? <p className="mt-1 truncate text-[0.6875rem] text-muted-ink">{pairPlayers(snapshot, pairId)}</p> : null}
+      {teamName ? <p className="mt-1 max-w-full [overflow-wrap:anywhere] text-[0.6875rem] text-muted-ink">{pairPlayers(snapshot, pairId)}</p> : null}
       <p className="mt-1.5 text-[0.625rem] uppercase tracking-[0.08em] text-muted-ink">
         {pairSeeds(snapshot, pairId)}
       </p>
       <strong
         className={cn(
-          'numeric mt-4 block min-w-28 rounded-[14px] text-[4.375rem]/[1.35] font-bold tracking-[-0.057em] shadow-[inset_0_1px_0_rgb(255_255_255/0.53)]',
+          'numeric mt-4 block w-full min-w-0 rounded-[14px] text-[clamp(3rem,18vw,4.375rem)]/[1.35] font-bold tracking-[-0.057em] shadow-[inset_0_1px_0_rgb(255_255_255/0.53)]',
           side === 'a' ? 'bg-peach' : 'bg-ice',
         )}
       >
@@ -115,7 +115,7 @@ export function MatchTicket({
           {status}
         </Badge>
       </div>
-      <div className="grid grid-cols-[minmax(0,1fr)_1rem_minmax(0,1fr)] items-center gap-3">
+      <div className="grid grid-cols-[minmax(0,1fr)_0.75rem_minmax(0,1fr)] items-center gap-1.5 sm:gap-3">
         <TicketSide match={match} side="a" snapshot={snapshot} />
         <span className="mt-[1.875rem] text-center text-xl opacity-40" aria-hidden="true">:</span>
         <TicketSide match={match} side="b" snapshot={snapshot} />

@@ -256,7 +256,7 @@ function ScoringSurface({
             aria-label={`Add one point for ${pairName(snapshot, side === 'a' ? match.pairAId : match.pairBId)}`}
             onClick={() => handlePoint(side)}
           >
-            <span className="max-w-full truncate text-[clamp(0.9375rem,2.4vw,1.625rem)]/[1.5] font-semibold tracking-[-0.023em]">
+            <span className="max-w-full [overflow-wrap:anywhere] text-[clamp(0.9375rem,2.4vw,1.625rem)]/[1.35] font-semibold tracking-[-0.023em]">
               {pairName(snapshot, side === 'a' ? match.pairAId : match.pairBId)}
             </span>
             <strong className="numeric self-center pr-[0.07em] text-[clamp(5rem,28dvh,16rem)] font-bold leading-none tracking-[-0.08em]">
