@@ -1,22 +1,18 @@
 import type {
   Court,
+  CourtCount,
   Fixture,
   Group,
   GroupFixture,
   Pair,
   UUID,
 } from './types'
+import { isValidGroupSplit } from './setup'
 
 interface Pairing {
   group: Group
   pairAId: UUID
   pairBId: UUID
-}
-
-const EXPECTED_GROUP_SIZES: Readonly<Record<number, readonly [number, number]>> = {
-  6: [3, 3],
-  7: [4, 3],
-  8: [4, 4],
 }
 
 function createPairings(pairs: readonly Pair[], group: Group): Pairing[] {
@@ -52,6 +48,7 @@ function areDisjoint(first: Pairing, second: Pairing): boolean {
 function chooseNextSlot(
   remaining: readonly Pairing[],
   previousPairIds: ReadonlySet<UUID>,
+  courtCount: CourtCount,
 ): number[] {
   let bestIndices: number[] = []
   let bestScore = Number.NEGATIVE_INFINITY
@@ -71,7 +68,7 @@ function chooseNextSlot(
   for (let first = 0; first < remaining.length; first += 1) {
     consider([first])
 
-    for (let second = first + 1; second < remaining.length; second += 1) {
+    for (let second = first + 1; courtCount === 2 && second < remaining.length; second += 1) {
       const firstPairing = remaining[first]
       const secondPairing = remaining[second]
 
@@ -85,27 +82,23 @@ function chooseNextSlot(
 }
 
 function validatePairs(pairs: readonly Pair[]): void {
-  const expectedSizes = EXPECTED_GROUP_SIZES[pairs.length]
-
-  if (!expectedSizes) {
-    throw new Error('Fixtures require 6, 7, or 8 pairs')
+  if (pairs.length < 4 || pairs.length > 10) {
+    throw new Error('Fixtures require 4 to 10 pairs')
   }
 
   if (new Set(pairs.map((pair) => pair.id)).size !== pairs.length) {
     throw new Error('Pair identifiers must be unique')
   }
 
-  const groupASize = pairs.filter((pair) => pair.group === 'A').length
-  const groupBSize = pairs.filter((pair) => pair.group === 'B').length
-
-  if (groupASize !== expectedSizes[0] || groupBSize !== expectedSizes[1]) {
-    throw new Error(
-      `Expected group sizes ${expectedSizes[0]}+${expectedSizes[1]} for ${pairs.length} pairs`,
-    )
+  if (!isValidGroupSplit(pairs)) {
+    throw new Error(`Groups must be balanced for ${pairs.length} pairs`)
   }
 }
 
-export function generateFixtures(pairs: readonly Pair[]): Fixture[] {
+export function generateFixtures(
+  pairs: readonly Pair[],
+  courtCount: CourtCount,
+): Fixture[] {
   validatePairs(pairs)
 
   const remaining = [
@@ -117,7 +110,7 @@ export function generateFixtures(pairs: readonly Pair[]): Fixture[] {
   let playingOrder = 1
 
   while (remaining.length > 0) {
-    const selectedIndices = chooseNextSlot(remaining, previousPairIds)
+    const selectedIndices = chooseNextSlot(remaining, previousPairIds, courtCount)
     const selected = selectedIndices.map((index) => remaining[index] as Pairing)
 
     selected.forEach((pairing, courtIndex) => {
@@ -161,8 +154,8 @@ export function generateFixtures(pairs: readonly Pair[]): Fixture[] {
       pairBId: null,
       sourceALabel: 'B1',
       sourceBLabel: 'A2',
-      court: 2,
-      playingOrder,
+      court: courtCount === 2 ? 2 : 1,
+      playingOrder: courtCount === 2 ? playingOrder : playingOrder + 1,
     },
     {
       round: 'final',
@@ -172,7 +165,7 @@ export function generateFixtures(pairs: readonly Pair[]): Fixture[] {
       sourceALabel: 'SF1 winner',
       sourceBLabel: 'SF2 winner',
       court: 1,
-      playingOrder: playingOrder + 1,
+      playingOrder: playingOrder + (courtCount === 2 ? 1 : 2),
     },
   ]
 }
