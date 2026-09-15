@@ -1,5 +1,5 @@
-// Schema-derived fallback generated while the local Supabase container is unavailable.
-// Regenerate from the running local schema before clearing the Phase 2 verification debt.
+// Schema-derived fallback maintained while the local Supabase container is unavailable.
+// Regenerate from the running local schema before clearing the verification debt.
 
 export type Json =
   | string
@@ -28,6 +28,7 @@ export type Database = {
     Tables: {
       tournament: {
         Row: {
+          court_count: number | null
           created_at: string
           id: string
           name: string
@@ -38,6 +39,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          court_count?: number | null
           created_at?: string
           id?: string
           name: string
@@ -48,6 +50,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          court_count?: number | null
           created_at?: string
           id?: string
           name?: string
@@ -220,6 +223,7 @@ export type Database = {
         Returns: Json
       }
       save_setup: MutationFunction
+      set_court_count: MutationFunction
       start_scoring: MutationFunction
       take_over: MutationFunction
       undo_point: MutationFunction

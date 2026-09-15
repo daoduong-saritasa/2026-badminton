@@ -25,6 +25,7 @@ function snapshot(version: number) {
       name: 'Tournament',
       stage: 'groups',
       setup_locked_at: '2026-09-09T00:00:00Z',
+      court_count: 2,
       version,
     },
     players: [
@@ -64,7 +65,7 @@ describe('tournament data', () => {
   it('maps server DTOs and rejects a response older than the accepted snapshot', async () => {
     rpc.mockResolvedValueOnce({ data: snapshot(1), error: null })
     await expect(fetchTournament()).resolves.toMatchObject({
-      tournament: { id: tournamentId, setupLockedAt: '2026-09-09T00:00:00Z', version: 1 },
+      tournament: { id: tournamentId, setupLockedAt: '2026-09-09T00:00:00Z', courtCount: 2, version: 1 },
       pairs: [{ id: pairId, playerAId, playerBId, group: 'A' }],
     })
 
@@ -104,6 +105,27 @@ describe('tournament data', () => {
       p_payload: {},
     })
     expect(rpc).toHaveBeenNthCalledWith(2, 'get_tournament_snapshot')
+  })
+
+  it('sends a versioned court-count mutation', async () => {
+    rpc
+      .mockResolvedValueOnce({
+        data: { requestId, tournamentVersion: 2, matchId: null, matchVersion: null },
+        error: null,
+      })
+      .mockResolvedValueOnce({ data: snapshot(2), error: null })
+
+    await mutateTournament('set_court_count', {
+      requestId,
+      expectedVersion: 1,
+      payload: { courtCount: 1 },
+    })
+
+    expect(rpc).toHaveBeenNthCalledWith(1, 'set_court_count', {
+      p_request_id: requestId,
+      p_expected_version: 1,
+      p_payload: { courtCount: 1 },
+    })
   })
 
   it('refreshes after Realtime reconnect and cleans up the channel', async () => {

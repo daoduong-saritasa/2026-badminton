@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type { CommandPayloads, MutationInput, MutationReceipt } from '../domain/commands'
 import type {
   Court,
+  CourtCount,
   Group,
   Match,
   Pair,
@@ -24,6 +25,7 @@ const tournamentDtoSchema = z.object({
   name: z.string(),
   stage: z.enum(['setup', 'groups', 'knockouts', 'completed']),
   setup_locked_at: z.string().nullable(),
+  court_count: courtSchema.nullable(),
   version: z.int().nonnegative(),
 })
 
@@ -142,6 +144,7 @@ function mapTournament(dto: z.infer<typeof tournamentDtoSchema>): Tournament {
     name: dto.name,
     stage: dto.stage,
     setupLockedAt: dto.setup_locked_at,
+    courtCount: dto.court_count as CourtCount | null,
     version: dto.version,
   }
 }
