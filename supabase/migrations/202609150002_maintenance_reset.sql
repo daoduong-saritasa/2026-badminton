@@ -306,9 +306,10 @@ begin
     delete from private.match_ownership where match_id is not null;
     delete from public.tie_resolutions where tournament_id = tournament_row.id;
     update public.pairs set withdrawn = false where withdrawn;
-    -- Void fixtures keep a slot the schedule may since have reused, or a court
-    -- since removed; restoring them in place would collide, so they rejoin
-    -- the end of an active court's queue.
+    -- Any fixture left on a removed court (reduction moves only unstarted
+    -- matches), and void fixtures whose slot the schedule has since reused,
+    -- would be unplayable or collide once unstarted, so they rejoin the end
+    -- of an active court's queue.
     with displaced as (
       select match_row.id,
         least(match_row.court, tournament_row.court_count) as target_court,
@@ -318,11 +319,10 @@ begin
         ) as queue_offset
       from public.matches as match_row
       where match_row.tournament_id = tournament_row.id
-        and match_row.state = 'void'
         and match_row.court is not null
         and (
           match_row.court > tournament_row.court_count
-          or exists (
+          or match_row.state = 'void' and exists (
             select 1 from public.matches as occupant
             where occupant.tournament_id = match_row.tournament_id
               and occupant.id <> match_row.id

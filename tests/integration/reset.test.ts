@@ -189,6 +189,37 @@ describe('tournament maintenance reset', () => {
     expect((await state(staff)).snapshot?.tournament.stage).toBe('knockouts')
   })
 
+  it('moves completed fixtures off a removed court so they can start after progress reset', async () => {
+    const staff = await signInAnonymously()
+    await elevate(staff)
+    const created = await createTournament(staff)
+    const courtTwo = created.matches.find((match) =>
+      match.court === 2 && match.pair_a_id !== null && match.pair_b_id !== null)
+    if (!courtTwo) throw new Error('Reset fixture has no playable Court 2 match')
+    expect((await rpc('enter_result', mutation(courtTwo.version, {
+      matchId: courtTwo.id,
+      score: { a: 21, b: 10 },
+    }), staff)).ok).toBe(true)
+
+    const completed = await state(staff)
+    expect((await rpc('set_court_count', mutation(completed.snapshot?.tournament.version ?? -1, { courtCount: 1 }), staff)).ok).toBe(true)
+
+    const before = await state(staff)
+    expect(before.snapshot?.matches.find((match) => match.id === courtTwo.id)?.court).toBe(2)
+    expect((await rpc('set_reset_enabled', { p_enabled: true })).ok).toBe(true)
+    expect((await rpc('reset_tournament', resetBody(before, 'progress'))).ok).toBe(true)
+
+    const restored = await state(staff)
+    const matches = restored.snapshot?.matches ?? []
+    expect(matches.every((match) => match.court === null || match.court === 1)).toBe(true)
+    const slots = matches.filter((match) => match.court !== null).map((match) => match.playing_order)
+    expect(new Set(slots).size).toBe(slots.length)
+    const relocated = matches.find((match) => match.id === courtTwo.id)
+    if (!relocated) throw new Error('Relocated fixture is missing')
+    expect(relocated).toMatchObject({ court: 1, state: 'unstarted', playing_order: Math.max(...slots) })
+    expect((await rpc('start_scoring', mutation(relocated.version, { matchId: relocated.id }, undefined, 1), staff)).ok).toBe(true)
+  })
+
   it('resets active progress while preserving setup, fixtures, schedule, staff, and audit history', async () => {
     const staff = await signInAnonymously()
     await elevate(staff)
