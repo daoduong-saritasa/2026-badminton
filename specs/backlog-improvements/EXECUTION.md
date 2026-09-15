@@ -37,8 +37,8 @@ Fresh review: required — persistent-data migration, durable scheduling writes,
 
 **Phase gate (hard):**
 
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed files>` using paths from the real phase diff; local Supabase is required for selected integration tests, with environment-blocked results handled under the STATUS debt rules.
+- [x] Run `npm run typecheck` project-wide.
+- [~] Run `npm run test:related -- <changed files>` using paths from the real phase diff; local Supabase is required for selected integration tests, with environment-blocked results handled under the STATUS debt rules. On 2026-09-15, 54 non-database tests passed and 19 selected integration tests were skipped because `/Users/thomasduong/.orbstack/run/docker.sock` is absent.
 
 **Review checklist (user, at PR review):**
 
