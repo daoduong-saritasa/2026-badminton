@@ -55,6 +55,7 @@ function setupPayload(): Record<string, unknown> {
   return {
     setup: {
       tournamentName: 'Integration tournament',
+      courtCount: 2,
       pairs: Array.from({ length: 6 }, (_, pairIndex) => ({
         teamName: `Pair ${pairIndex + 1}`,
         group: pairIndex < 3 ? 'A' : 'B',

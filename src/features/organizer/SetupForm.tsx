@@ -3,7 +3,8 @@ import { useMutation } from '@tanstack/react-query'
 import { AlertTriangle, Minus, Plus } from 'lucide-react'
 
 import { mutateTournament } from '@/data/tournament'
-import type { Group, Seed, SetupInput, SetupPairInput, TournamentSnapshot } from '@/domain/types'
+import { isValidGroupSplit } from '@/domain/setup'
+import type { CourtCount, Group, Seed, SetupInput, SetupPairInput, TournamentSnapshot } from '@/domain/types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import {
   AlertDialog,
@@ -34,12 +35,14 @@ function setupFromSnapshot(snapshot: TournamentSnapshot | null): SetupInput {
   if (snapshot === null) {
     return {
       tournamentName: '',
-      pairs: Array.from({ length: 6 }, (_, index) => blankPair(index, 6)),
+      pairs: Array.from({ length: 4 }, (_, index) => blankPair(index, 4)),
+      courtCount: null,
     }
   }
   const playerById = new Map(snapshot.players.map((player) => [player.id, player]))
   return {
     tournamentName: snapshot.tournament.name,
+    courtCount: snapshot.tournament.courtCount,
     pairs: snapshot.pairs.map((pair) => {
       const playerA = playerById.get(pair.playerAId)
       const playerB = playerById.get(pair.playerBId)
@@ -55,11 +58,6 @@ function setupFromSnapshot(snapshot: TournamentSnapshot | null): SetupInput {
   }
 }
 
-function normalizedGroups(pairs: SetupPairInput[]): SetupPairInput[] {
-  const groupASize = Math.ceil(pairs.length / 2)
-  return pairs.map((pair, index) => ({ ...pair, group: index < groupASize ? 'A' : 'B' }))
-}
-
 export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null }) {
   const initial = useMemo(() => setupFromSnapshot(snapshot), [snapshot])
   const [setup, setSetup] = useState(initial)
@@ -68,14 +66,10 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
     || snapshot.matches.some((match) => match.state !== 'unstarted'))
   const hasFixtures = (snapshot?.matches.length ?? 0) > 0
   const sameSeedPairs = setup.pairs.filter((pair) => pair.players[0].seed === pair.players[1].seed)
-  const groupACount = setup.pairs.filter((pair) => pair.group === 'A').length
-  const groupBCount = setup.pairs.length - groupACount
-  const groupsValid = (setup.pairs.length === 6 && groupACount === 3 && groupBCount === 3)
-    || (setup.pairs.length === 7 && groupACount === 4 && groupBCount === 3)
-    || (setup.pairs.length === 8 && groupACount === 4 && groupBCount === 4)
+  const groupsValid = isValidGroupSplit(setup.pairs)
   const valid = setup.tournamentName.trim().length > 0
-    && setup.pairs.length >= 6
-    && setup.pairs.length <= 8
+    && setup.pairs.length >= 4
+    && setup.pairs.length <= 10
     && groupsValid
     && setup.pairs.every((pair) => pair.players.every((player) => player.name.trim().length > 0))
 
@@ -86,6 +80,7 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
       payload: {
         setup: {
           tournamentName: setup.tournamentName.trim(),
+          courtCount: setup.courtCount,
           pairs: setup.pairs.map((pair) => ({
             ...pair,
             teamName: pair.teamName?.trim() || null,
@@ -119,15 +114,20 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
 
   const addPair = () => {
     setSetup((current) => {
-      const pairs = [...current.pairs, blankPair(current.pairs.length, current.pairs.length + 1)]
-      return { ...current, pairs: normalizedGroups(pairs) }
+      const groupACount = current.pairs.filter((pair) => pair.group === 'A').length
+      const groupBCount = current.pairs.length - groupACount
+      const group: Group = groupACount <= groupBCount ? 'A' : 'B'
+      return {
+        ...current,
+        pairs: [...current.pairs, { ...blankPair(current.pairs.length, current.pairs.length + 1), group }],
+      }
     })
   }
 
   const removePair = (index: number) => {
     setSetup((current) => ({
       ...current,
-      pairs: normalizedGroups(current.pairs.filter((_, pairIndex) => pairIndex !== index)),
+      pairs: current.pairs.filter((_, pairIndex) => pairIndex !== index),
     }))
   }
 
@@ -143,7 +143,7 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold">Players and groups</h3>
-          <p className="mt-1.5 text-[0.6875rem] text-muted-ink">Six to eight pairs, split 3+3, 4+3, or 4+4.</p>
+          <p className="mt-1.5 text-[0.6875rem] text-muted-ink">Four to ten pairs, split evenly between Groups A and B.</p>
         </div>
         <Badge variant="secondary">{setup.pairs.length} pairs</Badge>
       </div>
@@ -173,6 +173,23 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
             onChange={(event) => setSetup((current) => ({ ...current, tournamentName: event.target.value }))}
           />
         </div>
+        <div className="space-y-2">
+          <Label htmlFor="court-count">Available courts</Label>
+          <Select
+            value={setup.courtCount === null ? '' : String(setup.courtCount)}
+            disabled={locked}
+            onValueChange={(value) => setSetup((current) => ({ ...current, courtCount: Number(value) as CourtCount }))}
+          >
+            <SelectTrigger id="court-count" className="w-full sm:w-56">
+              <SelectValue placeholder="Select courts" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="1">1 court</SelectItem>
+              <SelectItem value="2">2 courts</SelectItem>
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-muted-ink">Choose before generating fixtures.</p>
+        </div>
         <div className="grid gap-4 xl:grid-cols-2">
           {setup.pairs.map((pair, pairIndex) => (
             <fieldset key={pairIndex} className="rounded-field border border-hairline p-4" disabled={locked}>
@@ -184,7 +201,7 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
                   size="icon-sm"
                   variant="ghost"
                   aria-label={`Remove pair ${pairIndex + 1}`}
-                  disabled={setup.pairs.length <= 6}
+                  disabled={setup.pairs.length <= 4}
                   onClick={() => removePair(pairIndex)}
                 >
                   <Minus />
@@ -242,14 +259,14 @@ export function SetupForm({ snapshot }: { snapshot: TournamentSnapshot | null })
           ))}
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <Button type="button" variant="outline" disabled={locked || setup.pairs.length >= 8} onClick={addPair}>
+          <Button type="button" variant="outline" disabled={locked || setup.pairs.length >= 10} onClick={addPair}>
             <Plus /> Add pair
           </Button>
           <Button disabled={locked || !valid || saveMutation.isPending}>
             {saveMutation.isPending ? 'Saving…' : 'Save setup'}
           </Button>
         </div>
-        {!groupsValid ? <p className="text-sm text-destructive" role="alert">Use group sizes 3+3, 4+3, or 4+4.</p> : null}
+        {!groupsValid ? <p className="text-sm text-destructive" role="alert">Keep Groups A and B equal, or one pair apart for odd totals.</p> : null}
         {saveMutation.isError ? <p className="text-sm text-destructive" role="alert">{saveMutation.error.message}</p> : null}
       </form>
 

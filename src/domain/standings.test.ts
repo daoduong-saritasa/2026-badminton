@@ -80,6 +80,7 @@ function snapshot(
       name: 'Badminton Tournament 2026',
       stage: 'groups',
       setupLockedAt: null,
+      courtCount: 2,
       version: 1,
     },
     players: [],

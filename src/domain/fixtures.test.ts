@@ -97,7 +97,7 @@ describe.each([1, 2] as const)('generateFixtures on %i court(s)', (courtCount) =
       const fixtures = generateFixtures(pairs, courtCount)
       const groups = groupFixtures(fixtures)
 
-      expect(fixtures).toHaveLength(TOTAL_MATCHES.get(count))
+      expect(fixtures).toHaveLength(TOTAL_MATCHES.get(count) ?? 0)
       for (const group of ['A', 'B'] as const) {
         expect(groups.filter((fixture) => fixture.group === group).map(fixtureKey).sort()).toEqual(
           expectedPairings(pairs, group),
@@ -105,7 +105,7 @@ describe.each([1, 2] as const)('generateFixtures on %i court(s)', (courtCount) =
       }
 
       expect(new Set(groups.map((fixture) => `${fixture.court}:${fixture.playingOrder}`)).size).toBe(groups.length)
-      expect(groups.every((fixture) => fixture.court <= courtCount)).toBe(true)
+      expect(groups.every((fixture) => fixture.court !== null && fixture.court <= courtCount)).toBe(true)
 
       const orders = [...new Set(groups.map((fixture) => fixture.playingOrder))].toSorted((a, b) => a - b)
       let remaining = [...groups]
