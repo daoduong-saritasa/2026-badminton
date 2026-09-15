@@ -1,5 +1,5 @@
 # Spec-Driven Execution Workflow
-<!-- rulebook v9 -->
+<!-- rulebook v10 -->
 
 Large/architectural changes flow: `/grill-me` → `specs/<feature>/PLAN.md` →
 `specs/<feature>/EXECUTION.md` (via the `spec-plan` skill) → phased implementation
@@ -33,13 +33,19 @@ root — fix the section, don't move rules into it. An agent that lands on a
   never hardcode). Each phase is one branch on that stack, still named
   `<feature-slug>/phase-<n>-<desc>` — the CLI tracks the base chain, so no phase computes
   its own base or PR target.
-  - Spec start: `gh stack init -b main` (adopts existing branches, and
-    **turns on `git rerere` in the repo** — say so before running it on a repo that hasn't
-    opted into that).
-  - Phase start: `gh stack add <feature-slug>/phase-<n>-<desc>`, from the stack top. Pass
-    the name explicitly — the auto-generated date-slug form breaks the state model, which
-    reads spec and phase out of the branch name. Never `-m`/`-A`/`-u`; commits are ordinary
-    git commits at logical sub-steps.
+  - **Command mechanics live in GitHub's `gh-stack` skill** (`gh skill install
+    github/gh-stack gh-stack`): non-interactive forms, `view --json` fields, exit codes,
+    conflict recovery. This rulebook sets only what the workflow permits. Skill not
+    installed → `gh stack <command> --help` is authoritative; never guess a flag.
+  - Phase 1: `gh stack init -b main <feature-slug>/phase-1-<desc>` creates
+    the stack and the first phase branch together — bare `init` prompts for branch names.
+    It **turns on `git rerere` in the repo**; say so before running it on a repo that
+    hasn't opted into that.
+  - Later phases: `gh stack add <feature-slug>/phase-<n>-<desc>`, from the stack top (`add`
+    exits 5 anywhere else; `gh stack top` gets there). Pass the name explicitly — the
+    auto-generated date-slug form breaks the state model, which reads spec and phase out of
+    the branch name. Never `-m`/`-A`/`-u`; commits are ordinary git commits at logical
+    sub-steps.
   - Push + PR: two commands, because `gh stack submit` accepts a PR description only in
     its full-screen editor, which an agent's non-interactive terminal never reaches.
     1. `gh stack submit --auto` submits every active branch in the stack, not just the
@@ -57,19 +63,25 @@ root — fix the section, don't move rules into it. An agent that lands on a
     auto-generated titles and any draft the user left draft deliberately.
   - After a merge: `gh stack sync` (fetch, fast-forward trunk, cascade-rebase the
     remaining phases, push, sync PR state) — it replaces the manual pull-and-rebase. Add
-    `--prune` only once the user has said yes to deleting merged phase branches.
+    `--prune` only once the user has said yes to deleting merged phase branches. Two
+    outcomes the exit code alone misreports:
+    - **Diverged stack** (local and GitHub changed differently): `sync` changes nothing,
+      prints `Sync aborted`, and **exits 0**. Check its output for that message. On a hit,
+      stop and surface it — keeping the local or the remote version is the user's call.
+    - **Rebase conflict**: exits 3 with every branch already restored. Stop and report it;
+      reproduce and resolve through `gh stack rebase` only after the user says to.
   - Reading stack shape: `gh stack view --json`. Git remains the authoritative state store.
-- **Non-interactive always.** Bare `gh stack submit`, `switch`, `checkout`, and `view` open
-  full-screen editors or a pager and will hang an agent. Use the flags above; on a diverged
-  stack, non-interactive `sync` aborts without pushing — surface that to the user rather
-  than retrying interactively.
+- **Non-interactive always.** Never run a `gh stack` command in a form that can open a
+  prompt, picker, or full-screen UI — under a pseudo-terminal it blocks the agent
+  indefinitely. Use the forms above; the `gh-stack` skill lists the safe form of the rest.
 - **Never run `gh stack merge`** (all-or-nothing across the stack; merging is the user's
   decision, per phase) **or `gh stack modify`** (restructures phases — that is `spec-plan`'s
   job, and it desyncs EXECUTION.md). `gh stack unstack`/`delete` needs an explicit ask.
-- **Fallback: sequential.** When `gh stack` is unavailable — the CLI lacks the command, or
-  the repo returns "stacked pull requests not enabled" (exit 9), or the remote isn't
-  GitHub — the spec runs sequential: each phase branches off the integration branch → push
-  → PR → user reviews & merges → pull → next phase off the updated integration branch. The
+- **Fallback: sequential.** When `gh stack` is unavailable — the CLI lacks the command,
+  stacked PRs aren't enabled on the repo (`gh api 'repos/{owner}/{repo}/stacks'` returns
+  404; a later command exits 9), or the remote isn't GitHub — the spec runs sequential:
+  each phase branches off the integration branch → push → PR → user reviews & merges →
+  pull → next phase off the updated integration branch. The
   user may also choose sequential outright. Record the choice in EXECUTION.md's header.
 - After a phase's PR merges, ask before deleting the merged phase branch (local + remote).
 

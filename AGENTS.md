@@ -11,3 +11,19 @@ repository root. Create the directory if needed.
 
 For spec work, read `specs/RULEBOOK.md` first. It defines the state model,
 verification gates, branch model, and checkpoints. Do not improvise substitutes.
+
+## Domain Model & Decisions
+<!-- domain-rulebook v1 -->
+
+`CONTEXT.md` (repo root) is the project's glossary. Use its canonical terms — and avoid the
+synonyms it marks `_Avoid_` — in code, docs, specs, and UI copy. It is a glossary only:
+never add schema, file references, or implementation detail to it.
+
+Recording a new term, or a decision worth keeping? Read `docs/DOMAIN-RULEBOOK.md` first — it
+routes between `CONTEXT.md`, `docs/adr/`, and a spec's `PLAN.md`, and defines what does and
+doesn't qualify as an ADR.
+
+## Commit messages
+
+This project does not use Jira task IDs. Follow the repository's prefix-free
+commit history without appending an issue identifier.
