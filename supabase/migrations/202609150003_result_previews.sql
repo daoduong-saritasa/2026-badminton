@@ -179,17 +179,31 @@ as $$
 declare
   projected jsonb;
   current_version integer;
+  expected_version integer;
 begin
   select version into current_version from public.tournament where singleton;
   if not found then
     raise exception 'Tournament is not configured' using errcode = 'P0002';
   end if;
 
+  -- Match-scoped mutations validate the target match's version; tournament-scoped
+  -- ones validate the tournament's. Passing the wrong one raises a version
+  -- conflict instead of projecting.
+  if p_operation in ('enter_result', 'correct_result', 'mark_walkover') then
+    select version into expected_version
+    from public.matches where id = (p_payload ->> 'matchId')::uuid;
+    if not found then
+      raise exception 'Match not found' using errcode = 'P0002';
+    end if;
+  else
+    expected_version := current_version;
+  end if;
+
   begin
     execute format('select private.%I($1, $2, $3)', 'legacy_' || p_operation)
     using
       gen_random_uuid(),
-      current_version,
+      expected_version,
       p_payload || jsonb_build_object('previewTournamentVersion', current_version);
     projected := private.snapshot_body();
     -- Unwind every write the call just made. PV001 is used by nothing else, so
@@ -350,13 +364,21 @@ declare
   staff_session uuid; replay jsonb; current_match public.matches%rowtype;
   target_match_id uuid := (p_payload ->> 'matchId')::uuid;
   new_score_a integer; new_score_b integer; new_winner uuid;
+  current_tournament_version integer;
   next_match_version integer; next_tournament_version integer; response jsonb;
 begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
   replay := private.replay_mutation(staff_session, p_request_id, p_operation, p_expected_version, p_payload);
   if replay is not null then return replay; end if;
+  -- p_expected_version is this match's version. The reviewed preview describes a
+  -- tournament version, which is a different counter, so it is read here under
+  -- the mutation lock and compared against itself.
   if p_operation = 'correct_result' then
-    perform private.require_preview_version(p_payload, p_expected_version);
+    select version into current_tournament_version from public.tournament where singleton for update;
+    if not found then
+      raise exception 'Tournament is not configured' using errcode = 'P0002';
+    end if;
+    perform private.require_preview_version(p_payload, current_tournament_version);
   end if;
   current_match := private.require_match_version(target_match_id, p_expected_version);
   if current_match.pair_a_id is null or current_match.pair_b_id is null

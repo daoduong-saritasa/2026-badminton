@@ -473,8 +473,8 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
 
       {hasFixtures ? <CourtConfiguration key={`courts-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
       {hasFixtures ? <UpcomingSchedule key={`schedule-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} onStartScoring={onStartScoring} /> : null}
-      {hasFixtures ? <ResultsSection key={`results-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
-      {hasFixtures ? <WithdrawalPanel key={`withdrawals-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
+      {hasFixtures ? <ResultsSection key={`results-${resetGeneration}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
+      {hasFixtures ? <WithdrawalPanel key={`withdrawals-${resetGeneration}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
 
       {snapshot.tournament.stage === 'groups' && allActiveGroupsComplete ? (
         <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">

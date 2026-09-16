@@ -200,6 +200,48 @@ describe('result and withdrawal previews', () => {
     expect(applied.snapshot?.tieResolutions).toEqual(projected.after?.tieResolutions)
   })
 
+  it('previews a correction and applies exactly what it projected', async () => {
+    const staff = await signInAnonymously()
+    await elevate(staff)
+    const created = await createTournament(staff)
+    const match = created.matches.find((candidate) => candidate.pair_a_id !== null)
+    if (!match) throw new Error('Fixture has no playable match')
+
+    expect((await rpc('enter_result', mutation(match.version, {
+      matchId: match.id,
+      score: { a: 21, b: 10 },
+    }), staff)).ok).toBe(true)
+
+    const completedState = await state(staff)
+    const completed = completedState.snapshot?.matches.find((candidate) => candidate.id === match.id)
+    if (!completed) throw new Error('Completed match vanished')
+    expect(completed.state).toBe('completed')
+
+    // No knockout match has started, so reversing this group result is allowed.
+    const response = await previewCorrection(match.id, { a: 15, b: 21 }, staff)
+    expect(response.ok).toBe(true)
+    const impact = await response.json() as Impact
+    expect(impact.blockedReason).toBeNull()
+    expect(impact.tournamentVersion).toBe(completedState.snapshot?.tournament.version)
+    expect(impact.after?.matches.find((candidate) => candidate.id === match.id)).toMatchObject({
+      score_a: 15,
+      score_b: 21,
+      winner_id: match.pair_b_id,
+    })
+
+    const saved = await rpc('correct_result', mutation(completed.version, {
+      matchId: match.id,
+      score: { a: 15, b: 21 },
+      previewTournamentVersion: impact.tournamentVersion,
+    }), staff)
+    expect(saved.ok).toBe(true)
+
+    const applied = await state(staff)
+    expect(applied.snapshot?.matches).toEqual(impact.after?.matches)
+    expect(applied.snapshot?.pairs).toEqual(impact.after?.pairs)
+    expect(applied.snapshot?.tieResolutions).toEqual(impact.after?.tieResolutions)
+  })
+
   it('blocks every group correction once knockout play starts, including a same-winner score change', async () => {
     const staff = await signInAnonymously()
     await elevate(staff)
@@ -226,11 +268,15 @@ describe('result and withdrawal previews', () => {
     expect(swappedWinner.blockedReason).toBe('knockouts-started')
 
     const current = await state(staff)
-    expect((await rpc('correct_result', mutation(groupMatch.version, {
+    const rejected = await rpc('correct_result', mutation(groupMatch.version, {
       matchId: groupMatch.id,
       score: { a: 21, b: 19 },
       previewTournamentVersion: current.snapshot?.tournament.version,
-    }), staff)).ok).toBe(false)
+    }), staff)
+    expect(rejected.ok).toBe(false)
+    // A reviewed version is supplied, so this can only be the knockout block.
+    expect((await rejected.json() as { message?: string }).message)
+      .toContain('Knockout play already depends on group participants')
   })
 
   it('reports the tie confirmations a correction would invalidate', async () => {

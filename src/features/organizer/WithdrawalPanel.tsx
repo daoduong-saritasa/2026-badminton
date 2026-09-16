@@ -24,15 +24,16 @@ export interface WithdrawalPanelProps {
   resetGeneration: number
 }
 
-// Remounted by OrganizerPage on each version and generation change, so a
-// preview cannot outlive the snapshot it describes.
+// A preview is stored with the version it was built from and goes stale during
+// render, so an unrelated mutation cannot leave a projection on screen that no
+// longer describes what confirming would do.
 export function WithdrawalPanel({ snapshot, resetGeneration }: WithdrawalPanelProps) {
   const [selectedPairId, setSelectedPairId] = useState<UUID | null>(null)
-  const [impact, setImpact] = useState<MutationImpact | null>(null)
+  const [reviewed, setReviewed] = useState<{ impact: MutationImpact; version: number } | null>(null)
 
   const previewMutation = useMutation({
     mutationFn: (pairId: UUID) => previewWithdrawal(pairId, resetGeneration),
-    onSuccess: setImpact,
+    onSuccess: (result) => setReviewed({ impact: result, version: snapshot.tournament.version }),
   })
 
   const withdrawMutation = useMutation({
@@ -44,11 +45,12 @@ export function WithdrawalPanel({ snapshot, resetGeneration }: WithdrawalPanelPr
         payload: { pairId: input.pairId, previewTournamentVersion: input.previewTournamentVersion },
       }),
     onSuccess: () => {
-      setImpact(null)
+      setReviewed(null)
       setSelectedPairId(null)
     },
   })
 
+  const impact = reviewed && reviewed.version === snapshot.tournament.version ? reviewed.impact : null
   const activePairs = snapshot.pairs.filter((pair) => !pair.withdrawn)
   const withdrawnPairs = snapshot.pairs.filter((pair) => pair.withdrawn)
 
@@ -96,7 +98,7 @@ export function WithdrawalPanel({ snapshot, resetGeneration }: WithdrawalPanelPr
         <p className="mt-4 text-sm text-destructive" role="alert">{withdrawMutation.error.message}</p>
       ) : null}
 
-      <AlertDialog open={impact !== null} onOpenChange={(open) => { if (!open) setImpact(null) }}>
+      <AlertDialog open={impact !== null} onOpenChange={(open) => { if (!open) setReviewed(null) }}>
         <AlertDialogContent size="wide">
           <AlertDialogHeader>
             <AlertDialogTitle>

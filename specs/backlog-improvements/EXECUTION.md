@@ -116,6 +116,10 @@ Fresh review: required — correction/withdrawal paths protecting durable data a
 - [x] Add `tests/integration/impacts.test.ts` importing the preview migration, and update correction/withdrawal calls in `tests/integration/tournament.test.ts` for preview versions; prove preview/write parity, read-only behavior, same-winner group correction blocking, tie effects, withdrawal limits, authorization, and concurrent downstream start/reset rejection.
 - [x] In the new organizer components and `src/components/ui/alert-dialog.tsx`, implement the agreed phone layouts, scrollable impact dialogs, long-name access, touch actions, and keyboard-safe confirmation; use `src/App.css` or `src/index.css` only for shared responsive rules.
 
+- [x] Fresh-review P0: in `supabase/migrations/202609150003_result_previews.sql`, compare `previewTournamentVersion` against the tournament version read under the mutation lock inside `private.finish_direct_result`, not against the match version passed as `p_expected_version` (amended 2026-09-16).
+- [x] Fresh-review P0: in `private.project_mutation`, pass the target match's version to match-scoped mutations and the tournament version only to tournament-scoped ones, so a result preview projects instead of raising a version conflict (amended 2026-09-16).
+- [x] Fresh-review P2: in `tests/integration/impacts.test.ts`, preview a correction with no knockout play started, confirm it with the returned `tournamentVersion`, and assert the applied snapshot equals `impact.after`; assert the knockout rejection's message rather than only its failure (amended 2026-09-16).
+- [x] Fresh-review P2: in `src/features/organizer/OrganizerPage.tsx`, `ResultEditor.tsx`, and `WithdrawalPanel.tsx`, key the results and withdrawal sections on the reset generation alone and let a preview go stale during render, so a point scored on any court no longer discards the selected match and typed score mid-review (amended 2026-09-16).
 **Phase gate (hard):**
 
 - [x] Run `npm run typecheck` project-wide. Exited 0 on 2026-09-16.

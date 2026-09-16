@@ -35,19 +35,21 @@ type SaveAction =
   | { kind: 'walkover'; winnerId: UUID }
 
 // A preview describes one exact tournament version, so it must not outlive it.
-// OrganizerPage remounts this subtree on every version and generation change,
-// which discards the projection along with the rest of the form.
+// It is stored with the version it was built from and goes stale during render,
+// rather than being destroyed by a remount: the tournament version also bumps
+// for every point scored on any court, which would otherwise wipe the selected
+// match and the typed score mid-review.
 export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: ResultEditorProps) {
   const match = snapshot.matches.find((candidate) => candidate.id === matchId)
   const [scoreA, setScoreA] = useState(String(match?.score?.a ?? 21))
   const [scoreB, setScoreB] = useState(String(match?.score?.b ?? 0))
   const [walkoverWinner, setWalkoverWinner] = useState<UUID>(match?.winnerId ?? match?.pairAId ?? '')
-  const [impact, setImpact] = useState<MutationImpact | null>(null)
+  const [reviewed, setReviewed] = useState<{ impact: MutationImpact; version: number } | null>(null)
   const [pendingWalkover, setPendingWalkover] = useState<UUID | null>(null)
 
   const previewMutation = useMutation({
     mutationFn: (score: Score) => previewResultCorrection(matchId, score, resetGeneration),
-    onSuccess: setImpact,
+    onSuccess: (result) => setReviewed({ impact: result, version: snapshot.tournament.version }),
   })
 
   const saveMutation = useMutation({
@@ -77,7 +79,7 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
       })
     },
     onSuccess: () => {
-      setImpact(null)
+      setReviewed(null)
       setPendingWalkover(null)
       onClose()
     },
@@ -90,6 +92,9 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
   const score = { a: Number(scoreA), b: Number(scoreB) }
   const scoreValid = Number.isInteger(score.a) && Number.isInteger(score.b) && isWinningScore(score)
   const isCorrection = match.state === 'completed'
+  // Anything that moved the tournament since the review invalidates the
+  // projection on screen, so the dialog closes and the staff member reviews again.
+  const impact = reviewed && reviewed.version === snapshot.tournament.version ? reviewed.impact : null
 
   return (
     <section className="space-y-4">
@@ -148,7 +153,7 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
         <p className="text-sm text-destructive" role="alert">{saveMutation.error.message}</p>
       ) : null}
 
-      <AlertDialog open={impact !== null} onOpenChange={(open) => { if (!open) setImpact(null) }}>
+      <AlertDialog open={impact !== null} onOpenChange={(open) => { if (!open) setReviewed(null) }}>
         <AlertDialogContent size="wide">
           <AlertDialogHeader>
             <AlertDialogTitle>{isCorrection ? 'Correct this result?' : 'Record this result?'}</AlertDialogTitle>
