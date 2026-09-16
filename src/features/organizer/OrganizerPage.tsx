@@ -24,9 +24,44 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { groupTone, matchRoundLabel, pairName } from '@/features/tournament/MatchTicket'
 import { cn } from '@/lib/utils'
 import { ResultEditor } from './ResultEditor'
+import { ResultSchedule } from './ResultSchedule'
+import { WithdrawalPanel } from './WithdrawalPanel'
 import { SetupForm } from './SetupForm'
 
 type OrganizerAction = 'fixtures' | 'confirm-groups' | 'reopen'
+
+/**
+ * Result entry is driven from the schedule: pick a match, then edit that one
+ * match. Withdrawals are a separate section because they act on a pair, not a
+ * match.
+ */
+function ResultsSection({
+  snapshot,
+  resetGeneration,
+}: {
+  snapshot: TournamentSnapshot
+  resetGeneration: number
+}) {
+  const [selectedMatchId, setSelectedMatchId] = useState<UUID | null>(null)
+
+  return (
+    <div className="space-y-4">
+      <ResultSchedule snapshot={snapshot} selectedMatchId={selectedMatchId} onSelect={setSelectedMatchId} />
+      {selectedMatchId ? (
+        <div className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
+          <ResultEditor
+            key={selectedMatchId}
+            snapshot={snapshot}
+            resetGeneration={resetGeneration}
+            matchId={selectedMatchId}
+            onClose={() => setSelectedMatchId(null)}
+          />
+        </div>
+      ) : null}
+    </div>
+  )
+}
+
 
 interface StageProgress {
   done: number
@@ -438,7 +473,8 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
 
       {hasFixtures ? <CourtConfiguration key={`courts-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
       {hasFixtures ? <UpcomingSchedule key={`schedule-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} onStartScoring={onStartScoring} /> : null}
-      {hasFixtures ? <ResultEditor key={`results-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
+      {hasFixtures ? <ResultsSection key={`results-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
+      {hasFixtures ? <WithdrawalPanel key={`withdrawals-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
 
       {snapshot.tournament.stage === 'groups' && allActiveGroupsComplete ? (
         <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
