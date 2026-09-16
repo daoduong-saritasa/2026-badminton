@@ -84,6 +84,7 @@ export const messages = {
       startBody: 'Bắt đầu thi đấu sẽ khoá thiết lập và giao quyền ghi điểm cho thiết bị này.',
       starting: 'Đang bắt đầu…',
       start: 'Bắt đầu ghi điểm',
+      startShort: 'Bắt đầu',
     },
 
     courts: {
@@ -108,6 +109,7 @@ export const messages = {
       moveDown: 'Xuống một bậc',
       explanation: 'Lý do quyết định',
       review: 'Xem trước thứ tự',
+      confirmTitle: (group: string) => `Ghi lại thứ tự bảng ${group}?`,
       confirmBody: 'Thứ tự này quyết định cặp nào đi tiếp khi xác nhận bảng xếp hạng.',
       back: 'Xem lại thứ tự',
       record: 'Ghi lại thứ tự',
@@ -222,6 +224,7 @@ export const messages = {
     fallbackTitle: 'Giải cầu lông',
     loading: 'Đang tải giải đấu…',
     unavailableTitle: 'Không tải được giải đấu',
+    retry: 'Thử lại',
     setupEyebrow: 'Thiết lập giải',
     setupHeading: 'Tạo giải đấu',
     setupNote: 'Cần quyền ban tổ chức để thiết lập lần đầu.',
@@ -275,6 +278,7 @@ export const messages = {
     recentResults: 'Kết quả gần đây',
     versusShort: 'gặp',
     courtPending: 'Chưa xếp sân',
+    noCourtMatches: 'Chưa có trận nào được xếp sân.',
     scoreOrWalkover: (score: string | null) => score ?? 'Xử thắng',
   },
 

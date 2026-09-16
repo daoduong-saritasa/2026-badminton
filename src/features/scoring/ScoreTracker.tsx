@@ -380,7 +380,7 @@ export function ScoreTracker({ snapshot, resetGeneration, onExit }: { snapshot: 
           </SelectTrigger>
           <SelectContent>
             {matches.map((candidate) => (
-              <SelectItem value={candidate.id} key={candidate.id}>Court {candidate.court ?? '–'}</SelectItem>
+              <SelectItem value={candidate.id} key={candidate.id}>{candidate.court === null ? messages.publicView.courtPending : messages.common.court(candidate.court)}</SelectItem>
             ))}
           </SelectContent>
         </Select>

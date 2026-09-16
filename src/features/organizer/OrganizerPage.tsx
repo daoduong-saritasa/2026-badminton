@@ -211,7 +211,7 @@ function UpcomingSchedule({ snapshot, resetGeneration, onStartScoring }: { snaps
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {courts.map((court) => <SelectItem value={String(court)} key={court}>Court {court}</SelectItem>)}
+                  {courts.map((court) => <SelectItem value={String(court)} key={court}>{messages.common.court(court)}</SelectItem>)}
                 </SelectContent>
               </Select>
               <Input
@@ -223,7 +223,7 @@ function UpcomingSchedule({ snapshot, resetGeneration, onStartScoring }: { snaps
                 onChange={(event) => update(assignment.matchId, { playingOrder: Number(event.target.value) })}
               />
               <Button variant="outline" className="w-full" disabled={!ready || startMutation.isPending} onClick={() => setStartMatchId(assignment.matchId)}>
-                <Play /> Start
+                <Play /> {messages.organizer.schedule.startShort}
               </Button>
             </div>
           )
@@ -386,7 +386,7 @@ function TieResolutionEditor({ snapshot, resetGeneration, group }: { snapshot: T
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Record this Group {group} order?</AlertDialogTitle>
+            <AlertDialogTitle>{messages.organizer.tie.confirmTitle(group)}</AlertDialogTitle>
             <AlertDialogDescription>{messages.organizer.tie.confirmBody}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -65,7 +65,7 @@ function ErrorScreen({ error, onRetry }: { error: Error; onRetry: () => void }) 
         <AlertDescription>
           <p>{errorMessage(error)}</p>
           <Button className="mt-5" variant="outline" onClick={onRetry}>
-            <RefreshCw /> Retry
+            <RefreshCw /> {messages.app.retry}
           </Button>
         </AlertDescription>
       </Alert>

@@ -51,7 +51,7 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
         </div>
         {current.length === 0 ? (
           <p className="rounded-card border border-dashed border-rule bg-white/60 p-8 text-center text-[0.8125rem] text-muted-ink">
-            No matches are assigned to a court yet.
+            {messages.publicView.noCourtMatches}
           </p>
         ) : null}
       </div>
