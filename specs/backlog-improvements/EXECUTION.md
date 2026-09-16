@@ -125,6 +125,7 @@ Fresh review: required — correction/withdrawal paths protecting durable data a
 - [x] Run `npm run typecheck` project-wide. Exited 0 on 2026-09-16.
 - [~] Run `npm run test:related -- <changed files>` using paths from the real phase diff; selected local database tests follow the recorded environment-debt policy. The 16-file Phase 3 diff selected 4 test files and 50 tests on 2026-09-16: 20 passed, 30 skipped, and `tests/integration/impacts.test.ts` and `tournament.test.ts` failed at setup because `/Users/thomasduong/.orbstack/run/docker.sock` is absent, so the command exits 1 under the standing policy in `AGENTS.md`.
 
+- [~] Re-run the complete phase gate after the fresh-review corrections (commit 8c4fc58): `npm run typecheck` exited 0; `npm run test:related` over the 16-file diff selected 51 tests, 20 passed and 31 integration scenarios, including the new successful-correction parity scenario, were skipped with two integration files failing at setup because `/Users/thomasduong/.orbstack/run/docker.sock` is absent (amended 2026-09-16).
 **Review checklist (user, at PR review):**
 
 - [ ] Enter an off-app result from the schedule, correct a completed result, and verify each preview's standings/knockout effects and confirmation invalidation.
