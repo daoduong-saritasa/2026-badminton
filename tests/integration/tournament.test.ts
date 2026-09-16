@@ -515,6 +515,7 @@ describe('tournament transactions', () => {
     await callMutation('correct_result', staff, correctedMatch.version, {
       matchId: correctedMatch.id,
       score: winningScore(correctedMatch, correctedMatch.winner_id, 11),
+      previewTournamentVersion: current.tournament.version,
     })
 
     current = await readSnapshot(staff)
@@ -534,6 +535,7 @@ describe('tournament transactions', () => {
     if (!withdrawnPair) throw new Error('No pair is available for withdrawal')
     await callMutation('withdraw_pair', staff, current.tournament.version, {
       pairId: withdrawnPair.id,
+      previewTournamentVersion: current.tournament.version,
     })
     current = await readSnapshot(staff)
     await callMutation('confirm_groups', staff, current.tournament.version, {})
@@ -544,11 +546,15 @@ describe('tournament transactions', () => {
     const start = await callMutation('start_scoring', staff, firstSemifinal.version, {
       matchId: firstSemifinal.id,
     })
+    // A reviewed preview is supplied so the rejection can only be the
+    // knockout-play block, not the missing preview version.
+    current = await readSnapshot(staff)
     const blockedCorrection = await rpc(
       'correct_result',
       mutation(correctedMatch.version + 1, {
         matchId: correctedMatch.id,
         score: winningScore(correctedMatch, correctedMatch.winner_id, 12),
+        previewTournamentVersion: current.tournament.version,
       }),
       staff,
     )
