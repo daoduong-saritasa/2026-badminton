@@ -1,30 +1,25 @@
 import { calculateStandings } from '@/domain/standings'
-import type { ImpactBlockCode, MutationImpact } from '@/domain/impacts'
+import { formatNumber } from '@/i18n/format'
+import { messages } from '@/i18n/vi'
+import type { MutationImpact } from '@/domain/impacts'
 import type { Group, Match, TournamentSnapshot, UUID } from '@/domain/types'
 import { pairName } from '@/features/tournament/MatchTicket'
 
 const groups: Group[] = ['A', 'B']
 
-const blockExplanations: Record<ImpactBlockCode, string> = {
-  // Every group result freezes once any knockout match leaves 'unstarted',
-  // including a correction that keeps the same winner.
-  'knockouts-started':
-    'Knockout play has started, so no group result can be corrected — not even one that keeps the same winner. Record a walkover on the affected knockout match instead.',
-  'final-started':
-    'The final already depends on this semifinal, so its winner cannot change.',
-  'too-few-active-pairs':
-    'Each group must keep at least two active pairs. Record a walkover for the matches this pair cannot play instead of withdrawing them.',
-  'invalid-match-state':
-    'This match is not in a state that accepts this result. A match being scored live must be finished or reopened first.',
-  'tournament-completed':
-    'The tournament is completed. Reopen it before changing results.',
-}
-
 function scoreText(match: Match | undefined): string {
   if (!match) return '—'
-  if (match.state === 'completed' && match.resultKind === 'walkover') return 'Walkover'
-  if (!match.score) return 'Not played'
-  return `${match.score.a}–${match.score.b}`
+  if (match.state === 'completed' && match.resultKind === 'walkover') return messages.matchState.walkover
+  if (!match.score) return messages.matchState.notPlayed
+  return `${formatNumber(match.score.a)}–${formatNumber(match.score.b)}`
+}
+
+function rankText(rank: number | null): string {
+  return rank === null ? '—' : `#${formatNumber(rank)}`
+}
+
+function stateText(match: Match | undefined): string {
+  return match ? messages.matchState[match.state] : '—'
 }
 
 function matchById(snapshot: TournamentSnapshot | null, id: UUID): Match | undefined {
@@ -51,8 +46,8 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
   if (impact.blockedReason !== null) {
     return (
       <div className="space-y-2" role="alert">
-        <p className="text-[0.8125rem] font-semibold text-destructive">This change is blocked</p>
-        <p className="text-[0.8125rem] text-muted-ink">{blockExplanations[impact.blockedReason]}</p>
+        <p className="text-[0.8125rem] font-semibold text-destructive">{messages.impact.blockedHeading}</p>
+        <p className="text-[0.8125rem] text-muted-ink">{messages.impact.blocked[impact.blockedReason]}</p>
       </div>
     )
   }
@@ -73,7 +68,7 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
     <div className="max-h-[50dvh] space-y-4 overflow-y-auto pr-1">
       {matchId ? (
         <section>
-          <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">Score</h4>
+          <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">{messages.impact.score}</h4>
           <Row
             label={pairName(before, matchById(before, matchId)?.pairAId ?? null)}
             before={scoreText(matchById(before, matchId))}
@@ -85,14 +80,14 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
       {changedMatches.length > 0 ? (
         <section>
           <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">
-            Affected matches ({changedMatches.length})
+            {messages.impact.affectedMatches(changedMatches.length)}
           </h4>
           {changedMatches.map((match) => (
             <Row
               key={match.id}
-              label={`${pairName(after, match.pairAId)} vs ${pairName(after, match.pairBId)}`}
-              before={`${matchById(before, match.id)?.state ?? '—'} ${scoreText(matchById(before, match.id))}`}
-              after={`${match.state} ${scoreText(match)}`}
+              label={messages.common.versus(pairName(after, match.pairAId), pairName(after, match.pairBId))}
+              before={`${stateText(matchById(before, match.id))} ${scoreText(matchById(before, match.id))}`}
+              after={`${stateText(match)} ${scoreText(match)}`}
             />
           ))}
         </section>
@@ -104,13 +99,13 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
         if (afterStandings.length === 0) return null
         return (
           <section key={group}>
-            <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">Group {group}</h4>
+            <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">{messages.common.group(group)}</h4>
             {afterStandings.map((standing) => (
               <Row
                 key={standing.pairId}
                 label={pairName(after, standing.pairId)}
-                before={`#${beforeStandings.find((entry) => entry.pairId === standing.pairId)?.rank ?? '—'}`}
-                after={`#${standing.rank ?? '—'}`}
+                before={rankText(beforeStandings.find((entry) => entry.pairId === standing.pairId)?.rank ?? null)}
+                after={rankText(standing.rank)}
               />
             ))}
           </section>
@@ -119,7 +114,9 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
 
       {confirmationsLost.length > 0 ? (
         <p className="text-[0.8125rem] text-destructive">
-          {confirmationsLost.map((resolution) => `Group ${resolution.group}`).join(' and ')} must be confirmed again.
+          {messages.impact.confirmationsLost(
+            confirmationsLost.map((resolution) => messages.common.group(resolution.group)).join(' và '),
+          )}
         </p>
       ) : null}
     </div>

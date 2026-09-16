@@ -21,6 +21,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { matchRoundLabel, pairName } from '@/features/tournament/MatchTicket'
+import { errorMessage } from '@/i18n/errors'
+import { messages } from '@/i18n/vi'
 import { ImpactPreview } from './ImpactPreview'
 
 export interface ResultEditorProps {
@@ -54,7 +56,7 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
 
   const saveMutation = useMutation({
     mutationFn: async (action: SaveAction) => {
-      if (!match) throw new Error('The selected match is no longer available')
+      if (!match) throw new Error(messages.results.matchGone)
       if (action.kind === 'walkover') {
         return mutateTournament('mark_walkover', {
           requestId: crypto.randomUUID(),
@@ -86,7 +88,7 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
   })
 
   if (!match) {
-    return <p className="text-[0.8125rem] text-muted-ink">The selected match is no longer available.</p>
+    return <p className="text-[0.8125rem] text-muted-ink">{messages.results.matchGone}</p>
   }
 
   const score = { a: Number(scoreA), b: Number(scoreB) }
@@ -100,12 +102,10 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
     <section className="space-y-4">
       <header>
         <h3 className="text-sm font-semibold">
-          {matchRoundLabel(match)} · {pairName(snapshot, match.pairAId)} vs {pairName(snapshot, match.pairBId)}
+          {matchRoundLabel(match)} · {messages.common.versus(pairName(snapshot, match.pairAId), pairName(snapshot, match.pairBId))}
         </h3>
         <p className="mt-1 text-[0.6875rem] text-muted-ink">
-          {isCorrection
-            ? 'Correcting a completed result. Review the effects before confirming.'
-            : 'Recording a result for a match played without live scoring.'}
+          {isCorrection ? messages.results.correctionIntro : messages.results.entryIntro}
         </p>
       </header>
 
@@ -121,49 +121,51 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
       </div>
 
       {!scoreValid ? (
-        <p className="text-[0.6875rem] text-muted-ink">Use a completed badminton score: win by two from 21, capped at 30.</p>
+        <p className="text-[0.6875rem] text-muted-ink">{messages.results.scoreHint}</p>
       ) : null}
 
       <div className="flex flex-wrap gap-2">
         <Button disabled={!scoreValid || previewMutation.isPending} onClick={() => previewMutation.mutate(score)}>
-          {previewMutation.isPending ? 'Checking…' : isCorrection ? 'Review correction' : 'Review result'}
+          {previewMutation.isPending
+            ? messages.common.checking
+            : isCorrection ? messages.results.reviewCorrection : messages.results.reviewResult}
         </Button>
-        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button variant="ghost" onClick={onClose}>{messages.common.cancel}</Button>
       </div>
 
       {match.state === 'unstarted' ? (
         <div className="flex flex-wrap items-center gap-2 border-t pt-4">
           <Select value={walkoverWinner} onValueChange={setWalkoverWinner}>
-            <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder="Walkover winner" /></SelectTrigger>
+            <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder={messages.results.walkoverWinner} /></SelectTrigger>
             <SelectContent>
               <SelectItem value={match.pairAId as UUID}>{pairName(snapshot, match.pairAId)}</SelectItem>
               <SelectItem value={match.pairBId as UUID}>{pairName(snapshot, match.pairBId)}</SelectItem>
             </SelectContent>
           </Select>
           <Button variant="outline" disabled={!walkoverWinner} onClick={() => setPendingWalkover(walkoverWinner)}>
-            Record walkover
+            {messages.results.recordWalkover}
           </Button>
         </div>
       ) : null}
 
       {previewMutation.isError ? (
-        <p className="text-sm text-destructive" role="alert">{previewMutation.error.message}</p>
+        <p className="text-sm text-destructive" role="alert">{errorMessage(previewMutation.error)}</p>
       ) : null}
       {saveMutation.isError ? (
-        <p className="text-sm text-destructive" role="alert">{saveMutation.error.message}</p>
+        <p className="text-sm text-destructive" role="alert">{errorMessage(saveMutation.error)}</p>
       ) : null}
 
       <AlertDialog open={impact !== null} onOpenChange={(open) => { if (!open) setReviewed(null) }}>
         <AlertDialogContent size="wide">
           <AlertDialogHeader>
-            <AlertDialogTitle>{isCorrection ? 'Correct this result?' : 'Record this result?'}</AlertDialogTitle>
+            <AlertDialogTitle>{isCorrection ? messages.results.confirmCorrectionTitle : messages.results.confirmResultTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              {impact?.blockedReason === null ? 'Review what changes before confirming.' : 'This change cannot be applied.'}
+              {impact?.blockedReason === null ? messages.results.reviewBeforeConfirm : messages.results.cannotApply}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {impact ? <ImpactPreview impact={impact} matchId={matchId} /> : null}
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
             <AlertDialogAction
               disabled={impact === null || impact.blockedReason !== null || saveMutation.isPending}
               onClick={() => {
@@ -172,7 +174,7 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
                 }
               }}
             >
-              {saveMutation.isPending ? 'Saving…' : 'Confirm change'}
+              {saveMutation.isPending ? messages.common.saving : messages.results.confirmChange}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -181,18 +183,18 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
       <AlertDialog open={pendingWalkover !== null} onOpenChange={(open) => { if (!open) setPendingWalkover(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Record this walkover?</AlertDialogTitle>
+            <AlertDialogTitle>{messages.results.confirmWalkoverTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pendingWalkover ? `${pairName(snapshot, pendingWalkover)} advances without play. Earlier results are unchanged.` : ''}
+              {pendingWalkover ? messages.results.walkoverConsequence(pairName(snapshot, pendingWalkover)) : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
             <AlertDialogAction
               disabled={pendingWalkover === null || saveMutation.isPending}
               onClick={() => { if (pendingWalkover) saveMutation.mutate({ kind: 'walkover', winnerId: pendingWalkover }) }}
             >
-              {saveMutation.isPending ? 'Saving…' : 'Confirm walkover'}
+              {saveMutation.isPending ? messages.common.saving : messages.results.confirmWalkover}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

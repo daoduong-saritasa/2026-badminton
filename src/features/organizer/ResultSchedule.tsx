@@ -2,6 +2,8 @@ import { useMemo } from 'react'
 
 import type { Match, TournamentSnapshot, UUID } from '@/domain/types'
 import { Button } from '@/components/ui/button'
+import { formatNumber } from '@/i18n/format'
+import { messages } from '@/i18n/vi'
 import { matchRoundLabel, pairName } from '@/features/tournament/MatchTicket'
 
 export interface ResultScheduleProps {
@@ -11,9 +13,9 @@ export interface ResultScheduleProps {
 }
 
 function scoreText(match: Match): string {
-  if (match.resultKind === 'walkover') return 'Walkover'
+  if (match.resultKind === 'walkover') return messages.matchState.walkover
   if (!match.score) return ''
-  return `${match.score.a}–${match.score.b}`
+  return `${formatNumber(match.score.a)}–${formatNumber(match.score.b)}`
 }
 
 function MatchRow({
@@ -39,11 +41,11 @@ function MatchRow({
     >
       <span className="min-w-0">
         <span className="block truncate text-[0.8125rem] font-medium">
-          {pairName(snapshot, match.pairAId)} vs {pairName(snapshot, match.pairBId)}
+          {messages.common.versus(pairName(snapshot, match.pairAId), pairName(snapshot, match.pairBId))}
         </span>
         <span className="block truncate text-[0.6875rem] text-muted-ink">
           {matchRoundLabel(match)}
-          {match.court === null ? '' : ` · Court ${match.court}`}
+          {match.court === null ? '' : ` · ${messages.common.court(match.court)}`}
           {scoreText(match) === '' ? '' : ` · ${scoreText(match)}`}
         </span>
       </span>
@@ -73,14 +75,14 @@ export function ResultSchedule({ snapshot, selectedMatchId, onSelect }: ResultSc
 
   return (
     <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
-      <h3 className="text-sm font-semibold">Results</h3>
+      <h3 className="text-sm font-semibold">{messages.results.heading}</h3>
       <p className="mt-1.5 text-[0.6875rem] text-muted-ink">
-        Record a result for a match played without live scoring, or correct one that was already recorded.
+        {messages.results.description}
       </p>
 
-      <h4 className="mt-5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">Upcoming</h4>
+      <h4 className="mt-5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">{messages.results.upcoming}</h4>
       {upcoming.length === 0 ? (
-        <p className="mt-2 text-[0.8125rem] text-muted-ink">No unstarted match has both participants yet.</p>
+        <p className="mt-2 text-[0.8125rem] text-muted-ink">{messages.results.noUpcoming}</p>
       ) : (
         <ul className="mt-2 space-y-2">
           {upcoming.map((match) => (
@@ -89,16 +91,16 @@ export function ResultSchedule({ snapshot, selectedMatchId, onSelect }: ResultSc
               snapshot={snapshot}
               match={match}
               selected={match.id === selectedMatchId}
-              actionLabel="Enter result"
+              actionLabel={messages.results.enterResult}
               onSelect={onSelect}
             />
           ))}
         </ul>
       )}
 
-      <h4 className="mt-6 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">Completed</h4>
+      <h4 className="mt-6 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">{messages.results.completed}</h4>
       {completed.length === 0 ? (
-        <p className="mt-2 text-[0.8125rem] text-muted-ink">No result has been recorded yet.</p>
+        <p className="mt-2 text-[0.8125rem] text-muted-ink">{messages.results.noCompleted}</p>
       ) : (
         <ul className="mt-2 space-y-2">
           {completed.map((match) => (
@@ -107,7 +109,7 @@ export function ResultSchedule({ snapshot, selectedMatchId, onSelect }: ResultSc
               snapshot={snapshot}
               match={match}
               selected={match.id === selectedMatchId}
-              actionLabel="Correct"
+              actionLabel={messages.results.correct}
               onSelect={onSelect}
             />
           ))}

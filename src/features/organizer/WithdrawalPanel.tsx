@@ -17,6 +17,8 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { pairName, pairPlayers } from '@/features/tournament/MatchTicket'
+import { errorMessage } from '@/i18n/errors'
+import { messages } from '@/i18n/vi'
 import { ImpactPreview } from './ImpactPreview'
 
 export interface WithdrawalPanelProps {
@@ -61,9 +63,9 @@ export function WithdrawalPanel({ snapshot, resetGeneration }: WithdrawalPanelPr
 
   return (
     <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
-      <h3 className="text-sm font-semibold">Pair withdrawals</h3>
+      <h3 className="text-sm font-semibold">{messages.withdrawals.heading}</h3>
       <p className="mt-1.5 text-[0.6875rem] text-muted-ink">
-        Withdrawing voids a pair's group matches and recalculates standings. Review the effects before confirming.
+        {messages.withdrawals.description}
       </p>
 
       <ul className="mt-5 space-y-2">
@@ -79,7 +81,7 @@ export function WithdrawalPanel({ snapshot, resetGeneration }: WithdrawalPanelPr
               disabled={previewMutation.isPending && selectedPairId === pair.id}
               onClick={() => review(pair.id)}
             >
-              {previewMutation.isPending && selectedPairId === pair.id ? 'Checking…' : 'Review withdrawal'}
+              {previewMutation.isPending && selectedPairId === pair.id ? messages.common.checking : messages.withdrawals.review}
             </Button>
           </li>
         ))}
@@ -87,32 +89,32 @@ export function WithdrawalPanel({ snapshot, resetGeneration }: WithdrawalPanelPr
 
       {withdrawnPairs.length > 0 ? (
         <p className="mt-4 text-[0.6875rem] text-muted-ink">
-          Withdrawn: {withdrawnPairs.map((pair) => pairName(snapshot, pair.id)).join(', ')}
+          {messages.withdrawals.withdrawn(withdrawnPairs.map((pair) => pairName(snapshot, pair.id)).join(', '))}
         </p>
       ) : null}
 
       {previewMutation.isError ? (
-        <p className="mt-4 text-sm text-destructive" role="alert">{previewMutation.error.message}</p>
+        <p className="mt-4 text-sm text-destructive" role="alert">{errorMessage(previewMutation.error)}</p>
       ) : null}
       {withdrawMutation.isError ? (
-        <p className="mt-4 text-sm text-destructive" role="alert">{withdrawMutation.error.message}</p>
+        <p className="mt-4 text-sm text-destructive" role="alert">{errorMessage(withdrawMutation.error)}</p>
       ) : null}
 
       <AlertDialog open={impact !== null} onOpenChange={(open) => { if (!open) setReviewed(null) }}>
         <AlertDialogContent size="wide">
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {selectedPairId ? `Withdraw ${pairName(snapshot, selectedPairId)}?` : 'Withdraw this pair?'}
+              {selectedPairId
+                ? messages.withdrawals.confirmTitle(pairName(snapshot, selectedPairId))
+                : messages.withdrawals.confirmTitleFallback}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {impact?.blockedReason === null
-                ? 'Their group matches are voided and standings are recalculated.'
-                : 'This withdrawal cannot be applied.'}
+              {impact?.blockedReason === null ? messages.withdrawals.consequence : messages.withdrawals.cannotApply}
             </AlertDialogDescription>
           </AlertDialogHeader>
           {impact ? <ImpactPreview impact={impact} /> : null}
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
             <AlertDialogAction
               disabled={impact === null || impact.blockedReason !== null || selectedPairId === null || withdrawMutation.isPending}
               onClick={() => {
@@ -121,7 +123,7 @@ export function WithdrawalPanel({ snapshot, resetGeneration }: WithdrawalPanelPr
                 }
               }}
             >
-              {withdrawMutation.isPending ? 'Saving…' : 'Confirm withdrawal'}
+              {withdrawMutation.isPending ? messages.common.saving : messages.withdrawals.confirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
