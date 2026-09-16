@@ -222,6 +222,14 @@ export type Database = {
       get_staff_access: { Args: Record<PropertyKey, never>; Returns: Json }
       get_tournament_snapshot: { Args: Record<PropertyKey, never>; Returns: Json }
       mark_walkover: MutationFunction
+      preview_result_correction: {
+        Args: { p_match_id: string; p_reset_generation: number; p_score: Json }
+        Returns: Json
+      }
+      preview_withdrawal: {
+        Args: { p_pair_id: string; p_reset_generation: number }
+        Returns: Json
+      }
       reopen_tournament: MutationFunction
       resolve_tie: MutationFunction
       revoke_staff_access: { Args: Record<PropertyKey, never>; Returns: undefined }

@@ -19,9 +19,13 @@ export interface CommandPayloads {
   undo_point: { matchId: UUID }
   confirm_result: { matchId: UUID }
   enter_result: { matchId: UUID; score: Score }
-  correct_result: { matchId: UUID; score: Score }
+  correct_result: {
+    matchId: UUID
+    score: Score
+    previewTournamentVersion: number
+  }
   mark_walkover: { matchId: UUID; winnerId: UUID }
-  withdraw_pair: { pairId: UUID }
+  withdraw_pair: { pairId: UUID; previewTournamentVersion: number }
   resolve_tie: {
     group: Group
     orderedPairIds: UUID[]

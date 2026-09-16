@@ -224,6 +224,15 @@ function mapSnapshotDto(dto: z.infer<typeof snapshotDtoSchema>): TournamentSnaps
   }
 }
 
+/**
+ * Shared with the preview API, whose before/after bodies are the same shape the
+ * snapshot RPC returns. Parsing them in one place keeps a preview from
+ * accepting a snapshot the tournament fetch would reject.
+ */
+export function parseSnapshot(value: unknown): TournamentSnapshot {
+  return mapSnapshotDto(parseDto(snapshotDtoSchema, value, 'tournament snapshot'))
+}
+
 function mapState(value: unknown): TournamentState {
   const dto = parseDto(tournamentStateDtoSchema, value, 'tournament state')
   return {
