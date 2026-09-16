@@ -1,0 +1,14 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "2026-badminton",
+  "compatibility_date": "2026-09-16",
+  // This project is a static Vite build with no Worker script, so the Worker
+  // exists only to serve ./dist. `vite build` writes there by default and the
+  // directory is gitignored, which is why the deploy step cannot infer it.
+  "assets": {
+    "directory": "./dist",
+    // Client-side app: serve index.html rather than a 404 for unknown paths, so
+    // a refresh or a shared deep link does not land on an error page.
+    "not_found_handling": "single-page-application"
+  }
+}
