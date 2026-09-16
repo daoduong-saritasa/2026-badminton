@@ -26,6 +26,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { pairName } from '@/features/tournament/MatchTicket'
+import { errorMessage } from '@/i18n/errors'
+import { formatNumber } from '@/i18n/format'
+import { messages } from '@/i18n/vi'
 import { cn } from '@/lib/utils'
 
 function failureReason(error: unknown): SaveFailureReason {
@@ -38,7 +41,7 @@ function failureReason(error: unknown): SaveFailureReason {
 }
 
 function message(error: unknown): string {
-  return error instanceof Error ? error.message : 'The score could not be saved'
+  return error === undefined || error === null ? messages.scoring.saveFailed : errorMessage(error)
 }
 
 function playableMatches(snapshot: TournamentSnapshot): PlayingMatch[] {
@@ -48,10 +51,10 @@ function playableMatches(snapshot: TournamentSnapshot): PlayingMatch[] {
 
 function pairSeedLabel(snapshot: TournamentSnapshot, pairId: UUID | null): string {
   const pair = snapshot.pairs.find((candidate) => candidate.id === pairId)
-  if (!pair) return 'Qualifier'
+  if (!pair) return messages.scoring.qualifier
   const firstSeed = snapshot.players.find((player) => player.id === pair.playerAId)?.seed
   const secondSeed = snapshot.players.find((player) => player.id === pair.playerBId)?.seed
-  return firstSeed && secondSeed ? `Seeds ${firstSeed} + ${secondSeed}` : 'Seeds unavailable'
+  return firstSeed && secondSeed ? messages.common.seeds(firstSeed, secondSeed) : messages.common.seedsUnavailable
 }
 
 function createInitialState(match: PlayingMatch, resetGeneration: number, hasOwnership: boolean): IdleScoringState {
@@ -67,11 +70,11 @@ function createInitialState(match: PlayingMatch, resetGeneration: number, hasOwn
 
 async function latestMatch(matchId: string, resetGeneration: number): Promise<PlayingMatch> {
   const state = await fetchTournament()
-  if (state.resetGeneration !== resetGeneration) throw new Error('The tournament was reset')
+  if (state.resetGeneration !== resetGeneration) throw new Error(messages.scoring.tournamentReset)
   const snapshot = state.snapshot
-  if (snapshot === null) throw new Error('The tournament was reset')
+  if (snapshot === null) throw new Error(messages.scoring.tournamentReset)
   const match = snapshot.matches.find((candidate): candidate is PlayingMatch => candidate.id === matchId && candidate.state === 'playing')
-  if (!match) throw new Error('The selected match is no longer available for scoring')
+  if (!match) throw new Error(messages.scoring.matchGone)
   return match
 }
 
@@ -172,7 +175,7 @@ function ScoringSurface({
   const handleActionFailure = async (action: string, error: unknown): Promise<void> => {
     try {
       await reconcileAfterAction()
-      setActionFailure(`${action} failed: ${message(error)}. The latest score and ownership were restored; retry only if the action is still needed.`)
+      setActionFailure(messages.scoring.actionFailed(action, message(error)))
     } catch {
       setActionFailure(`${action} failed: ${message(error)}. The latest state could not be verified; leave and reopen scoring before continuing.`)
     }
@@ -200,7 +203,7 @@ function ScoringSurface({
       }
       setTakeoverOpen(false)
     },
-    onError: (error) => handleActionFailure('Takeover', error),
+    onError: (error) => handleActionFailure(messages.scoring.actions.takeover, error),
   })
 
   const undoMutation = useMutation({
@@ -211,7 +214,7 @@ function ScoringSurface({
       expectedVersion: state.matchVersion,
       payload: { matchId: match.id },
     }),
-    onError: (error) => handleActionFailure('Undo', error),
+    onError: (error) => handleActionFailure(messages.scoring.actions.undo, error),
   })
 
   const confirmMutation = useMutation({
@@ -222,7 +225,7 @@ function ScoringSurface({
       expectedVersion: state.matchVersion,
       payload: { matchId: match.id },
     }),
-    onError: (error) => handleActionFailure('Confirmation', error),
+    onError: (error) => handleActionFailure(messages.scoring.actions.confirm, error),
   })
 
   const failed = state.status === 'failed' ? state : null
@@ -234,7 +237,7 @@ function ScoringSurface({
     <main className="score-viewport grid grid-rows-[2.75rem_minmax(0,1fr)_auto] gap-2 overflow-hidden bg-background">
       <div className="flex items-center justify-between gap-3">
         <Button variant="outline" size="sm" onClick={onExit}>
-          <ArrowLeft /> Back
+          <ArrowLeft /> {messages.scoring.back}
         </Button>
         <div className="flex items-center gap-1 rounded-pill border border-line bg-white p-1 shadow-float">
           <Button
@@ -244,7 +247,7 @@ function ScoringSurface({
             disabled={actionPending || state.status === 'saving' || state.status === 'failed' || !state.hasOwnership}
             onClick={() => undoMutation.mutate()}
           >
-            <RotateCcw /> Undo
+            <RotateCcw /> {messages.scoring.undo}
           </Button>
           <Button
             size="sm"
@@ -252,10 +255,10 @@ function ScoringSurface({
             disabled={state.status !== 'reviewing' || actionPending}
             onClick={() => confirmMutation.mutate()}
           >
-            Confirm
+            {messages.scoring.confirm}
           </Button>
         </div>
-        <span className="hidden text-xs font-semibold sm:block">Court {match.court ?? '–'}</span>
+        <span className="hidden text-xs font-semibold sm:block">{match.court ? messages.common.court(match.court) : '–'}</span>
       </div>
 
       <div className="grid min-h-0 grid-cols-2 gap-2">
@@ -268,14 +271,14 @@ function ScoringSurface({
               side === 'a' ? 'border-navy-soft bg-mist text-navy' : 'border-peach-line bg-peach text-ink',
             )}
             disabled={disabled}
-            aria-label={`Add one point for ${pairName(snapshot, side === 'a' ? match.pairAId : match.pairBId)}`}
+            aria-label={messages.scoring.addPoint(pairName(snapshot, side === 'a' ? match.pairAId : match.pairBId))}
             onClick={() => handlePoint(side)}
           >
             <span className="max-w-full [overflow-wrap:anywhere] text-[clamp(0.9375rem,2.4vw,1.625rem)]/[1.35] font-semibold tracking-[-0.023em]">
               {pairName(snapshot, side === 'a' ? match.pairAId : match.pairBId)}
             </span>
             <strong className="numeric self-center pr-[0.07em] text-[clamp(5rem,28dvh,16rem)] font-bold leading-none tracking-[-0.08em]">
-              {state.score[side]}
+              {formatNumber(state.score[side])}
             </strong>
             <small className="text-[0.625rem] opacity-75">
               {pairSeedLabel(snapshot, side === 'a' ? match.pairAId : match.pairBId)}
@@ -285,23 +288,23 @@ function ScoringSurface({
       </div>
 
       <div className="min-h-8 self-center text-center text-[0.6875rem] text-navy" aria-live="polite">
-        {state.status === 'saving' ? 'Saving point…' : null}
+        {state.status === 'saving' ? messages.scoring.savingPoint : null}
         {failed ? (
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="text-destructive">{failed.message}</span>
             {failed.reason === 'version-conflict' && failed.observed ? (
               <Button size="sm" variant="outline" onClick={() => dispatch({ type: 'version-conflict-reconciled' })}>
-                Use latest score
+                {messages.scoring.useLatestScore}
               </Button>
             ) : null}
             {!needsTakeover ? (
-              <Button size="sm" variant="outline" onClick={handleRetry}><RefreshCw /> Retry</Button>
+              <Button size="sm" variant="outline" onClick={handleRetry}><RefreshCw /> {messages.scoring.retry}</Button>
             ) : null}
           </div>
         ) : null}
         {needsTakeover ? (
           <Button size="sm" variant="outline" className="rounded-full" disabled={actionPending} onClick={() => setTakeoverOpen(true)}>
-            <ShieldAlert /> Take over scoring
+            <ShieldAlert /> {messages.scoring.takeOverScoring}
           </Button>
         ) : null}
         {actionFailure ? <p className="mt-1 text-destructive" role="alert">{actionFailure}</p> : null}
@@ -312,14 +315,14 @@ function ScoringSurface({
       }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirm the winning score?</AlertDialogTitle>
+            <AlertDialogTitle>{messages.scoring.confirmTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Review {state.score.a}–{state.score.b}. Dismiss this message if you need to undo the last point.
+              {messages.scoring.confirmBody(state.score.a, state.score.b)}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Review and undo</AlertDialogCancel>
-            <AlertDialogAction disabled={actionPending} onClick={() => confirmMutation.mutate()}>Confirm result</AlertDialogAction>
+            <AlertDialogCancel>{messages.scoring.reviewAndUndo}</AlertDialogCancel>
+            <AlertDialogAction disabled={actionPending} onClick={() => confirmMutation.mutate()}>{messages.scoring.confirmResult}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -327,13 +330,13 @@ function ScoringSurface({
       <AlertDialog open={takeoverOpen} onOpenChange={setTakeoverOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Take over this match?</AlertDialogTitle>
-            <AlertDialogDescription>The previous scorer will immediately lose write access.</AlertDialogDescription>
+            <AlertDialogTitle>{messages.scoring.takeoverTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{messages.scoring.takeoverBody}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
             <AlertDialogAction disabled={actionPending} onClick={() => takeoverMutation.mutate()}>
-              {takeoverMutation.isPending ? 'Taking over…' : 'Take over'}
+              {takeoverMutation.isPending ? messages.scoring.takingOver : messages.scoring.takeOver}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -357,15 +360,15 @@ export function ScoreTracker({ snapshot, resetGeneration, onExit }: { snapshot: 
     return (
       <main className="score-viewport grid place-items-center text-center">
         <div>
-          <h2 className="text-xl font-semibold tracking-[-0.028em]">No match is currently scoring</h2>
-          <Button className="mt-5" variant="outline" onClick={onExit}>Back to matches</Button>
+          <h2 className="text-xl font-semibold tracking-[-0.028em]">{messages.scoring.noMatch}</h2>
+          <Button className="mt-5" variant="outline" onClick={onExit}>{messages.scoring.backToMatches}</Button>
         </div>
       </main>
     )
   }
 
   if (ownershipQuery.isPending) {
-    return <main className="score-viewport grid place-items-center text-sm">Recovering score access…</main>
+    return <main className="score-viewport grid place-items-center text-sm">{messages.scoring.recovering}</main>
   }
 
   return (
