@@ -184,7 +184,7 @@ Fresh review: not required
 - [x] Add `src/features/tournament/document-title.ts` and update `src/App.tsx` to set the configured tournament name or “Giải cầu lông”; apply the fallback for empty setup/Reset all and never append stage names.
 - [x] Replace `public/favicon.svg` with the blue/orange shuttlecock silhouette; render `public/favicon-32.png`, `apple-touch-icon.png` (180), `icon-192.png`, and `icon-512.png` from the same artwork, leaving the unrelated interface sprite untouched.
 - [x] Add `public/site.webmanifest` with PLAN.md's static identity/start/scope/display/language and valid PNG references; update `index.html` title, icon, Apple touch icon, and manifest links; do not add a service worker or offline behavior.
-- [ ] Inspect home-screen standalone viewport behavior in `src/App.css`, `src/index.css`, and `src/features/scoring/ScoreTracker.tsx`; correct any safe-area or reachable-control issues against the shared responsive requirements.
+- [x] Inspect home-screen standalone viewport behavior in `src/App.css`, `src/index.css`, and `src/features/scoring/ScoreTracker.tsx`; correct any safe-area or reachable-control issues against the shared responsive requirements. Inspected 2026-09-16, no change: the viewport meta omits `viewport-fit=cover`, so the browser keeps content inside the safe area in standalone mode (the `env(safe-area-inset-*)` paddings resolve to 0); the manifest's default status bar does not overlay content; `100dvh`/`100svh` sizing holds. Enabling `cover` was rejected because ScoreTracker's `fixed right-4 top-4` court selector and the 1rem-margin centered dialogs would then sit under the notch and home indicator.
 
 **Phase gate (hard):**
 
