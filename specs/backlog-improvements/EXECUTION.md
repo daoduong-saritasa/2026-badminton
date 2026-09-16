@@ -11,7 +11,7 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default); exte
 - Phase 3 — Results and withdrawals: pending
 - Phase 4 — Vietnamese translation: pending
 - Phase 5 — Application icon and title: pending
-- Verification debt: Phase 1 and Phase 2 local database type generation, Phase 1's 19 selected integration scenarios, and Phase 2's 30 selected integration scenarios are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is absent; `src/lib/database.types.ts` carries a schema-derived fallback, while project-wide typechecking and 96 non-database tests provide substitute evidence. No Phase 2 SQL, including the fresh-review corrections, has executed against a database. Never target production for integration tests.
+- Verification debt: Phase 1 and Phase 2 local database type generation, Phase 1's 19 selected integration scenarios, and Phase 2's 30 selected integration scenarios are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is absent. The project decided on 2026-09-16 not to run the local Supabase stack at all (`AGENTS.md` → "Local Supabase and integration tests"), so this debt is permanent, not pending. The blocked suites do not skip cleanly: `requireLocalSupabase` throws in each setup hook, so the phase gate's `test:related` command exits 1 with `tests/integration/auth.test.ts`, `reset.test.ts`, and `tournament.test.ts` reported as failed files; `src/lib/database.types.ts` carries a schema-derived fallback, while project-wide typechecking and 96 non-database tests provide substitute evidence. No Phase 2 SQL, including the fresh-review corrections, has executed against a database. Never target production for integration tests.
 
 ## Phase 1 — Flexible pair count and courts
 
