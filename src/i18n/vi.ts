@@ -219,6 +219,7 @@ export const messages = {
   },
 
   app: {
+    fallbackTitle: 'Giải cầu lông',
     loading: 'Đang tải giải đấu…',
     unavailableTitle: 'Không tải được giải đấu',
     setupEyebrow: 'Thiết lập giải',

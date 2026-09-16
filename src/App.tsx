@@ -17,6 +17,7 @@ import { OrganizerPage } from '@/features/organizer/OrganizerPage'
 import { SetupForm } from '@/features/organizer/SetupForm'
 import { KnockoutBracket } from '@/features/tournament/KnockoutBracket'
 import { StandingsTable } from '@/features/tournament/StandingsTable'
+import { tournamentTitle } from '@/features/tournament/document-title'
 import { TournamentPage } from '@/features/tournament/TournamentPage'
 
 import './App.css'
@@ -146,6 +147,11 @@ export default function App() {
     if (state) queryClient.setQueryData(tournamentQueryKey, state)
     else void queryClient.invalidateQueries({ queryKey: tournamentQueryKey })
   }), [queryClient])
+
+  const tournamentName = tournamentQuery.data?.snapshot?.tournament.name ?? null
+  useEffect(() => {
+    document.title = tournamentTitle(tournamentName)
+  }, [tournamentName])
 
   useEffect(() => {
     if (staffAccess === null) return
