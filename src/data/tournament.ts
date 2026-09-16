@@ -28,6 +28,7 @@ const tournamentDtoSchema = z.object({
   setup_locked_at: z.string().nullable(),
   court_count: courtSchema.nullable(),
   version: z.int().nonnegative(),
+  result_revision: z.int().nonnegative(),
 })
 
 const playerDtoSchema = z.object({
@@ -150,6 +151,7 @@ function mapTournament(dto: z.infer<typeof tournamentDtoSchema>): Tournament {
     setupLockedAt: dto.setup_locked_at,
     courtCount: dto.court_count as CourtCount | null,
     version: dto.version,
+    resultRevision: dto.result_revision,
   }
 }
 

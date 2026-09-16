@@ -44,12 +44,12 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
   const [scoreA, setScoreA] = useState(String(match?.score?.a ?? 21))
   const [scoreB, setScoreB] = useState(String(match?.score?.b ?? 0))
   const [walkoverWinner, setWalkoverWinner] = useState<UUID>(match?.winnerId ?? match?.pairAId ?? '')
-  const [reviewed, setReviewed] = useState<{ impact: MutationImpact; version: number } | null>(null)
+  const [reviewed, setReviewed] = useState<{ impact: MutationImpact; revision: number } | null>(null)
   const [pendingWalkover, setPendingWalkover] = useState<UUID | null>(null)
 
   const previewMutation = useMutation({
     mutationFn: (score: Score) => previewResultCorrection(matchId, score, resetGeneration),
-    onSuccess: (result) => setReviewed({ impact: result, version: snapshot.tournament.version }),
+    onSuccess: (result) => setReviewed({ impact: result, revision: result.tournamentVersion }),
   })
 
   const saveMutation = useMutation({
@@ -94,7 +94,7 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
   const isCorrection = match.state === 'completed'
   // Anything that moved the tournament since the review invalidates the
   // projection on screen, so the dialog closes and the staff member reviews again.
-  const impact = reviewed && reviewed.version === snapshot.tournament.version ? reviewed.impact : null
+  const impact = reviewed && reviewed.revision === snapshot.tournament.resultRevision ? reviewed.impact : null
 
   return (
     <section className="space-y-4">

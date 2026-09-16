@@ -20,6 +20,12 @@ export interface Tournament {
   setupLockedAt: string | null
   courtCount: CourtCount | null
   version: number
+  /**
+   * Bumps for every change a preview's projection depends on, and stays still
+   * while a live score moves. `version` bumps for both, so it cannot tell a
+   * reviewed projection from one a scored point invalidated.
+   */
+  resultRevision: number
 }
 
 export interface Player {

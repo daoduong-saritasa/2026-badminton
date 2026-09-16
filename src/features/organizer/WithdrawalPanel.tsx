@@ -29,11 +29,11 @@ export interface WithdrawalPanelProps {
 // longer describes what confirming would do.
 export function WithdrawalPanel({ snapshot, resetGeneration }: WithdrawalPanelProps) {
   const [selectedPairId, setSelectedPairId] = useState<UUID | null>(null)
-  const [reviewed, setReviewed] = useState<{ impact: MutationImpact; version: number } | null>(null)
+  const [reviewed, setReviewed] = useState<{ impact: MutationImpact; revision: number } | null>(null)
 
   const previewMutation = useMutation({
     mutationFn: (pairId: UUID) => previewWithdrawal(pairId, resetGeneration),
-    onSuccess: (result) => setReviewed({ impact: result, version: snapshot.tournament.version }),
+    onSuccess: (result) => setReviewed({ impact: result, revision: result.tournamentVersion }),
   })
 
   const withdrawMutation = useMutation({
@@ -50,7 +50,7 @@ export function WithdrawalPanel({ snapshot, resetGeneration }: WithdrawalPanelPr
     },
   })
 
-  const impact = reviewed && reviewed.version === snapshot.tournament.version ? reviewed.impact : null
+  const impact = reviewed && reviewed.revision === snapshot.tournament.resultRevision ? reviewed.impact : null
   const activePairs = snapshot.pairs.filter((pair) => !pair.withdrawn)
   const withdrawnPairs = snapshot.pairs.filter((pair) => pair.withdrawn)
 

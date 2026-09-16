@@ -33,6 +33,7 @@ export type Database = {
           created_at: string
           id: string
           name: string
+          result_revision: number
           setup_locked_at: string | null
           singleton: boolean
           stage: TournamentStage
@@ -44,6 +45,7 @@ export type Database = {
           created_at?: string
           id?: string
           name: string
+          result_revision?: number
           setup_locked_at?: string | null
           singleton?: boolean
           stage?: TournamentStage
@@ -55,6 +57,7 @@ export type Database = {
           created_at?: string
           id?: string
           name?: string
+          result_revision?: number
           setup_locked_at?: string | null
           singleton?: boolean
           stage?: TournamentStage

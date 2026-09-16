@@ -22,6 +22,7 @@ function snapshot(version: number) {
       setup_locked_at: '2026-09-09T00:00:00Z',
       court_count: 2,
       version,
+      result_revision: version,
     },
     players: [
       { id: playerAId, name: 'A', seed: 1 },

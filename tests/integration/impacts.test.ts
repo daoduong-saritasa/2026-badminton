@@ -32,7 +32,7 @@ interface Snapshot {
   pairs: Array<{ group_code: string; id: string; withdrawn: boolean }>
   players: Array<{ id: string }>
   tieResolutions: Array<{ group_code: string }>
-  tournament: { id: string; stage: string; version: number }
+  tournament: { id: string; result_revision: number; stage: string; version: number }
 }
 
 interface TournamentState {
@@ -271,7 +271,7 @@ describe('result and withdrawal previews', () => {
     const rejected = await rpc('correct_result', mutation(groupMatch.version, {
       matchId: groupMatch.id,
       score: { a: 21, b: 19 },
-      previewTournamentVersion: current.snapshot?.tournament.version,
+      previewTournamentVersion: current.snapshot?.tournament.result_revision,
     }), staff)
     expect(rejected.ok).toBe(false)
     // A reviewed version is supplied, so this can only be the knockout block.
@@ -317,7 +317,7 @@ describe('result and withdrawal previews', () => {
     const current = await state(staff)
     expect((await rpc('withdraw_pair', mutation(current.snapshot?.tournament.version ?? -1, {
       pairId: groupA[0].id,
-      previewTournamentVersion: current.snapshot?.tournament.version,
+      previewTournamentVersion: current.snapshot?.tournament.result_revision,
     }), staff)).ok).toBe(false)
   })
 
@@ -357,6 +357,71 @@ describe('result and withdrawal previews', () => {
     expect(impact.blockedReason).toBe('knockouts-started')
   })
 
+  it('keeps a reviewed preview valid while a live match is being scored', async () => {
+    const staff = await signInAnonymously()
+    await elevate(staff)
+    const created = await createTournament(staff, 6)
+    const target = created.matches.find(
+      (candidate) => candidate.round === 'group' && candidate.pair_a_id !== null,
+    )
+    const scoring = created.matches.find(
+      (candidate) => candidate.round === 'group' && candidate.pair_a_id !== null && candidate.id !== target?.id,
+    )
+    if (!target || !scoring) throw new Error('Fixture needs two independent group matches')
+
+    expect((await rpc('start_scoring', mutation(scoring.version, { matchId: scoring.id }), staff)).ok).toBe(true)
+
+    const reviewed = await (await previewCorrection(target.id, { a: 21, b: 10 }, staff)).json() as Impact
+    expect(reviewed.blockedReason).toBeNull()
+
+    // Points on another court move public.tournament.version but must not
+    // invalidate a projection that does not depend on them.
+    let playing = (await state(staff)).snapshot?.matches.find((match) => match.id === scoring.id)
+    for (let point = 0; point < 3; point += 1) {
+      if (!playing) throw new Error('Scoring match vanished')
+      expect((await rpc('add_point', mutation(playing.version, {
+        matchId: scoring.id,
+        side: 'a',
+      }), staff)).ok).toBe(true)
+      playing = (await state(staff)).snapshot?.matches.find((match) => match.id === scoring.id)
+    }
+
+    const moved = await state(staff)
+    expect(moved.snapshot?.tournament.version).toBeGreaterThan(created.tournament.version)
+    expect(moved.snapshot?.tournament.result_revision).toBe(reviewed.tournamentVersion)
+
+    const saved = await rpc('enter_result', mutation(target.version, {
+      matchId: target.id,
+      score: { a: 21, b: 10 },
+    }), staff)
+    expect(saved.ok).toBe(true)
+  })
+
+  it('invalidates a reviewed preview when another result lands', async () => {
+    const staff = await signInAnonymously()
+    await elevate(staff)
+    const created = await createTournament(staff, 6)
+    const target = created.pairs.find((pair) => pair.group_code === 'A')
+    const other = created.matches.find(
+      (match) => match.round === 'group' && match.pair_a_id !== null
+        && ![match.pair_a_id, match.pair_b_id].includes(target?.id ?? ''),
+    )
+    if (!target || !other) throw new Error('Fixture is missing an independent match')
+
+    const reviewed = await (await previewWithdrawal(target.id, staff)).json() as Impact
+    expect((await rpc('enter_result', mutation(other.version, {
+      matchId: other.id,
+      score: { a: 21, b: 10 },
+    }), staff)).ok).toBe(true)
+
+    const moved = await state(staff)
+    expect(moved.snapshot?.tournament.result_revision).toBeGreaterThan(reviewed.tournamentVersion)
+    expect((await rpc('withdraw_pair', mutation(moved.snapshot?.tournament.version ?? -1, {
+      pairId: target.id,
+      previewTournamentVersion: reviewed.tournamentVersion,
+    }), staff)).ok).toBe(false)
+  })
+
   it('rejects a confirmation built on a superseded preview', async () => {
     const staff = await signInAnonymously()
     await elevate(staff)
@@ -385,7 +450,7 @@ describe('result and withdrawal previews', () => {
 
     expect((await rpc('withdraw_pair', mutation(moved.snapshot?.tournament.version ?? -1, {
       pairId: target.id,
-      previewTournamentVersion: moved.snapshot?.tournament.version,
+      previewTournamentVersion: moved.snapshot?.tournament.result_revision,
     }), staff)).ok).toBe(true)
   })
 

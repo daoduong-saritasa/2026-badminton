@@ -50,6 +50,7 @@ interface Snapshot {
   tieResolutions: unknown[]
   tournament: {
     court_count: 1 | 2 | null
+    result_revision: number
     setup_locked_at: string | null
     stage: 'setup' | 'groups' | 'knockouts' | 'completed'
     version: number
@@ -515,7 +516,7 @@ describe('tournament transactions', () => {
     await callMutation('correct_result', staff, correctedMatch.version, {
       matchId: correctedMatch.id,
       score: winningScore(correctedMatch, correctedMatch.winner_id, 11),
-      previewTournamentVersion: current.tournament.version,
+      previewTournamentVersion: current.tournament.result_revision,
     })
 
     current = await readSnapshot(staff)
@@ -535,7 +536,7 @@ describe('tournament transactions', () => {
     if (!withdrawnPair) throw new Error('No pair is available for withdrawal')
     await callMutation('withdraw_pair', staff, current.tournament.version, {
       pairId: withdrawnPair.id,
-      previewTournamentVersion: current.tournament.version,
+      previewTournamentVersion: current.tournament.result_revision,
     })
     current = await readSnapshot(staff)
     await callMutation('confirm_groups', staff, current.tournament.version, {})
@@ -554,7 +555,7 @@ describe('tournament transactions', () => {
       mutation(correctedMatch.version + 1, {
         matchId: correctedMatch.id,
         score: winningScore(correctedMatch, correctedMatch.winner_id, 12),
-        previewTournamentVersion: current.tournament.version,
+        previewTournamentVersion: current.tournament.result_revision,
       }),
       staff,
     )

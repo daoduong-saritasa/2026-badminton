@@ -36,6 +36,7 @@ function matchBase(id: UUID, pairAId: UUID, pairBId: UUID) {
     court: 1 as const,
     playingOrder: 1,
     version: 1,
+    resultRevision: 0,
   }
 }
 
@@ -82,6 +83,7 @@ function snapshot(
       setupLockedAt: null,
       courtCount: 2,
       version: 1,
+      resultRevision: 0,
     },
     players: [],
     pairs,

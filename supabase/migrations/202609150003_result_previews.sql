@@ -9,6 +9,9 @@
 -- the subtransaction unwinds and nothing reaches the mutation log, the
 -- tournament version, or any table.
 
+alter table public.tournament
+  add column if not exists result_revision integer not null default 0;
+
 -- Shared snapshot projection ------------------------------------------------
 
 create or replace function private.snapshot_body()
@@ -179,9 +182,11 @@ as $$
 declare
   projected jsonb;
   current_version integer;
+  current_revision integer;
   expected_version integer;
 begin
-  select version into current_version from public.tournament where singleton;
+  select version, result_revision into current_version, current_revision
+  from public.tournament where singleton;
   if not found then
     raise exception 'Tournament is not configured' using errcode = 'P0002';
   end if;
@@ -204,7 +209,7 @@ begin
     using
       gen_random_uuid(),
       expected_version,
-      p_payload || jsonb_build_object('previewTournamentVersion', current_version);
+      p_payload || jsonb_build_object('previewTournamentVersion', current_revision);
     projected := private.snapshot_body();
     -- Unwind every write the call just made. PV001 is used by nothing else, so
     -- a genuine failure inside the mutation propagates instead of being read as
@@ -232,6 +237,8 @@ set search_path = ''
 as $$
   select jsonb_build_object(
     'resetGeneration', private.current_reset_generation(),
+    -- The number the caller hands back as previewTournamentVersion: the result
+    -- revision, not public.tournament.version, which a live score also moves.
     'tournamentVersion', p_tournament_version,
     'blockedReason', p_block_code,
     'before', p_before,
@@ -253,7 +260,7 @@ set search_path = ''
 as $$
 declare
   current_match public.matches%rowtype;
-  current_version integer;
+  current_revision integer;
   allow_completed boolean;
   new_score_a integer := (p_score ->> 'a')::integer;
   new_score_b integer := (p_score ->> 'b')::integer;
@@ -264,7 +271,7 @@ begin
   perform private.require_staff_access();
   perform private.require_reset_generation(p_reset_generation);
 
-  select version into current_version from public.tournament where singleton;
+  select result_revision into current_revision from public.tournament where singleton;
   if not found then
     raise exception 'Tournament is not configured' using errcode = 'P0002';
   end if;
@@ -286,7 +293,7 @@ begin
   before_body := private.snapshot_body();
 
   return private.impact(
-    current_version,
+    current_revision,
     block_code,
     before_body,
     case when block_code is null then private.project_mutation(
@@ -307,14 +314,14 @@ security definer
 set search_path = ''
 as $$
 declare
-  current_version integer;
+  current_revision integer;
   block_code text;
   before_body jsonb;
 begin
   perform private.require_staff_access();
   perform private.require_reset_generation(p_reset_generation);
 
-  select version into current_version from public.tournament where singleton;
+  select result_revision into current_revision from public.tournament where singleton;
   if not found then
     raise exception 'Tournament is not configured' using errcode = 'P0002';
   end if;
@@ -323,7 +330,7 @@ begin
   before_body := private.snapshot_body();
 
   return private.impact(
-    current_version,
+    current_revision,
     block_code,
     before_body,
     case when block_code is null then private.project_mutation(
@@ -364,21 +371,21 @@ declare
   staff_session uuid; replay jsonb; current_match public.matches%rowtype;
   target_match_id uuid := (p_payload ->> 'matchId')::uuid;
   new_score_a integer; new_score_b integer; new_winner uuid;
-  current_tournament_version integer;
+  current_result_revision integer;
   next_match_version integer; next_tournament_version integer; response jsonb;
 begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
   replay := private.replay_mutation(staff_session, p_request_id, p_operation, p_expected_version, p_payload);
   if replay is not null then return replay; end if;
-  -- p_expected_version is this match's version. The reviewed preview describes a
-  -- tournament version, which is a different counter, so it is read here under
-  -- the mutation lock and compared against itself.
+  -- p_expected_version is this match's version. The reviewed preview describes
+  -- the result revision, a different counter, so it is read here under the
+  -- mutation lock and compared against itself.
   if p_operation = 'correct_result' then
-    select version into current_tournament_version from public.tournament where singleton for update;
+    select result_revision into current_result_revision from public.tournament where singleton for update;
     if not found then
       raise exception 'Tournament is not configured' using errcode = 'P0002';
     end if;
-    perform private.require_preview_version(p_payload, current_tournament_version);
+    perform private.require_preview_version(p_payload, current_result_revision);
   end if;
   current_match := private.require_match_version(target_match_id, p_expected_version);
   if current_match.pair_a_id is null or current_match.pair_b_id is null
@@ -446,8 +453,8 @@ begin
   staff_session := private.require_staff_access(); perform private.lock_mutations();
   replay := private.replay_mutation(staff_session, p_request_id, 'withdraw_pair', p_expected_version, p_payload);
   if replay is not null then return replay; end if;
-  perform private.require_preview_version(p_payload, p_expected_version);
   tournament_row := private.require_tournament_version(p_expected_version);
+  perform private.require_preview_version(p_payload, tournament_row.result_revision);
 
   block_code := private.withdrawal_block_code(target_pair_id);
   if block_code = 'knockouts-started' then
@@ -476,3 +483,136 @@ end;
 $$;
 
 revoke all on function private.legacy_withdraw_pair(uuid, integer, jsonb) from public, anon, authenticated, service_role;
+
+-- Result revision --------------------------------------------------------
+-- public.tournament.version bumps on every mutation, including each point
+-- scored, so it cannot be the handshake for a reviewed projection: an organizer
+-- correcting a result while any court is playing would be rejected by the next
+-- point. result_revision bumps for everything a projection depends on and stays
+-- still while a live score moves, so a preview survives ongoing play and is
+-- invalidated only by a change that could alter what confirming would do.
+
+create or replace function private.bump_tournament()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare next_version integer;
+begin
+  update public.tournament
+  set version = version + 1,
+      result_revision = result_revision + 1,
+      updated_at = clock_timestamp()
+  where singleton
+  returning version into strict next_version;
+  return next_version;
+end;
+$$;
+
+/**
+ * Used only by add_point and undo_point. Both move a playing match's score,
+ * which every client still needs to see, but neither changes standings,
+ * participants, ties, or which result a correction would overwrite.
+ */
+create or replace function private.bump_tournament_score_only()
+returns integer
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare next_version integer;
+begin
+  update public.tournament
+  set version = version + 1, updated_at = clock_timestamp()
+  where singleton
+  returning version into strict next_version;
+  return next_version;
+end;
+$$;
+
+create or replace function private.legacy_add_point(
+  p_request_id uuid,
+  p_expected_version integer,
+  p_payload jsonb
+)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  staff_session uuid; replay jsonb; current_match public.matches%rowtype;
+  side text := p_payload ->> 'side'; target_match_id uuid := (p_payload ->> 'matchId')::uuid;
+  next_match_version integer; next_tournament_version integer; response jsonb;
+begin
+  staff_session := private.require_staff_access(); perform private.lock_mutations();
+  replay := private.replay_mutation(staff_session, p_request_id, 'add_point', p_expected_version, p_payload);
+  if replay is not null then
+    perform private.require_scoring_replay(target_match_id, staff_session, replay, false);
+    return replay;
+  end if;
+  current_match := private.require_match_version(target_match_id, p_expected_version);
+  perform private.require_match_owner(target_match_id, staff_session);
+  if side not in ('a', 'b') or current_match.state <> 'playing'
+    or private.is_winning_score(current_match.score_a, current_match.score_b) then
+    raise exception 'Point cannot be added' using errcode = '55000';
+  end if;
+  update public.matches
+  set score_a = score_a + case when side = 'a' then 1 else 0 end,
+      score_b = score_b + case when side = 'b' then 1 else 0 end,
+      version = version + 1, updated_at = clock_timestamp()
+  where id = target_match_id returning version into next_match_version;
+  next_tournament_version := private.bump_tournament_score_only();
+  response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
+  return private.store_mutation(staff_session, p_request_id, 'add_point', p_expected_version, p_payload, response, target_match_id, side);
+end;
+$$;
+
+create or replace function private.legacy_undo_point(
+  p_request_id uuid,
+  p_expected_version integer,
+  p_payload jsonb
+)
+returns jsonb language plpgsql security definer set search_path = '' as $$
+declare
+  staff_session uuid; replay jsonb; current_match public.matches%rowtype;
+  point_log private.mutation_log%rowtype;
+  target_match_id uuid := (p_payload ->> 'matchId')::uuid;
+  current_generation integer := private.current_reset_generation();
+  next_match_version integer; next_tournament_version integer; response jsonb;
+begin
+  staff_session := private.require_staff_access(); perform private.lock_mutations();
+  replay := private.replay_mutation(staff_session, p_request_id, 'undo_point', p_expected_version, p_payload);
+  if replay is not null then
+    perform private.require_scoring_replay(target_match_id, staff_session, replay, false);
+    return replay;
+  end if;
+  current_match := private.require_match_version(target_match_id, p_expected_version);
+  perform private.require_match_owner(target_match_id, staff_session);
+  if current_match.state <> 'playing' then
+    raise exception 'Only a playing match can be undone' using errcode = '55000';
+  end if;
+  select * into point_log from private.mutation_log as point_entry
+  where point_entry.match_id = target_match_id
+    and point_entry.operation = 'add_point'
+    and point_entry.actor_kind = 'staff'
+    and point_entry.reset_generation = current_generation
+    and not point_entry.undone
+  order by created_at desc, request_id desc limit 1 for update;
+  if not found then raise exception 'No point is available to undo' using errcode = '55000'; end if;
+  if (point_log.point_side = 'a' and current_match.score_a <= 0)
+    or (point_log.point_side = 'b' and current_match.score_b <= 0) then
+    raise exception 'Score history is inconsistent' using errcode = '55000';
+  end if;
+  update public.matches
+  set score_a = score_a - case when point_log.point_side = 'a' then 1 else 0 end,
+      score_b = score_b - case when point_log.point_side = 'b' then 1 else 0 end,
+      version = version + 1, updated_at = clock_timestamp()
+  where id = target_match_id returning version into next_match_version;
+  update private.mutation_log set undone = true where id = point_log.id;
+  next_tournament_version := private.bump_tournament_score_only();
+  response := private.receipt(p_request_id, next_tournament_version, target_match_id, next_match_version);
+  return private.store_mutation(staff_session, p_request_id, 'undo_point', p_expected_version, p_payload, response, target_match_id);
+end;
+$$;
+
+revoke all on function private.bump_tournament_score_only() from public, anon, authenticated, service_role;
+revoke all on function private.legacy_add_point(uuid, integer, jsonb) from public, anon, authenticated, service_role;
+revoke all on function private.legacy_undo_point(uuid, integer, jsonb) from public, anon, authenticated, service_role;
