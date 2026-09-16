@@ -56,6 +56,39 @@ export const messages = {
     unknownPlayer: 'Không rõ tên',
   },
 
+  staff: {
+    menu: 'Ban tổ chức',
+    menuLabel: 'Ban tổ chức',
+    rotatePin: 'Đổi mã PIN',
+    signOut: 'Đăng xuất',
+    accessTitle: 'Quyền ban tổ chức',
+    accessDescription: 'Nhập mã PIN của ban tổ chức.',
+    pinLabel: 'Mã PIN',
+    continueAction: 'Tiếp tục',
+    rotateTitle: 'Đổi mã PIN',
+    rotateDescription: 'Mọi quyền ban tổ chức khác sẽ bị thu hồi ngay.',
+    newPinLabel: 'Mã PIN mới',
+    reviewRotation: 'Xem trước thay đổi',
+    confirmRotateTitle: 'Đổi mã PIN ban tổ chức?',
+    confirmRotateBody: 'Các thiết bị khác sẽ mất quyền và phải nhập mã PIN mới.',
+    keepPin: 'Giữ mã hiện tại',
+    rotating: 'Đang đổi…',
+    confirmRotate: 'Đổi mã PIN',
+    rateLimited: (minutes: number) =>
+      `Đã thử quá nhiều lần. Hãy thử lại sau khoảng ${formatNumber(minutes)} phút.`,
+  },
+
+  publicView: {
+    awaitingConfirmationTitle: 'Chờ xác nhận bảng xếp hạng',
+    awaitingConfirmationBody: 'Ban tổ chức cần xử lý đồng hạng và xác nhận các cặp vào bán kết.',
+    playingNow: 'Đang thi đấu',
+    upcomingOrder: 'Thứ tự sắp tới',
+    recentResults: 'Kết quả gần đây',
+    versusShort: 'gặp',
+    courtPending: 'Chưa xếp sân',
+    scoreOrWalkover: (score: string | null) => score ?? 'Xử thắng',
+  },
+
   bracket: {
     heading: 'Vòng loại trực tiếp',
     description: 'Hai cặp thắng bán kết gặp nhau ở chung kết.',
