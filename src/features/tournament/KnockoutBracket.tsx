@@ -88,7 +88,7 @@ export function KnockoutBracket({ snapshot }: { snapshot: TournamentSnapshot }) 
     return (
       <section className="view-enter rounded-[2rem] bg-navy px-7 py-12 text-center text-white shadow-final">
         <Trophy className="mx-auto size-9 text-cyan" aria-hidden="true" />
-        <p className="mt-5 text-xs uppercase tracking-[0.25em] text-navy-soft">{messages.bracket.championLabel}</p>
+        <p className="mt-5 text-xs font-semibold tracking-[0.12em] text-navy-soft">{messages.bracket.championLabel}</p>
         <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-5xl">{champion}</h2>
         {championId ? (
           <p className="mt-3 text-sm text-navy-soft">

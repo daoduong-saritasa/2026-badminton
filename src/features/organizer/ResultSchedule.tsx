@@ -80,7 +80,7 @@ export function ResultSchedule({ snapshot, selectedMatchId, onSelect }: ResultSc
         {messages.results.description}
       </p>
 
-      <h4 className="mt-5 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">{messages.results.upcoming}</h4>
+      <h4 className="mt-5 text-[0.6875rem] font-semibold text-muted-ink">{messages.results.upcoming}</h4>
       {upcoming.length === 0 ? (
         <p className="mt-2 text-[0.8125rem] text-muted-ink">{messages.results.noUpcoming}</p>
       ) : (
@@ -98,7 +98,7 @@ export function ResultSchedule({ snapshot, selectedMatchId, onSelect }: ResultSc
         </ul>
       )}
 
-      <h4 className="mt-6 text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">{messages.results.completed}</h4>
+      <h4 className="mt-6 text-[0.6875rem] font-semibold text-muted-ink">{messages.results.completed}</h4>
       {completed.length === 0 ? (
         <p className="mt-2 text-[0.8125rem] text-muted-ink">{messages.results.noCompleted}</p>
       ) : (

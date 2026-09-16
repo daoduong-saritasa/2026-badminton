@@ -68,7 +68,7 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
     <div className="max-h-[50dvh] space-y-4 overflow-y-auto pr-1">
       {matchId ? (
         <section>
-          <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">{messages.impact.score}</h4>
+          <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.impact.score}</h4>
           <Row
             label={pairName(before, matchById(before, matchId)?.pairAId ?? null)}
             before={scoreText(matchById(before, matchId))}
@@ -79,7 +79,7 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
 
       {changedMatches.length > 0 ? (
         <section>
-          <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">
+          <h4 className="text-[0.6875rem] font-semibold text-muted-ink">
             {messages.impact.affectedMatches(changedMatches.length)}
           </h4>
           {changedMatches.map((match) => (
@@ -99,7 +99,7 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
         if (afterStandings.length === 0) return null
         return (
           <section key={group}>
-            <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">{messages.common.group(group)}</h4>
+            <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.common.group(group)}</h4>
             {afterStandings.map((standing) => (
               <Row
                 key={standing.pairId}

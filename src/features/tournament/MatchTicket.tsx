@@ -71,7 +71,7 @@ function TicketSide({
         {pairId ? pairName(snapshot, pairId) : sideLabel(match, side)}
       </p>
       {teamName ? <p className="mt-1 max-w-full [overflow-wrap:anywhere] text-[0.6875rem] text-muted-ink">{pairPlayers(snapshot, pairId)}</p> : null}
-      <p className="mt-1.5 text-[0.625rem] uppercase tracking-[0.08em] text-muted-ink">
+      <p className="mt-1.5 text-[0.625rem] text-muted-ink">
         {pairSeeds(snapshot, pairId)}
       </p>
       <strong

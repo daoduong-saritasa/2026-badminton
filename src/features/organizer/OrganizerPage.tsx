@@ -177,7 +177,7 @@ function UpcomingSchedule({ snapshot, resetGeneration, onStartScoring }: { snaps
       {assignments.length > 0 ? (
         <div
           aria-hidden="true"
-          className="mt-6 mb-2 hidden gap-2.5 px-[0.9375rem] text-[0.625rem] tracking-[0.08em] text-muted-ink uppercase md:grid md:grid-cols-[minmax(0,1fr)_8rem_6.5rem_6.5rem]"
+          className="mt-6 mb-2 hidden gap-2.5 px-[0.9375rem] text-[0.625rem] text-muted-ink md:grid md:grid-cols-[minmax(0,1fr)_8rem_6.5rem_6.5rem]"
         >
           <span>{messages.organizer.schedule.match}</span>
           <span>{messages.organizer.schedule.court}</span>

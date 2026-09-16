@@ -88,7 +88,7 @@ function SetupRequiredScreen({
   return (
     <main className="app-shell">
       <header className="mb-8">
-        <p className="text-[0.625rem] font-semibold uppercase tracking-[0.18em] text-muted-ink">{messages.app.setupEyebrow}</p>
+        <p className="text-[0.625rem] font-semibold tracking-[0.08em] text-muted-ink">{messages.app.setupEyebrow}</p>
         <h1 className="mt-2 text-2xl font-extrabold tracking-tight"><span className="brand-mark" aria-hidden="true" />{messages.app.setupHeading}</h1>
         <p className="ml-[2.5625rem] mt-2 text-xs text-muted-ink">{messages.app.setupNote}</p>
       </header>

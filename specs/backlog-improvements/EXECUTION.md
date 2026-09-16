@@ -150,12 +150,12 @@ Produces: typed `messages` in `src/i18n/vi.ts`, `formatNumber(value: number): st
 
 Fresh review: not required
 
-- [ ] Add `src/i18n/vi.ts`, `src/i18n/format.ts`, and `src/i18n/errors.ts` per PLAN.md; compose complete natural Vietnamese messages with typed parameters, distinguish badminton seed/rank and walkover/withdrawal/reset concepts, and resolve ambiguous terminology with the user in `CONTEXT.md` before final copy.
-- [ ] Translate `src/App.tsx`, `src/features/tournament/TournamentPage.tsx`, `MatchTicket.tsx`, `StandingsTable.tsx`, and `KnockoutBracket.tsx`, preserving user-entered names and using `formatNumber` for scores/counts.
-- [ ] Translate `src/features/organizer/SetupForm.tsx`, `OrganizerPage.tsx`, `ResultSchedule.tsx`, `ResultEditor.tsx`, `WithdrawalPanel.tsx`, and `ImpactPreview.tsx`, plus `src/features/scoring/ScoreTracker.tsx`, `src/features/staff/StaffAccessDialog.tsx`, and `StaffMenu.tsx`; cover accessible names, errors, pending/empty states, confirmations, and full impact explanations.
-- [ ] Audit user-visible defaults in `src/components/ui/dialog.tsx`, `alert-dialog.tsx`, and `select.tsx`; localize close/control labels without translating identifiers or user data, and route known backend/staff errors through typed Vietnamese messages with a safe unknown-error fallback.
-- [ ] Set `index.html` language to `vi`; adjust `src/index.css`, `src/App.css`, `ScoreTracker.tsx`, and affected component layouts to support Vietnamese diacritics, long copy, dynamic viewport height, safe areas, and touch controls without hiding Undo/Confirm in landscape.
-- [ ] Add `src/i18n/errors.test.ts` and `src/i18n/format.test.ts` for known/unknown failures, parameter handling, and `vi-VN` formatting; keep linguistic and font/layout assessment in the manual review rather than tests that merely repeat catalogue strings.
+- [x] Add `src/i18n/vi.ts`, `src/i18n/format.ts`, and `src/i18n/errors.ts` per PLAN.md; compose complete natural Vietnamese messages with typed parameters, distinguish badminton seed/rank and walkover/withdrawal/reset concepts, and resolve ambiguous terminology with the user in `CONTEXT.md` before final copy.
+- [x] Translate `src/App.tsx`, `src/features/tournament/TournamentPage.tsx`, `MatchTicket.tsx`, `StandingsTable.tsx`, and `KnockoutBracket.tsx`, preserving user-entered names and using `formatNumber` for scores/counts.
+- [x] Translate `src/features/organizer/SetupForm.tsx`, `OrganizerPage.tsx`, `ResultSchedule.tsx`, `ResultEditor.tsx`, `WithdrawalPanel.tsx`, and `ImpactPreview.tsx`, plus `src/features/scoring/ScoreTracker.tsx`, `src/features/staff/StaffAccessDialog.tsx`, and `StaffMenu.tsx`; cover accessible names, errors, pending/empty states, confirmations, and full impact explanations.
+- [x] Audit user-visible defaults in `src/components/ui/dialog.tsx`, `alert-dialog.tsx`, and `select.tsx`; localize close/control labels without translating identifiers or user data, and route known backend/staff errors through typed Vietnamese messages with a safe unknown-error fallback.
+- [x] Set `index.html` language to `vi`; adjust `src/index.css`, `src/App.css`, `ScoreTracker.tsx`, and affected component layouts to support Vietnamese diacritics, long copy, dynamic viewport height, safe areas, and touch controls without hiding Undo/Confirm in landscape.
+- [x] Add `src/i18n/errors.test.ts` and `src/i18n/format.test.ts` for known/unknown failures, parameter handling, and `vi-VN` formatting; keep linguistic and font/layout assessment in the manual review rather than tests that merely repeat catalogue strings.
 
 **Phase gate (hard):**
 
