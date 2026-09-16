@@ -22,6 +22,9 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { groupTone, matchRoundLabel, pairName } from '@/features/tournament/MatchTicket'
+import { errorMessage } from '@/i18n/errors'
+import { formatNumber } from '@/i18n/format'
+import { messages } from '@/i18n/vi'
 import { cn } from '@/lib/utils'
 import { ResultEditor } from './ResultEditor'
 import { ResultSchedule } from './ResultSchedule'
@@ -78,7 +81,7 @@ function stageProgress(snapshot: TournamentSnapshot): StageProgress | null {
   return {
     done: scoped.filter((match) => match.state === 'completed' || match.state === 'void').length,
     total: scoped.length,
-    label: inGroups ? 'group matches played' : 'knockout matches played',
+    label: messages.organizer.progress(inGroups),
   }
 }
 
@@ -87,8 +90,8 @@ function StageProgressMeter({ progress }: { progress: StageProgress }) {
   return (
     <div className="min-w-52">
       <p className="text-[0.6875rem] text-muted-ink">
-        <span className="numeric text-sm font-semibold text-navy">{done}</span>
-        <span className="numeric"> / {total}</span> {label}
+        <span className="numeric text-sm font-semibold text-navy">{formatNumber(done)}</span>
+        <span className="numeric"> / {formatNumber(total)}</span> {label}
       </p>
       <div
         className="mt-2.5 h-[5px] overflow-hidden rounded-[5px] bg-mist"
@@ -106,14 +109,14 @@ function StageProgressMeter({ progress }: { progress: StageProgress }) {
 
 function matchPairs(snapshot: TournamentSnapshot, matchId: UUID): string {
   const match = snapshot.matches.find((candidate) => candidate.id === matchId)
-  if (!match) return 'Unknown match'
-  return `${pairName(snapshot, match.pairAId)} vs ${pairName(snapshot, match.pairBId)}`
+  if (!match) return messages.organizer.unknownMatch
+  return messages.common.versus(pairName(snapshot, match.pairAId), pairName(snapshot, match.pairBId))
 }
 
 /** The spoken form, for control labels: the visible row shows the round as a chip. */
 function matchName(snapshot: TournamentSnapshot, matchId: UUID): string {
   const match = snapshot.matches.find((candidate) => candidate.id === matchId)
-  if (!match) return 'Unknown match'
+  if (!match) return messages.organizer.unknownMatch
   return `${matchRoundLabel(match)} · ${matchPairs(snapshot, matchId)}`
 }
 
@@ -143,7 +146,7 @@ function UpcomingSchedule({ snapshot, resetGeneration, onStartScoring }: { snaps
   const startMutation = useMutation({
     mutationFn: (matchId: UUID) => {
       const match = snapshot.matches.find((candidate) => candidate.id === matchId)
-      if (!match) throw new Error('Match no longer exists')
+      if (!match) throw new Error(messages.organizer.matchGone)
       return mutateTournament('start_scoring', {
         requestId: crypto.randomUUID(),
         resetGeneration,
@@ -164,10 +167,9 @@ function UpcomingSchedule({ snapshot, resetGeneration, onStartScoring }: { snaps
     <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold">Upcoming courts</h3>
+          <h3 className="text-sm font-semibold">{messages.organizer.schedule.heading}</h3>
           <p className="mt-1.5 text-[0.6875rem]/[1.6] text-muted-ink">
-            Order is the position in each court&#39;s queue, so the same number can appear once on Court 1 and once on Court 2.
-            Edit every slot together and publish in one go.
+            {messages.organizer.schedule.description}
           </p>
         </div>
         <CalendarRange className="size-5 text-muted-ink" />
@@ -177,9 +179,9 @@ function UpcomingSchedule({ snapshot, resetGeneration, onStartScoring }: { snaps
           aria-hidden="true"
           className="mt-6 mb-2 hidden gap-2.5 px-[0.9375rem] text-[0.625rem] tracking-[0.08em] text-muted-ink uppercase md:grid md:grid-cols-[minmax(0,1fr)_8rem_6.5rem_6.5rem]"
         >
-          <span>Match</span>
-          <span>Court</span>
-          <span>Order</span>
+          <span>{messages.organizer.schedule.match}</span>
+          <span>{messages.organizer.schedule.court}</span>
+          <span>{messages.organizer.schedule.order}</span>
           <span />
         </div>
       ) : null}
@@ -205,7 +207,7 @@ function UpcomingSchedule({ snapshot, resetGeneration, onStartScoring }: { snaps
                 value={String(assignment.court)}
                 onValueChange={(value) => update(assignment.matchId, { court: Number(value) as Court })}
               >
-                <SelectTrigger className="w-full" aria-label={`Court for ${matchName(snapshot, assignment.matchId)}`}>
+                <SelectTrigger className="w-full" aria-label={messages.organizer.schedule.courtFor(matchName(snapshot, assignment.matchId))}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -216,7 +218,7 @@ function UpcomingSchedule({ snapshot, resetGeneration, onStartScoring }: { snaps
                 type="number"
                 min="1"
                 className="numeric"
-                aria-label={`Playing order for ${matchName(snapshot, assignment.matchId)}`}
+                aria-label={messages.organizer.schedule.orderFor(matchName(snapshot, assignment.matchId))}
                 value={assignment.playingOrder}
                 onChange={(event) => update(assignment.matchId, { playingOrder: Number(event.target.value) })}
               />
@@ -226,38 +228,38 @@ function UpcomingSchedule({ snapshot, resetGeneration, onStartScoring }: { snaps
             </div>
           )
         })}
-        {assignments.length === 0 ? <p className="text-[0.8125rem] text-muted-ink">No upcoming matches.</p> : null}
+        {assignments.length === 0 ? <p className="text-[0.8125rem] text-muted-ink">{messages.organizer.schedule.empty}</p> : null}
       </div>
       {assignments.length > 0 ? (
         <Button className="mt-4" variant="outline" disabled={assignmentMutation.isPending} onClick={() => setConfirmAssignments(true)}>
-          Review schedule changes
+          {messages.organizer.schedule.review}
         </Button>
       ) : null}
-      {assignmentMutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{assignmentMutation.error.message}</p> : null}
-      {startMutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{startMutation.error.message}</p> : null}
+      {assignmentMutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{errorMessage(assignmentMutation.error)}</p> : null}
+      {startMutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{errorMessage(startMutation.error)}</p> : null}
 
       <AlertDialog open={confirmAssignments} onOpenChange={setConfirmAssignments}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Publish the updated court order?</AlertDialogTitle>
-            <AlertDialogDescription>The public upcoming schedule will change immediately.</AlertDialogDescription>
+            <AlertDialogTitle>{messages.organizer.schedule.confirmTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{messages.organizer.schedule.confirmBody}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep current schedule</AlertDialogCancel>
-            <AlertDialogAction onClick={() => assignmentMutation.mutate()}>Publish schedule</AlertDialogAction>
+            <AlertDialogCancel>{messages.organizer.schedule.keep}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => assignmentMutation.mutate()}>{messages.organizer.schedule.publish}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
       <AlertDialog open={startMatchId !== null} onOpenChange={(open) => { if (!open) setStartMatchId(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Start scoring this match?</AlertDialogTitle>
-            <AlertDialogDescription>Starting play locks the tournament setup and claims this match for your staff session.</AlertDialogDescription>
+            <AlertDialogTitle>{messages.organizer.schedule.startTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{messages.organizer.schedule.startBody}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
             <AlertDialogAction disabled={startMutation.isPending || startMatchId === null} onClick={() => { if (startMatchId) startMutation.mutate(startMatchId) }}>
-              {startMutation.isPending ? 'Starting…' : 'Start scoring'}
+              {startMutation.isPending ? messages.organizer.schedule.starting : messages.organizer.schedule.start}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -282,41 +284,41 @@ function CourtConfiguration({ snapshot, resetGeneration }: { snapshot: Tournamen
 
   return (
     <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
-      <h3 className="text-sm font-semibold">Available courts</h3>
+      <h3 className="text-sm font-semibold">{messages.organizer.courts.heading}</h3>
       <p className="mt-1.5 text-[0.6875rem] text-muted-ink">
-        Adding Court 2 keeps the current queues. Reducing to one court appends Court 2&apos;s waiting matches to Court 1.
+        {messages.organizer.courts.description}
       </p>
       <div className="mt-4 flex flex-wrap items-end gap-3">
         <div className="min-w-44 space-y-2">
-          <Label htmlFor="active-court-count">Court count</Label>
+          <Label htmlFor="active-court-count">{messages.organizer.courts.label}</Label>
           <Select value={String(nextCount)} onValueChange={(value) => setNextCount(Number(value) as CourtCount)}>
             <SelectTrigger id="active-court-count" className="w-full"><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="1">1 court</SelectItem>
-              <SelectItem value="2">2 courts</SelectItem>
+              <SelectItem value="1">{messages.setup.courtOption(1)}</SelectItem>
+              <SelectItem value="2">{messages.setup.courtOption(2)}</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <Button variant="outline" disabled={!changed || mutation.isPending} onClick={() => setConfirmationOpen(true)}>
-          Review court change
+          {messages.organizer.courts.review}
         </Button>
       </div>
-      {mutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{mutation.error.message}</p> : null}
+      {mutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
 
       <AlertDialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Use {nextCount} court{nextCount === 1 ? '' : 's'}?</AlertDialogTitle>
+            <AlertDialogTitle>{messages.organizer.courts.confirmTitle(nextCount)}</AlertDialogTitle>
             <AlertDialogDescription>
               {nextCount === 1
-                ? 'Court 2 must have no active match. Its waiting queue will move after Court 1 while completed Court 2 matches keep their history.'
-                : 'Existing assignments and playing order will stay unchanged. Move waiting matches to Court 2 manually.'}
+                ? messages.organizer.courts.reduceBody
+                : messages.organizer.courts.increaseBody}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep current courts</AlertDialogCancel>
+            <AlertDialogCancel>{messages.organizer.courts.keep}</AlertDialogCancel>
             <AlertDialogAction disabled={mutation.isPending} onClick={() => mutation.mutate()}>
-              {mutation.isPending ? 'Saving…' : 'Change courts'}
+              {mutation.isPending ? messages.common.saving : messages.organizer.courts.change}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -358,20 +360,20 @@ function TieResolutionEditor({ snapshot, resetGeneration, group }: { snapshot: T
   if (manual.length < 2) return null
   return (
     <section className="rounded-field border border-navy-soft bg-mist/50 p-4">
-      <h4 className="text-[0.8125rem] font-semibold">Group {group} manual tie</h4>
-      <p className="mt-1.5 text-[0.6875rem] text-muted-ink">Set the exact order for every unresolved pair and record the decision.</p>
+      <h4 className="text-[0.8125rem] font-semibold">{messages.organizer.tie.heading(group)}</h4>
+      <p className="mt-1.5 text-[0.6875rem] text-muted-ink">{messages.organizer.tie.description}</p>
       <ol className="mt-3 space-y-2">
         {orderedIds.map((pairId, index) => (
           <li className="flex items-center gap-2 rounded-chip bg-white px-3 py-1.5 text-[0.8125rem]" key={pairId}>
-            <span className="numeric w-5 text-[0.625rem] text-dim-ink">{index + 1}</span>
+            <span className="numeric w-5 text-[0.625rem] text-dim-ink">{formatNumber(index + 1)}</span>
             <span className="min-w-0 flex-1 truncate font-medium">{pairName(snapshot, pairId)}</span>
-            <Button size="icon-sm" variant="ghost" aria-label="Move up" disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp /></Button>
-            <Button size="icon-sm" variant="ghost" aria-label="Move down" disabled={index === orderedIds.length - 1} onClick={() => move(index, 1)}><ArrowDown /></Button>
+            <Button size="icon-sm" variant="ghost" aria-label={messages.organizer.tie.moveUp} disabled={index === 0} onClick={() => move(index, -1)}><ArrowUp /></Button>
+            <Button size="icon-sm" variant="ghost" aria-label={messages.organizer.tie.moveDown} disabled={index === orderedIds.length - 1} onClick={() => move(index, 1)}><ArrowDown /></Button>
           </li>
         ))}
       </ol>
       <div className="mt-3 space-y-2">
-        <Label htmlFor={`tie-${group}`}>Decision explanation</Label>
+        <Label htmlFor={`tie-${group}`}>{messages.organizer.tie.explanation}</Label>
         <textarea
           id={`tie-${group}`}
           className="min-h-20 w-full rounded-field border border-line bg-white px-3.5 py-3 text-[0.8125rem] outline-none transition-colors focus-visible:border-navy focus-visible:ring-[3px] focus-visible:ring-mist"
@@ -379,17 +381,17 @@ function TieResolutionEditor({ snapshot, resetGeneration, group }: { snapshot: T
           onChange={(event) => setExplanation(event.target.value)}
         />
       </div>
-      <Button className="mt-4" size="sm" disabled={!explanation.trim() || mutation.isPending} onClick={() => setConfirmOpen(true)}>Review tie order</Button>
-      {mutation.isError ? <p className="mt-2 text-sm text-destructive" role="alert">{mutation.error.message}</p> : null}
+      <Button className="mt-4" size="sm" disabled={!explanation.trim() || mutation.isPending} onClick={() => setConfirmOpen(true)}>{messages.organizer.tie.review}</Button>
+      {mutation.isError ? <p className="mt-2 text-sm text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Record this Group {group} order?</AlertDialogTitle>
-            <AlertDialogDescription>This order will determine knockout qualification when groups are confirmed.</AlertDialogDescription>
+            <AlertDialogDescription>{messages.organizer.tie.confirmBody}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Review order</AlertDialogCancel>
-            <AlertDialogAction onClick={() => mutation.mutate()}>Record tie order</AlertDialogAction>
+            <AlertDialogCancel>{messages.organizer.tie.back}</AlertDialogCancel>
+            <AlertDialogAction onClick={() => mutation.mutate()}>{messages.organizer.tie.record}</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
@@ -422,19 +424,19 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
 
   const actionCopy: Record<OrganizerAction, { title: string; description: string; confirm: string }> = {
     fixtures: {
-      title: 'Generate all fixtures?',
-      description: 'This fixes the initial group and knockout schedule. Save setup changes first.',
-      confirm: 'Generate fixtures',
+      title: messages.organizer.actions.fixtures.title,
+      description: messages.organizer.actions.fixtures.description,
+      confirm: messages.organizer.actions.fixtures.confirm,
     },
     'confirm-groups': {
-      title: 'Confirm group standings?',
-      description: 'The top two pairs in each group will populate the semifinals.',
-      confirm: 'Confirm groups',
+      title: messages.organizer.actions.confirmGroups.title,
+      description: messages.organizer.actions.confirmGroups.description,
+      confirm: messages.organizer.actions.confirmGroups.confirm,
     },
     reopen: {
-      title: 'Reopen the tournament?',
-      description: 'The final result will be cleared so staff can record it again.',
-      confirm: 'Reopen final',
+      title: messages.organizer.actions.reopen.title,
+      description: messages.organizer.actions.reopen.description,
+      confirm: messages.organizer.actions.reopen.confirm,
     },
   }
   const copy = pendingAction ? actionCopy[pendingAction] : null
@@ -450,12 +452,12 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
     <section className="view-enter space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
         <div>
-          <h2 className="text-[1.375rem] font-semibold tracking-[-0.036em]">Run the tournament</h2>
-          <p className="mt-2 text-xs text-muted-ink">Keep play moving.</p>
+          <h2 className="text-[1.375rem] font-semibold tracking-[-0.036em]">{messages.organizer.heading}</h2>
+          <p className="mt-2 text-xs text-muted-ink">{messages.organizer.subheading}</p>
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           {progress ? <StageProgressMeter progress={progress} /> : null}
-          <Badge variant="outline"><span className="capitalize">{snapshot.tournament.stage}</span>&nbsp;stage</Badge>
+          <Badge variant="outline">{messages.organizer.stageBadge(messages.app.stage[snapshot.tournament.stage])}</Badge>
         </div>
       </div>
 
@@ -463,10 +465,10 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
 
       {!hasFixtures ? (
         <section className="rounded-card bg-navy p-6 text-white shadow-final">
-          <h3 className="text-sm font-semibold">Fixture generation</h3>
-          <p className="mt-1.5 text-[0.6875rem] text-navy-soft">Generate fixtures after the setup contains four to ten balanced pairs and an explicit court choice.</p>
+          <h3 className="text-sm font-semibold">{messages.organizer.fixtures.heading}</h3>
+          <p className="mt-1.5 text-[0.6875rem] text-navy-soft">{messages.organizer.fixtures.description}</p>
           <Button className="mt-5 bg-white text-navy hover:bg-navy-soft" disabled={snapshot.tournament.courtCount === null} onClick={() => setPendingAction('fixtures')}>
-            <CalendarRange /> Review fixture generation
+            <CalendarRange /> {messages.organizer.fixtures.review}
           </Button>
         </section>
       ) : null}
@@ -483,30 +485,30 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
               <LockKeyhole className="size-3.5" />
             </span>
             <div>
-              <h3 className="text-sm font-semibold">Confirm group standings</h3>
-              <p className="mt-1.5 text-[0.6875rem] text-muted-ink">Resolve any manual ties, then lock qualifiers into the semifinals.</p>
+              <h3 className="text-sm font-semibold">{messages.organizer.confirmGroups.heading}</h3>
+              <p className="mt-1.5 text-[0.6875rem] text-muted-ink">{messages.organizer.confirmGroups.description}</p>
             </div>
           </div>
           <div className="mt-4 grid gap-3 md:grid-cols-2">
             <TieResolutionEditor key={`tie-A-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} group="A" />
             <TieResolutionEditor key={`tie-B-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} group="B" />
           </div>
-          <Button className="mt-5" disabled={unresolvedTie} onClick={() => setPendingAction('confirm-groups')}>Review group confirmation</Button>
-          {unresolvedTie ? <p className="mt-2 text-xs text-destructive">Record every unresolved tie before confirming groups.</p> : null}
+          <Button className="mt-5" disabled={unresolvedTie} onClick={() => setPendingAction('confirm-groups')}>{messages.organizer.confirmGroups.review}</Button>
+          {unresolvedTie ? <p className="mt-2 text-xs text-destructive">{messages.organizer.confirmGroups.unresolved}</p> : null}
         </section>
       ) : null}
 
       {snapshot.tournament.stage === 'completed' ? (
         <section className="rounded-card border border-peach-line bg-[#fff7f3] p-6">
-          <h3 className="text-sm font-semibold">Tournament completed</h3>
-          <p className="mt-1.5 text-[0.6875rem] text-muted-ink">Reopening clears only the final result; setup remains locked.</p>
-          <Button className="mt-5" variant="outline" onClick={() => setPendingAction('reopen')}><RotateCcw /> Review reopening</Button>
+          <h3 className="text-sm font-semibold">{messages.organizer.completed.heading}</h3>
+          <p className="mt-1.5 text-[0.6875rem] text-muted-ink">{messages.organizer.completed.description}</p>
+          <Button className="mt-5" variant="outline" onClick={() => setPendingAction('reopen')}><RotateCcw /> {messages.organizer.completed.review}</Button>
         </section>
       ) : null}
 
       {hasFixtures ? setupPanel : null}
 
-      {actionMutation.isError ? <p className="text-sm text-destructive" role="alert">{actionMutation.error.message}</p> : null}
+      {actionMutation.isError ? <p className="text-sm text-destructive" role="alert">{errorMessage(actionMutation.error)}</p> : null}
       <AlertDialog open={copy !== null} onOpenChange={(open) => { if (!open) setPendingAction(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -514,9 +516,9 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
             <AlertDialogDescription>{copy?.description}</AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
             <AlertDialogAction disabled={!pendingAction || actionMutation.isPending} onClick={() => { if (pendingAction) actionMutation.mutate(pendingAction) }}>
-              {actionMutation.isPending ? 'Saving…' : copy?.confirm}
+              {actionMutation.isPending ? messages.common.saving : copy?.confirm}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

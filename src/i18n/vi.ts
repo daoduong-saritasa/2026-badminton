@@ -56,6 +56,134 @@ export const messages = {
     unknownPlayer: 'Không rõ tên',
   },
 
+  organizer: {
+    heading: 'Điều hành giải',
+    subheading: 'Giữ nhịp thi đấu.',
+    stageBadge: (stage: string) => `Giai đoạn: ${stage}`,
+    progress: (inGroups: boolean) =>
+      inGroups ? 'trận vòng bảng đã đấu' : 'trận vòng loại trực tiếp đã đấu',
+    unknownMatch: 'Trận không xác định',
+    matchGone: 'Trận đấu này không còn nữa.',
+
+    schedule: {
+      heading: 'Sân sắp tới',
+      description:
+        'Thứ tự là vị trí trong hàng chờ của từng sân, nên cùng một số có thể xuất hiện một lần ở sân 1 và một lần ở sân 2. Hãy sửa tất cả rồi công bố một lần.',
+      match: 'Trận',
+      court: 'Sân',
+      order: 'Thứ tự',
+      empty: 'Không có trận nào sắp tới.',
+      courtFor: (match: string) => `Sân cho ${match}`,
+      orderFor: (match: string) => `Thứ tự cho ${match}`,
+      review: 'Xem trước thay đổi lịch',
+      confirmTitle: 'Công bố thứ tự sân mới?',
+      confirmBody: 'Lịch thi đấu công khai sẽ thay đổi ngay.',
+      keep: 'Giữ lịch hiện tại',
+      publish: 'Công bố lịch',
+      startTitle: 'Bắt đầu ghi điểm trận này?',
+      startBody: 'Bắt đầu thi đấu sẽ khoá thiết lập và giao quyền ghi điểm cho thiết bị này.',
+      starting: 'Đang bắt đầu…',
+      start: 'Bắt đầu ghi điểm',
+    },
+
+    courts: {
+      heading: 'Số sân đang dùng',
+      description:
+        'Thêm sân 2 sẽ giữ nguyên hàng chờ hiện tại. Giảm còn một sân sẽ dồn các trận đang chờ của sân 2 xuống cuối hàng chờ sân 1.',
+      label: 'Số sân',
+      review: 'Xem trước thay đổi sân',
+      confirmTitle: (count: number) => `Dùng ${formatNumber(count)} sân?`,
+      reduceBody:
+        'Sân 2 phải không còn trận đang đấu. Các trận đang chờ sẽ chuyển xuống sau sân 1, còn các trận đã đấu xong trên sân 2 vẫn giữ nguyên lịch sử.',
+      increaseBody:
+        'Các trận đã xếp và thứ tự hiện tại giữ nguyên. Hãy tự chuyển những trận đang chờ sang sân 2.',
+      keep: 'Giữ số sân hiện tại',
+      change: 'Đổi số sân',
+    },
+
+    tie: {
+      heading: (group: string) => `Đồng hạng bảng ${group}`,
+      description: 'Hãy xếp thứ tự chính xác cho từng cặp còn đồng hạng và ghi lại lý do.',
+      moveUp: 'Lên một bậc',
+      moveDown: 'Xuống một bậc',
+      explanation: 'Lý do quyết định',
+      review: 'Xem trước thứ tự',
+      confirmBody: 'Thứ tự này quyết định cặp nào đi tiếp khi xác nhận bảng xếp hạng.',
+      back: 'Xem lại thứ tự',
+      record: 'Ghi lại thứ tự',
+    },
+
+    fixtures: {
+      heading: 'Tạo lịch thi đấu',
+      description: 'Tạo lịch sau khi thiết lập có 4 đến 10 cặp chia đều và đã chọn số sân.',
+      review: 'Xem trước lịch thi đấu',
+    },
+
+    confirmGroups: {
+      heading: 'Xác nhận bảng xếp hạng',
+      description: 'Hãy xử lý các trường hợp đồng hạng, rồi chốt các cặp vào bán kết.',
+      review: 'Xem trước xác nhận',
+      unresolved: 'Cần ghi lại thứ tự cho mọi trường hợp đồng hạng trước khi xác nhận.',
+    },
+
+    completed: {
+      heading: 'Giải đã kết thúc',
+      description: 'Mở lại chỉ xoá kết quả chung kết; thiết lập vẫn khoá.',
+      review: 'Xem trước việc mở lại',
+    },
+
+    actions: {
+      fixtures: {
+        title: 'Tạo toàn bộ lịch thi đấu?',
+        description: 'Thao tác này chốt lịch vòng bảng và vòng loại trực tiếp ban đầu. Hãy lưu thay đổi thiết lập trước.',
+        confirm: 'Tạo lịch thi đấu',
+      },
+      confirmGroups: {
+        title: 'Xác nhận bảng xếp hạng?',
+        description: 'Hai cặp đứng đầu mỗi bảng sẽ vào bán kết.',
+        confirm: 'Xác nhận',
+      },
+      reopen: {
+        title: 'Mở lại giải đấu?',
+        description: 'Kết quả chung kết sẽ bị xoá để ban tổ chức ghi lại.',
+        confirm: 'Mở lại chung kết',
+      },
+    },
+  },
+
+  setup: {
+    heading: 'Người chơi và bảng đấu',
+    description: 'Từ 4 đến 10 cặp, chia đều cho bảng A và bảng B.',
+    lockedTitle: 'Thiết lập đã khoá',
+    lockedBody: 'Không đổi được người chơi và bảng sau khi giải bắt đầu.',
+    seedAdvisoryTitle: 'Lưu ý về hạt giống',
+    seedAdvisory: (count: number) =>
+      `${formatNumber(count)} cặp có hai người cùng hạt giống. Vẫn có thể lưu.`,
+    tournamentName: 'Tên giải đấu',
+    courts: 'Số sân',
+    selectCourts: 'Chọn số sân',
+    courtOption: (count: number) => `${formatNumber(count)} sân`,
+    courtsHint: 'Hãy chọn trước khi tạo lịch thi đấu.',
+    pairLegend: (index: number) => `Cặp ${formatNumber(index)}`,
+    removePair: (index: number) => `Xoá cặp ${formatNumber(index)}`,
+    teamNameLabel: (index: number) => `Tên đội của cặp ${formatNumber(index)}`,
+    teamNamePlaceholder: 'Tên đội (không bắt buộc)',
+    groupFor: (index: number) => `Bảng của cặp ${formatNumber(index)}`,
+    playerLabel: (pair: number, player: number) =>
+      `Cặp ${formatNumber(pair)} người chơi ${formatNumber(player)}`,
+    playerPlaceholder: (player: number) => `Người chơi ${formatNumber(player)}`,
+    seedFor: (pair: number, player: number) =>
+      `Hạt giống của cặp ${formatNumber(pair)} người chơi ${formatNumber(player)}`,
+    seedOption: (seed: number) => `Hạt giống ${formatNumber(seed)}`,
+    groupsInvalid: 'Bảng A và bảng B phải bằng nhau, hoặc lệch nhau đúng một cặp nếu tổng số lẻ.',
+    addPair: 'Thêm cặp',
+    save: 'Lưu thiết lập',
+    confirmTitle: 'Thay thế thiết lập và lịch thi đấu?',
+    confirmBody: 'Toàn bộ thiết lập hiện tại và các trận chưa bắt đầu sẽ được tạo lại theo biểu mẫu này.',
+    keepCurrent: 'Giữ thiết lập hiện tại',
+    replace: 'Thay thế thiết lập',
+  },
+
   scoring: {
     noMatch: 'Chưa có trận nào đang ghi điểm',
     backToMatches: 'Về danh sách trận',
