@@ -8,10 +8,10 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default); exte
 - Current phase: 3 — in-progress
 - Phase 1 — Flexible pair count and courts: done-with-debt
 - Phase 2 — Tournament reset: done-with-debt — fresh review found 2 P1 + 2 P2, corrected in 7624db9/d7471c5; the one allowed re-review (2026-09-16) confirmed those and raised a new P2 (formerly completed Court 2 matches restored onto a removed court). The user approved the recommended correction on 2026-09-16; it is not independently re-reviewed under the one-re-review cap.
-- Phase 3 — Results and withdrawals: in-progress — branch `backlog-improvements/phase-3-results` added to the stack on 2026-09-16, based on phase 2 (PRs #7 and #8 still open)
+- Phase 3 — Results and withdrawals: in-progress — all seven checklist items complete and the phase gate run on 2026-09-16; fresh review outstanding. Branch `backlog-improvements/phase-3-results`, stacked on phase 2 (PRs #7 and #8 still open).
 - Phase 4 — Vietnamese translation: pending
 - Phase 5 — Application icon and title: pending
-- Verification debt: Phase 1 and Phase 2 local database type generation, Phase 1's 19 selected integration scenarios, and Phase 2's 30 selected integration scenarios are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is absent. The project decided on 2026-09-16 not to run the local Supabase stack at all (`AGENTS.md` → "Local Supabase and integration tests"), so this debt is permanent, not pending. The blocked suites do not skip cleanly: `requireLocalSupabase` throws in each setup hook, so the phase gate's `test:related` command exits 1 with `tests/integration/auth.test.ts`, `reset.test.ts`, and `tournament.test.ts` reported as failed files; `src/lib/database.types.ts` carries a schema-derived fallback, while project-wide typechecking and 96 non-database tests provide substitute evidence. No Phase 2 SQL, including the fresh-review corrections, has executed against a database. Never target production for integration tests.
+- Verification debt: Phase 1 and Phase 2 local database type generation, Phase 1's 19 selected integration scenarios, Phase 2's 30 selected integration scenarios, and Phase 3's 30 selected integration scenarios are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is absent. The project decided on 2026-09-16 not to run the local Supabase stack at all (`AGENTS.md` → "Local Supabase and integration tests"), so this debt is permanent, not pending. The blocked suites do not skip cleanly: `requireLocalSupabase` throws in each setup hook, so the phase gate's `test:related` command exits 1 with `tests/integration/auth.test.ts`, `reset.test.ts`, and `tournament.test.ts` reported as failed files; `src/lib/database.types.ts` carries a schema-derived fallback, while project-wide typechecking and 96 non-database tests provide substitute evidence. No Phase 2 SQL, including the fresh-review corrections, has executed against a database. Never target production for integration tests.
 
 ## Phase 1 — Flexible pair count and courts
 
@@ -118,8 +118,8 @@ Fresh review: required — correction/withdrawal paths protecting durable data a
 
 **Phase gate (hard):**
 
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed files>` using paths from the real phase diff; selected local database tests follow the recorded environment-debt policy.
+- [x] Run `npm run typecheck` project-wide. Exited 0 on 2026-09-16.
+- [~] Run `npm run test:related -- <changed files>` using paths from the real phase diff; selected local database tests follow the recorded environment-debt policy. The 16-file Phase 3 diff selected 4 test files and 50 tests on 2026-09-16: 20 passed, 30 skipped, and `tests/integration/impacts.test.ts` and `tournament.test.ts` failed at setup because `/Users/thomasduong/.orbstack/run/docker.sock` is absent, so the command exits 1 under the standing policy in `AGENTS.md`.
 
 **Review checklist (user, at PR review):**
 
