@@ -97,7 +97,7 @@ export function WithdrawalPanel({ snapshot, resetGeneration }: WithdrawalPanelPr
       ) : null}
 
       <AlertDialog open={impact !== null} onOpenChange={(open) => { if (!open) setImpact(null) }}>
-        <AlertDialogContent>
+        <AlertDialogContent size="wide">
           <AlertDialogHeader>
             <AlertDialogTitle>
               {selectedPairId ? `Withdraw ${pairName(snapshot, selectedPairId)}?` : 'Withdraw this pair?'}

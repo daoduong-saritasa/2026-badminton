@@ -149,7 +149,7 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
       ) : null}
 
       <AlertDialog open={impact !== null} onOpenChange={(open) => { if (!open) setImpact(null) }}>
-        <AlertDialogContent>
+        <AlertDialogContent size="wide">
           <AlertDialogHeader>
             <AlertDialogTitle>{isCorrection ? 'Correct this result?' : 'Record this result?'}</AlertDialogTitle>
             <AlertDialogDescription>

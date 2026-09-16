@@ -70,7 +70,7 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
   )
 
   return (
-    <div className="max-h-[50vh] space-y-4 overflow-y-auto pr-1">
+    <div className="max-h-[50dvh] space-y-4 overflow-y-auto pr-1">
       {matchId ? (
         <section>
           <h4 className="text-[0.6875rem] font-semibold uppercase tracking-wide text-muted-ink">Score</h4>
