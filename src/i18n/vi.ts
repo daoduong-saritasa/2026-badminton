@@ -42,6 +42,49 @@ export const messages = {
     notPlayed: 'Chưa thi đấu',
   },
 
+  ticket: {
+    status: {
+      playing: 'Đang đấu',
+      completed: 'Đã xong',
+      upNext: 'Sắp tới',
+    },
+    theFinal: 'Trận chung kết',
+    upNext: 'Tiếp theo',
+    order: (order: number) => `Thứ tự ${formatNumber(order)}`,
+    courtLabel: (court: number) => `Sân ${formatNumber(court)}`,
+    roundMatch: (round: string) => `Trận ${round.toLowerCase()}`,
+    unknownPlayer: 'Không rõ tên',
+  },
+
+  bracket: {
+    heading: 'Vòng loại trực tiếp',
+    description: 'Hai cặp thắng bán kết gặp nhau ở chung kết.',
+    awaitingStandings: 'Chờ xác nhận bảng xếp hạng',
+    active: 'Đang thi đấu',
+    semifinals: 'Bán kết',
+    semifinalCount: (count: number) => `${formatNumber(count)} trận`,
+    finalHeading: 'Chung kết',
+    finalPairs: (count: number) => `${formatNumber(count)} cặp`,
+    semifinalNumber: (index: number) => `Bán kết ${formatNumber(index)}`,
+    courtPending: 'Chưa xếp sân',
+    championLabel: 'Vô địch',
+    championshipMatch: 'Trận tranh vô địch',
+    winnerAdvances: 'Cặp thắng vào chung kết',
+  },
+
+  standings: {
+    heading: 'Bảng xếp hạng',
+    description: 'Hai cặp đứng đầu mỗi bảng vào vòng loại trực tiếp.',
+    pair: 'Cặp',
+    // Abbreviated to fit a 320px table; the full term is the accessible name.
+    playedShort: 'Trận',
+    played: 'Số trận đã đấu',
+    winsShort: 'Thắng',
+    wins: 'Số trận thắng',
+    differenceShort: '±',
+    difference: 'Hiệu số điểm',
+  },
+
   results: {
     heading: 'Kết quả',
     description:
