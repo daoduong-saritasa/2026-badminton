@@ -413,6 +413,8 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
     mutationFn: (action: OrganizerAction) => {
       const envelope = { requestId: crypto.randomUUID(), resetGeneration, expectedVersion: snapshot.tournament.version, payload: {} }
       if (action === 'fixtures') {
+        // Deliberately the server's own wording: errorMessage translates it, so
+        // this client guard and the server produce the same Vietnamese.
         if (snapshot.tournament.courtCount === null) throw new Error('Select one or two courts before generating fixtures')
         return mutateTournament('generate_fixtures', envelope)
       }

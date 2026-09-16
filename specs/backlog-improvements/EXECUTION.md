@@ -5,11 +5,11 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default); exte
 
 ## STATUS
 
-- Current phase: 4 — in-progress
+- Current phase: 4 — done
 - Phase 1 — Flexible pair count and courts: done-with-debt
 - Phase 2 — Tournament reset: done-with-debt — fresh review found 2 P1 + 2 P2, corrected in 7624db9/d7471c5; the one allowed re-review (2026-09-16) confirmed those and raised a new P2 (formerly completed Court 2 matches restored onto a removed court). The user approved the recommended correction on 2026-09-16; it is not independently re-reviewed under the one-re-review cap.
 - Phase 3 — Results and withdrawals: done-with-debt — all seven checklist items complete and the phase gate re-run on 2026-09-16. The initial fresh review raised 2 P0 + 2 P2, corrected in 8c4fc58. The one allowed re-review (2026-09-16) confirmed those corrections and raised a new P1: the preview handshake keys on `public.tournament.version`, which `add_point` bumps, so a correction or withdrawal reviewed while any match is scored live is rejected or has its dialog vanish. The user chose the result-revision counter on 2026-09-16 and it is implemented; the accompanying P2 was applied, and the three smaller residual items were declined. The re-review cap is reached; no further review runs. Branch `backlog-improvements/phase-3-results`, stacked on phase 2 (PRs #7 and #8 still open).
-- Phase 4 — Vietnamese translation: in-progress — branch `backlog-improvements/phase-4-vietnamese` added to the stack on 2026-09-16, stacked on phase 3 (PRs #7, #8 and #10 open).
+- Phase 4 — Vietnamese translation: done — phase gate passed clean on 2026-09-16 (typecheck exit 0; 14 tests passed, none skipped). Fresh review stayed `not required`: the diff is interface copy with no authorization, migration, destructive, or durable-data path. Terminology was resolved with the user and recorded in `CONTEXT.md`. Branch `backlog-improvements/phase-4-vietnamese`, stacked on phase 3 (PRs #7, #8 and #10 open).
 - Phase 5 — Application icon and title: pending
 - Verification debt: Phase 1 and Phase 2 local database type generation, Phase 1's 19 selected integration scenarios, Phase 2's 30 selected integration scenarios, and Phase 3's 33 selected integration scenarios are blocked because `/Users/thomasduong/.orbstack/run/docker.sock` is absent. The project decided on 2026-09-16 not to run the local Supabase stack at all (`AGENTS.md` → "Local Supabase and integration tests"), so this debt is permanent, not pending. The blocked suites do not skip cleanly: `requireLocalSupabase` throws in each setup hook, so the phase gate's `test:related` command exits 1 with `tests/integration/auth.test.ts`, `reset.test.ts`, and `tournament.test.ts` reported as failed files; `src/lib/database.types.ts` carries a schema-derived fallback, while project-wide typechecking and 96 non-database tests provide substitute evidence. No Phase 2 SQL, including the fresh-review corrections, has executed against a database. Never target production for integration tests.
 
@@ -159,8 +159,8 @@ Fresh review: not required
 
 **Phase gate (hard):**
 
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed files>` using paths from the real phase diff.
+- [x] Run `npm run typecheck` project-wide. Exited 0 on 2026-09-16.
+- [x] Run `npm run test:related -- <changed files>` using paths from the real phase diff. The 24-file Phase 4 diff selected 2 test files and 14 tests on 2026-09-16; all passed and the command exited 0. No database-backed test depends on this phase's files, so nothing was skipped.
 
 **Review checklist (user, at PR review):**
 
