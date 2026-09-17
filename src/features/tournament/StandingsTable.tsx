@@ -1,9 +1,10 @@
 import { finalPositions } from '@/domain/progression'
-import type { TournamentSnapshot } from '@/domain/types'
+import type { Group, Seed, TournamentSnapshot } from '@/domain/types'
 import { messages } from '@/i18n/vi'
+import { cn } from '@/lib/utils'
 
 import { FixtureCard } from './FixtureCard'
-import { teamName } from './labels'
+import { groupTone, teamName } from './labels'
 
 export function FinalPositions({ snapshot }: { snapshot: TournamentSnapshot }) {
   const positions = finalPositions(snapshot.fixtures, snapshot.matches)
@@ -23,6 +24,58 @@ export function FinalPositions({ snapshot }: { snapshot: TournamentSnapshot }) {
   )
 }
 
+const seeds: readonly Seed[] = [1, 2]
+
+/** Seed 1 reads as the filled chip, seed 2 as the light one; the label carries the meaning. */
+function seedTone(seed: Seed): string {
+  return seed === 1 ? 'bg-navy text-white' : 'bg-mist text-navy'
+}
+
+/** Each team in a group with its players listed under their seed. */
+function GroupRoster({ snapshot, group }: { snapshot: TournamentSnapshot; group: Group }) {
+  const teams = snapshot.teams.filter((team) => team.group === group)
+  return (
+    <section className="rounded-card border border-line bg-white p-6">
+      <h3 className="mb-4 flex items-center gap-2.5 text-[0.9375rem] font-semibold">
+        <span className={cn('grid size-[1.625rem] place-items-center rounded-chip text-[0.625rem] font-bold', groupTone(group))}>{group}</span>
+        {messages.fixtures.rosterHeading(group)}
+      </h3>
+      <div className="grid gap-5 sm:grid-cols-2">
+        {teams.map((team) => {
+          const players = snapshot.players
+            .filter((player) => player.teamId === team.id)
+            .toSorted((first, second) => first.name.localeCompare(second.name, 'vi'))
+          return (
+            <div className="min-w-0" key={team.id}>
+              <h4 className="mb-2 text-[0.8125rem] font-semibold [overflow-wrap:anywhere]">{team.name}</h4>
+              {players.length === 0 ? (
+                <p className="text-[0.6875rem] text-muted-ink">{messages.fixtures.noPlayers}</p>
+              ) : (
+                <dl className="space-y-2">
+                  {seeds.map((seed) => (
+                    <div className="grid gap-1" key={seed}>
+                      <dt>
+                        <span className={cn('inline-block rounded-chip px-2 py-0.5 text-[0.625rem] font-bold', seedTone(seed))}>
+                          {messages.common.seed(seed)}
+                        </span>
+                      </dt>
+                      {players
+                        .filter((player) => player.seed === seed)
+                        .map((player) => (
+                          <dd className="pl-2 text-[0.8125rem] [overflow-wrap:anywhere]" key={player.id}>{player.name}</dd>
+                        ))}
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </section>
+  )
+}
+
 export function StandingsTable({ snapshot }: { snapshot: TournamentSnapshot }) {
   return (
     <section className="view-enter space-y-6">
@@ -32,11 +85,13 @@ export function StandingsTable({ snapshot }: { snapshot: TournamentSnapshot }) {
       </div>
       <div className="grid gap-6 md:grid-cols-2">
         {(['A', 'B'] as const).map((group) => (
-          <FixtureCard
-            key={group}
-            snapshot={snapshot}
-            fixture={snapshot.fixtures.find((fixture) => fixture.stage === 'group' && fixture.group === group)}
-          />
+          <div className="space-y-6" key={group}>
+            <FixtureCard
+              snapshot={snapshot}
+              fixture={snapshot.fixtures.find((fixture) => fixture.stage === 'group' && fixture.group === group)}
+            />
+            <GroupRoster snapshot={snapshot} group={group} />
+          </div>
         ))}
       </div>
       <FinalPositions snapshot={snapshot} />

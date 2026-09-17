@@ -275,6 +275,8 @@ export const messages = {
   fixtures: {
     groupHeading: 'Vòng bảng',
     groupDescription: 'Đội thắng hai trận thắng cuộc đối đầu. Đội thắng mỗi bảng vào chung kết, đội thua tranh hạng ba.',
+    rosterHeading: (group: string) => `Thành viên bảng ${group}`,
+    noPlayers: 'Chưa có người chơi.',
     placementHeading: 'Tranh hạng',
     placementDescription: 'Hai đội thắng bảng gặp nhau ở chung kết; hai đội thua bảng tranh hạng ba.',
     awaitingGroupWinner: (group: string) => `Đội thắng bảng ${group}`,
