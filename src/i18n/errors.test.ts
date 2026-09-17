@@ -8,25 +8,24 @@ describe('errorMessage', () => {
       .toBe('Giải đấu vừa thay đổi. Hãy tải lại và thử lại.')
   })
 
-  it('distinguishes a withdrawal block from a walkover instruction', () => {
-    expect(errorMessage(new Error('Pair cannot withdraw after knockout play starts')))
-      .toContain('xử thắng')
-    expect(errorMessage(new Error('Each group must retain at least two active pairs')))
-      .toBe('Mỗi bảng phải còn ít nhất hai đội thi đấu.')
+  it('translates a correction block raised by the server', () => {
+    expect(errorMessage(new Error('placement-started'))).toContain('tranh hạng')
+    expect(errorMessage(new Error('decider-started'))).toContain('Trận quyết định')
   })
 
-  it('states that a same-winner group correction is also blocked', () => {
-    expect(errorMessage(new Error('Knockout play already depends on group participants')))
-      .toContain('kể cả khi đội thắng không đổi')
+  it('tells an ownership conflict apart from a missing role', () => {
+    expect(errorMessage(new Error('This session does not own the match')))
+      .toBe('Thiết bị khác đang ghi điểm trận này.')
+    expect(errorMessage(new Error('Organizer access required'))).toBe('Cần quyền điều hành.')
   })
 
   it('accepts a plain string and a PostgREST-shaped object', () => {
-    expect(errorMessage('Match not found')).toBe('Không tìm thấy trận đấu.')
-    expect(errorMessage({ message: 'Match not found' })).toBe('Không tìm thấy trận đấu.')
+    expect(errorMessage('Court is occupied')).toBe('Sân này đang có trận khác thi đấu.')
+    expect(errorMessage({ message: 'Court is occupied' })).toBe('Sân này đang có trận khác thi đấu.')
   })
 
   it('tolerates surrounding whitespace', () => {
-    expect(errorMessage(new Error('  Match not found  '))).toBe('Không tìm thấy trận đấu.')
+    expect(errorMessage(new Error('  Court is occupied  '))).toBe('Sân này đang có trận khác thi đấu.')
   })
 
   it('translates client-side failures by name, not by text', () => {
@@ -64,7 +63,7 @@ describe('errorMessage', () => {
     const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
     const asciiOnly = /^[\x20-\x7E]*$/
 
-    for (const message of ['Invalid completed score', 'Match is not ready to start', 'Service role required']) {
+    for (const message of ['Game does not have a valid winning score', 'Decider is not eligible', 'Service role required']) {
       const translated = errorMessage(new Error(message))
       expect(translated).not.toBe(unknownErrorMessage)
       expect(asciiOnly.test(translated)).toBe(false)

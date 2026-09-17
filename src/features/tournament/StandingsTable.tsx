@@ -1,63 +1,76 @@
-import type { Group, TournamentSnapshot } from '@/domain/types'
-import { calculateStandings } from '@/domain/standings'
-import { formatNumber } from '@/i18n/format'
+import { finalPositions } from '@/domain/progression'
+import type { Group, Seed, TournamentSnapshot } from '@/domain/types'
 import { messages } from '@/i18n/vi'
 import { cn } from '@/lib/utils'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 
-import { groupTone, pairName, pairPlayers, pairTeamName } from './MatchTicket'
+import { FixtureCard } from './FixtureCard'
+import { groupTone, teamName } from './labels'
 
-function GroupTable({ group, snapshot }: { group: Group; snapshot: TournamentSnapshot }) {
-  const standings = calculateStandings(snapshot, group)
+export function FinalPositions({ snapshot }: { snapshot: TournamentSnapshot }) {
+  const positions = finalPositions(snapshot.fixtures, snapshot.matches)
+  if (positions === null) return null
+  return (
+    <section className="rounded-card border border-line bg-white p-6">
+      <h3 className="mb-4 text-[0.9375rem] font-semibold">{messages.fixtures.positionsHeading}</h3>
+      <ol className="space-y-2">
+        {positions.map((teamId, index) => (
+          <li className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3 text-[0.8125rem]" key={teamId}>
+            <span className="text-muted-ink">{messages.fixtures.position(index + 1)}</span>
+            <span className="font-medium [overflow-wrap:anywhere]">{teamName(snapshot, teamId)}</span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+const seeds: readonly Seed[] = [1, 2]
+
+/** Seed 1 reads as the filled chip, seed 2 as the light one; the label carries the meaning. */
+function seedTone(seed: Seed): string {
+  return seed === 1 ? 'bg-navy text-white' : 'bg-mist text-navy'
+}
+
+/** Each team in a group with its players listed under their seed. */
+function GroupRoster({ snapshot, group }: { snapshot: TournamentSnapshot; group: Group }) {
+  const teams = snapshot.teams.filter((team) => team.group === group)
   return (
     <section className="rounded-card border border-line bg-white p-6">
       <h3 className="mb-4 flex items-center gap-2.5 text-[0.9375rem] font-semibold">
         <span className={cn('grid size-[1.625rem] place-items-center rounded-chip text-[0.625rem] font-bold', groupTone(group))}>{group}</span>
-        {messages.common.group(group)}
+        {messages.fixtures.rosterHeading(group)}
       </h3>
-      {/* Pulled out by the cell padding so the text still lines up with the
-          heading, while a highlighted row extends past it on both sides. */}
-      <div className="-mx-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{messages.standings.pair}</TableHead>
-              <TableHead className="text-right"><abbr className="no-underline" title={messages.standings.played}>{messages.standings.playedShort}</abbr></TableHead>
-              <TableHead className="text-right"><abbr className="no-underline" title={messages.standings.wins}>{messages.standings.winsShort}</abbr></TableHead>
-              <TableHead className="text-right"><abbr className="no-underline" title={messages.standings.difference}>{messages.standings.differenceShort}</abbr></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {standings.map((standing) => (
-              <TableRow
-                className={cn(
-                  standing.rank !== null && standing.rank <= 2
-                    && 'bg-navy/5',
-                )}
-                key={standing.pairId}
-              >
-                <TableCell className="max-w-44 font-medium">
-                  <span>{pairName(snapshot, standing.pairId)}</span>
-                  {pairTeamName(snapshot, standing.pairId) ? (
-                    <span className="mt-1 block truncate text-[0.625rem] font-normal text-muted-ink">
-                      {pairPlayers(snapshot, standing.pairId)}
-                    </span>
-                  ) : null}
-                </TableCell>
-                <TableCell className="numeric text-right">{formatNumber(standing.played)}</TableCell>
-                <TableCell className="numeric text-right">{formatNumber(standing.wins)}</TableCell>
-                <TableCell className="numeric text-right">{formatNumber(standing.pointDifference)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+      <div className="grid gap-5 sm:grid-cols-2">
+        {teams.map((team) => {
+          const players = snapshot.players
+            .filter((player) => player.teamId === team.id)
+            .toSorted((first, second) => first.name.localeCompare(second.name, 'vi'))
+          return (
+            <div className="min-w-0" key={team.id}>
+              <h4 className="mb-2 text-[0.8125rem] font-semibold [overflow-wrap:anywhere]">{team.name}</h4>
+              {players.length === 0 ? (
+                <p className="text-[0.6875rem] text-muted-ink">{messages.fixtures.noPlayers}</p>
+              ) : (
+                <dl className="space-y-2">
+                  {seeds.map((seed) => (
+                    <div className="grid gap-1" key={seed}>
+                      <dt>
+                        <span className={cn('inline-block rounded-chip px-2 py-0.5 text-[0.625rem] font-bold', seedTone(seed))}>
+                          {messages.common.seed(seed)}
+                        </span>
+                      </dt>
+                      {players
+                        .filter((player) => player.seed === seed)
+                        .map((player) => (
+                          <dd className="pl-2 text-[0.8125rem] [overflow-wrap:anywhere]" key={player.id}>{player.name}</dd>
+                        ))}
+                    </div>
+                  ))}
+                </dl>
+              )}
+            </div>
+          )
+        })}
       </div>
     </section>
   )
@@ -65,15 +78,23 @@ function GroupTable({ group, snapshot }: { group: Group; snapshot: TournamentSna
 
 export function StandingsTable({ snapshot }: { snapshot: TournamentSnapshot }) {
   return (
-    <section className="view-enter">
-      <div className="mb-5">
-        <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.standings.heading}</h2>
-        <p className="mt-2 text-xs text-muted-ink">{messages.standings.description}</p>
+    <section className="view-enter space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.fixtures.groupHeading}</h2>
+        <p className="mt-2 text-xs text-muted-ink">{messages.fixtures.groupDescription}</p>
       </div>
       <div className="grid gap-6 md:grid-cols-2">
-        <GroupTable group="A" snapshot={snapshot} />
-        <GroupTable group="B" snapshot={snapshot} />
+        {(['A', 'B'] as const).map((group) => (
+          <div className="space-y-6" key={group}>
+            <FixtureCard
+              snapshot={snapshot}
+              fixture={snapshot.fixtures.find((fixture) => fixture.stage === 'group' && fixture.group === group)}
+            />
+            <GroupRoster snapshot={snapshot} group={group} />
+          </div>
+        ))}
       </div>
+      <FinalPositions snapshot={snapshot} />
     </section>
   )
 }

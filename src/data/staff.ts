@@ -1,11 +1,12 @@
 import { z } from 'zod'
 
-import type { StaffAccess, UUID } from '../domain/types'
+import type { StaffAccess, StaffRole, UUID } from '../domain/types'
 import { getSupabaseClient } from '../lib/supabase'
 
 const staffAccessSchema = z.object({
   sessionId: z.uuid(),
   expiresAt: z.string(),
+  role: z.enum(['organizer', 'referee']),
 })
 
 const edgeErrorSchema = z.object({
@@ -145,10 +146,10 @@ export async function signOutStaff(): Promise<void> {
   }
 }
 
-export async function rotateStaffPin(pin: string): Promise<void> {
+export async function rotateStaffPin(role: StaffRole, pin: string): Promise<void> {
   validatePin(pin)
   const { error } = await getSupabaseClient().functions.invoke('rotate-pin', {
-    body: { pin },
+    body: { role, pin },
   })
   if (error) throw await readEdgeError(error)
 }

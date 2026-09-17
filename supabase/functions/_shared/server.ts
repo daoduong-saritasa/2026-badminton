@@ -112,6 +112,30 @@ export async function parsePin(request: Request): Promise<string | null> {
   }
 }
 
+export async function parsePinRotation(
+  request: Request,
+): Promise<{ pin: string; role: 'organizer' | 'referee' } | null> {
+  try {
+    const body: unknown = await request.json()
+
+    if (
+      typeof body !== 'object' ||
+      body === null ||
+      !('pin' in body) ||
+      typeof body.pin !== 'string' ||
+      !PIN_PATTERN.test(body.pin) ||
+      !('role' in body) ||
+      (body.role !== 'organizer' && body.role !== 'referee')
+    ) {
+      return null
+    }
+
+    return { pin: body.pin, role: body.role }
+  } catch {
+    return null
+  }
+}
+
 export async function rateLimitBucket(userId: string): Promise<string> {
   const bytes = new TextEncoder().encode(userId)
   const digest = await crypto.subtle.digest('SHA-256', bytes)

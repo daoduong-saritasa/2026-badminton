@@ -10,9 +10,11 @@ export type Json =
   | Json[]
 
 type TournamentStage = 'setup' | 'groups' | 'knockouts' | 'completed'
-type MatchRound = 'group' | 'semifinal' | 'final'
-type MatchState = 'unstarted' | 'playing' | 'completed' | 'void'
+type GroupCode = 'A' | 'B'
+type FixtureStage = 'group' | 'third-place' | 'final'
+type MatchState = 'unstarted' | 'playing' | 'completed' | 'unnecessary'
 type ResultKind = 'played' | 'walkover'
+type Side = 'a' | 'b'
 
 type MutationFunction = {
   Args: {
@@ -29,7 +31,6 @@ export type Database = {
     Tables: {
       tournament: {
         Row: {
-          court_count: number | null
           created_at: string
           id: string
           name: string
@@ -41,7 +42,6 @@ export type Database = {
           version: number
         }
         Insert: {
-          court_count?: number | null
           created_at?: string
           id?: string
           name: string
@@ -53,7 +53,6 @@ export type Database = {
           version?: number
         }
         Update: {
-          court_count?: number | null
           created_at?: string
           id?: string
           name?: string
@@ -72,39 +71,69 @@ export type Database = {
         Update: { reset_generation?: number; singleton?: boolean }
         Relationships: []
       }
-      players: {
-        Row: { created_at: string; id: string; name: string; seed: number }
-        Insert: { created_at?: string; id?: string; name: string; seed: number }
-        Update: { created_at?: string; id?: string; name?: string; seed?: number }
-        Relationships: []
-      }
-      pairs: {
+      teams: {
         Row: {
           created_at: string
-          group_code: string
+          group_code: GroupCode
           id: string
-          player_a_id: string
-          player_b_id: string
-          team_name: string | null
-          withdrawn: boolean
+          name: string
+          tournament_id: string
         }
         Insert: {
           created_at?: string
-          group_code: string
+          group_code: GroupCode
           id?: string
-          player_a_id: string
-          player_b_id: string
-          team_name?: string | null
-          withdrawn?: boolean
+          name: string
+          tournament_id: string
         }
         Update: {
           created_at?: string
-          group_code?: string
+          group_code?: GroupCode
           id?: string
-          player_a_id?: string
-          player_b_id?: string
-          team_name?: string | null
-          withdrawn?: boolean
+          name?: string
+          tournament_id?: string
+        }
+        Relationships: []
+      }
+      players: {
+        Row: { created_at: string; id: string; name: string; seed: number; team_id: string }
+        Insert: { created_at?: string; id?: string; name: string; seed: number; team_id: string }
+        Update: { created_at?: string; id?: string; name?: string; seed?: number; team_id?: string }
+        Relationships: []
+      }
+      team_fixtures: {
+        Row: {
+          created_at: string
+          group_code: GroupCode | null
+          id: string
+          stage: FixtureStage
+          team_a_id: string | null
+          team_b_id: string | null
+          tournament_id: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          created_at?: string
+          group_code?: GroupCode | null
+          id?: string
+          stage: FixtureStage
+          team_a_id?: string | null
+          team_b_id?: string | null
+          tournament_id: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          created_at?: string
+          group_code?: GroupCode | null
+          id?: string
+          stage?: FixtureStage
+          team_a_id?: string | null
+          team_b_id?: string | null
+          tournament_id?: string
+          updated_at?: string
+          version?: number
         }
         Relationships: []
       }
@@ -112,97 +141,82 @@ export type Database = {
         Row: {
           court: number | null
           created_at: string
-          group_code: string | null
+          fixture_id: string
           id: string
-          pair_a_id: string | null
-          pair_b_id: string | null
-          playing_order: number
+          match_number: number
+          pair_a_seed1_player_id: string | null
+          pair_a_seed2_player_id: string | null
+          pair_b_seed1_player_id: string | null
+          pair_b_seed2_player_id: string | null
           result_kind: ResultKind | null
-          round: MatchRound
-          score_a: number | null
-          score_b: number | null
-          source_a_label: string | null
-          source_a_match_id: string | null
-          source_b_label: string | null
-          source_b_match_id: string | null
           state: MatchState
-          tournament_id: string
           updated_at: string
           version: number
-          winner_id: string | null
+          winner_side: Side | null
         }
         Insert: {
           court?: number | null
           created_at?: string
-          group_code?: string | null
+          fixture_id: string
           id?: string
-          pair_a_id?: string | null
-          pair_b_id?: string | null
-          playing_order: number
+          match_number: number
+          pair_a_seed1_player_id?: string | null
+          pair_a_seed2_player_id?: string | null
+          pair_b_seed1_player_id?: string | null
+          pair_b_seed2_player_id?: string | null
           result_kind?: ResultKind | null
-          round: MatchRound
-          score_a?: number | null
-          score_b?: number | null
-          source_a_label?: string | null
-          source_a_match_id?: string | null
-          source_b_label?: string | null
-          source_b_match_id?: string | null
           state?: MatchState
-          tournament_id: string
           updated_at?: string
           version?: number
-          winner_id?: string | null
+          winner_side?: Side | null
         }
         Update: {
           court?: number | null
           created_at?: string
-          group_code?: string | null
+          fixture_id?: string
           id?: string
-          pair_a_id?: string | null
-          pair_b_id?: string | null
-          playing_order?: number
+          match_number?: number
+          pair_a_seed1_player_id?: string | null
+          pair_a_seed2_player_id?: string | null
+          pair_b_seed1_player_id?: string | null
+          pair_b_seed2_player_id?: string | null
           result_kind?: ResultKind | null
-          round?: MatchRound
-          score_a?: number | null
-          score_b?: number | null
-          source_a_label?: string | null
-          source_a_match_id?: string | null
-          source_b_label?: string | null
-          source_b_match_id?: string | null
           state?: MatchState
-          tournament_id?: string
           updated_at?: string
           version?: number
-          winner_id?: string | null
+          winner_side?: Side | null
         }
         Relationships: []
       }
-      tie_resolutions: {
+      match_games: {
         Row: {
+          confirmed_at: string | null
           created_at: string
-          explanation: string
-          group_code: string
-          ordered_pair_ids: string[]
-          standings_revision: number
-          tournament_id: string
+          game_number: number
+          id: string
+          match_id: string
+          score_a: number
+          score_b: number
           updated_at: string
         }
         Insert: {
+          confirmed_at?: string | null
           created_at?: string
-          explanation: string
-          group_code: string
-          ordered_pair_ids: string[]
-          standings_revision: number
-          tournament_id: string
+          game_number: number
+          id?: string
+          match_id: string
+          score_a?: number
+          score_b?: number
           updated_at?: string
         }
         Update: {
+          confirmed_at?: string | null
           created_at?: string
-          explanation?: string
-          group_code?: string
-          ordered_pair_ids?: string[]
-          standings_revision?: number
-          tournament_id?: string
+          game_number?: number
+          id?: string
+          match_id?: string
+          score_a?: number
+          score_b?: number
           updated_at?: string
         }
         Relationships: []
@@ -212,36 +226,38 @@ export type Database = {
     Functions: {
       add_point: MutationFunction
       assign_courts: MutationFunction
-      confirm_groups: MutationFunction
-      confirm_result: MutationFunction
+      confirm_game: MutationFunction
+      confirm_lineup: MutationFunction
       correct_result: MutationFunction
-      enter_result: MutationFunction
       exchange_staff_pin: {
         Args: { p_bucket: string; p_pin: string; p_session_id: string; p_user_id: string }
         Returns: Json
       }
-      generate_fixtures: MutationFunction
       get_score_access: { Args: { p_match_id: string }; Returns: boolean }
-      get_staff_access: { Args: Record<PropertyKey, never>; Returns: Json }
+      get_staff_access: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          expiresAt: string
+          role: 'organizer' | 'referee'
+          sessionId: string
+        } | null
+      }
       get_tournament_snapshot: { Args: Record<PropertyKey, never>; Returns: Json }
       mark_walkover: MutationFunction
-      preview_result_correction: {
-        Args: { p_match_id: string; p_reset_generation: number; p_score: Json }
-        Returns: Json
-      }
-      preview_withdrawal: {
-        Args: { p_pair_id: string; p_reset_generation: number }
-        Returns: Json
-      }
-      reopen_tournament: MutationFunction
-      resolve_tie: MutationFunction
+      preview_result_correction: MutationFunction
+      reopen_lineups: MutationFunction
       revoke_staff_access: { Args: Record<PropertyKey, never>; Returns: undefined }
       rotate_staff_pin_for_session: {
-        Args: { p_pin: string; p_session_id: string; p_user_id: string }
+        Args: {
+          p_pin: string
+          p_role: 'organizer' | 'referee'
+          p_session_id: string
+          p_user_id: string
+        }
         Returns: Json
       }
-      save_setup: MutationFunction
-      set_court_count: MutationFunction
+      save_lineup: MutationFunction
+      save_roster: MutationFunction
       set_reset_enabled: { Args: { p_enabled: boolean }; Returns: undefined }
       reset_tournament: {
         Args: {
@@ -254,10 +270,10 @@ export type Database = {
         }
         Returns: Json
       }
-      start_scoring: MutationFunction
+      start_group_play: MutationFunction
+      start_match: MutationFunction
       take_over: MutationFunction
       undo_point: MutationFunction
-      withdraw_pair: MutationFunction
     }
     Enums: Record<never, never>
     CompositeTypes: Record<never, never>

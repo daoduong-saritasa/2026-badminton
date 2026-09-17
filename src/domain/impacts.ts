@@ -1,11 +1,10 @@
 import type { TournamentSnapshot } from './types'
 
 export const impactBlockCodes = [
-  'knockouts-started',
-  'final-started',
-  'too-few-active-pairs',
   'invalid-match-state',
   'tournament-completed',
+  'decider-started',
+  'placement-started',
 ] as const
 
 export type ImpactBlockCode = (typeof impactBlockCodes)[number]
@@ -15,7 +14,7 @@ export function isImpactBlockCode(value: unknown): value is ImpactBlockCode {
 }
 
 /**
- * The authoritative projection of a proposed correction or withdrawal.
+ * The authoritative projection of a proposed result correction.
  *
  * `after` is the snapshot the tournament would hold if the mutation were
  * applied, and is null exactly when `blockedReason` is set. `tournamentVersion`

@@ -1,20 +1,20 @@
 import { useMemo } from 'react'
 
-import type { Match, TournamentSnapshot, UUID } from '@/domain/types'
+import type { FixtureMatch, TournamentSnapshot, UUID } from '@/domain/types'
 import { Button } from '@/components/ui/button'
-import { formatNumber } from '@/i18n/format'
+import {
+  fixtureOf,
+  isDeciderEligible,
+  matchLabel,
+  matchResultText,
+  sideTeamId,
+  teamName,
+} from '@/features/tournament/labels'
 import { messages } from '@/i18n/vi'
-import { matchRoundLabel, pairName } from '@/features/tournament/MatchTicket'
 
 export interface ResultScheduleProps {
   snapshot: TournamentSnapshot
   onSelect: (matchId: UUID) => void
-}
-
-function scoreText(match: Match): string {
-  if (match.resultKind === 'walkover') return messages.matchState.walkover
-  if (!match.score) return ''
-  return `${formatNumber(match.score.a)}–${formatNumber(match.score.b)}`
 }
 
 function MatchRow({
@@ -24,20 +24,21 @@ function MatchRow({
   onSelect,
 }: {
   snapshot: TournamentSnapshot
-  match: Match
+  match: FixtureMatch
   actionLabel: string
   onSelect: (matchId: UUID) => void
 }) {
+  const fixture = fixtureOf(snapshot, match)
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-ink/5 px-3 py-2">
       <span className="min-w-0">
         <span className="block truncate text-[0.8125rem] font-medium">
-          {messages.common.versus(pairName(snapshot, match.pairAId), pairName(snapshot, match.pairBId))}
+          {messages.common.versus(teamName(snapshot, sideTeamId(fixture, 'a')), teamName(snapshot, sideTeamId(fixture, 'b')))}
         </span>
         <span className="block truncate text-[0.6875rem] text-muted-ink">
-          {matchRoundLabel(match)}
+          {matchLabel(snapshot, match)}
           {match.court === null ? '' : ` · ${messages.common.court(match.court)}`}
-          {scoreText(match) === '' ? '' : ` · ${scoreText(match)}`}
+          {` · ${matchResultText(snapshot, match)}`}
         </span>
       </span>
       <Button variant="outline" size="sm" onClick={() => onSelect(match.id)}>
@@ -48,21 +49,16 @@ function MatchRow({
 }
 
 /**
- * Staff pick the match from the schedule they already read on the tournament
- * page, rather than from a flat list that gives no ordering or court context.
- * Completed matches stay reachable so a result can be corrected.
+ * An open match can only be awarded as a walkover; live scores belong to the
+ * referee. A completed match stays reachable so its result can be corrected.
  */
 export function ResultSchedule({ snapshot, onSelect }: ResultScheduleProps) {
-  const { upcoming, completed } = useMemo(() => {
-    const known = snapshot.matches.filter(
-      (match) => match.pairAId !== null && match.pairBId !== null,
-    )
-    const byOrder = (a: Match, b: Match) => a.playingOrder - b.playingOrder
-    return {
-      upcoming: known.filter((match) => match.state === 'unstarted').sort(byOrder),
-      completed: known.filter((match) => match.state === 'completed').sort(byOrder),
-    }
-  }, [snapshot])
+  const { open, completed } = useMemo(() => ({
+    open: snapshot.matches.filter((match) =>
+      (match.state === 'unstarted' || match.state === 'playing')
+      && isDeciderEligible(snapshot, match)),
+    completed: snapshot.matches.filter((match) => match.state === 'completed'),
+  }), [snapshot])
 
   return (
     <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
@@ -71,19 +67,13 @@ export function ResultSchedule({ snapshot, onSelect }: ResultScheduleProps) {
         {messages.results.description}
       </p>
 
-      <h4 className="mt-5 text-[0.6875rem] font-semibold text-muted-ink">{messages.results.upcoming}</h4>
-      {upcoming.length === 0 ? (
-        <p className="mt-2 text-[0.8125rem] text-muted-ink">{messages.results.noUpcoming}</p>
+      <h4 className="mt-5 text-[0.6875rem] font-semibold text-muted-ink">{messages.results.open}</h4>
+      {open.length === 0 ? (
+        <p className="mt-2 text-[0.8125rem] text-muted-ink">{messages.results.noOpen}</p>
       ) : (
         <ul className="mt-2 space-y-2">
-          {upcoming.map((match) => (
-            <MatchRow
-              key={match.id}
-              snapshot={snapshot}
-              match={match}
-              actionLabel={messages.results.enterResult}
-              onSelect={onSelect}
-            />
+          {open.map((match) => (
+            <MatchRow key={match.id} snapshot={snapshot} match={match} actionLabel={messages.results.walkover} onSelect={onSelect} />
           ))}
         </ul>
       )}
@@ -94,13 +84,7 @@ export function ResultSchedule({ snapshot, onSelect }: ResultScheduleProps) {
       ) : (
         <ul className="mt-2 space-y-2">
           {completed.map((match) => (
-            <MatchRow
-              key={match.id}
-              snapshot={snapshot}
-              match={match}
-              actionLabel={messages.results.correct}
-              onSelect={onSelect}
-            />
+            <MatchRow key={match.id} snapshot={snapshot} match={match} actionLabel={messages.results.correct} onSelect={onSelect} />
           ))}
         </ul>
       )}

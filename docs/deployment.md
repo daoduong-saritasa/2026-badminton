@@ -11,7 +11,8 @@ Resolve these inputs before you provision anything:
   the sole owner.
 - The Supabase organization, project name, region, database password, and project reference.
 - The Cloudflare account, production branch, `pages.dev` name, and optional custom domain.
-- The final production URL, event date, entrants, group allocation, and initial staff PIN.
+- The final production URL, event date, entrants, group allocation, and distinct initial
+  organizer and referee PINs.
 - Whether the Free-plan pause and backup limitations are acceptable. Use a paid plan if the
   company requires inactivity protection, downloadable backups, support, or a stronger recovery
   objective.
@@ -82,21 +83,41 @@ session so the initial PIN does not enter shell history:
 docker exec -it supabase_db_badminton psql --username postgres --dbname postgres
 ~~~
 
-At the `psql` prompt, provision or replace the local PIN:
+At the `psql` prompt, provision or replace both local role PINs:
 
 ~~~sql
-\prompt 'Initial staff PIN: ' initial_staff_pin
-insert into private.staff_config (singleton, pin_hash, generation)
-values (
-  true,
-  extensions.crypt(:'initial_staff_pin', extensions.gen_salt('bf', 12)),
-  1
-)
-on conflict (singleton) do update
+\prompt 'Initial organizer PIN: ' initial_organizer_pin
+\prompt 'Initial referee PIN: ' initial_referee_pin
+select (
+  :'initial_organizer_pin' ~ '^[0-9]{4,12}$'
+  and :'initial_referee_pin' ~ '^[0-9]{4,12}$'
+  and :'initial_organizer_pin' <> :'initial_referee_pin'
+) as valid_staff_pins \gset
+\if :valid_staff_pins
+insert into private.staff_config (role, pin_hash, generation)
+values
+  (
+    'organizer',
+    extensions.crypt(:'initial_organizer_pin', extensions.gen_salt('bf', 12)),
+    1
+  ),
+  (
+    'referee',
+    extensions.crypt(:'initial_referee_pin', extensions.gen_salt('bf', 12)),
+    1
+  )
+on conflict (role) do update
 set pin_hash = excluded.pin_hash,
     generation = private.staff_config.generation + 1,
     updated_at = clock_timestamp();
-\unset initial_staff_pin
+update private.staff_grants
+set revoked_at = clock_timestamp()
+where revoked_at is null;
+\else
+\echo 'PINs must be distinct and contain 4 to 12 digits. Nothing was changed.'
+\endif
+\unset initial_organizer_pin
+\unset initial_referee_pin
 ~~~
 
 ## Create and publish Supabase
@@ -169,6 +190,24 @@ If the migration fails, keep the existing frontend. If the frontend publish fail
 migration succeeds, restore service by fixing or republishing the matching frontend; do not point
 integration tests at production.
 
+## Roll out staff roles
+
+Migration `202609170001_staff_roles.sql`, both staff Edge Functions, and the role-aware frontend
+form one incompatible release boundary. The migration changes the PIN-rotation RPC signature,
+and older browser tabs do not understand role-bearing access.
+
+1. Announce a maintenance window and stop organizer and referee writes.
+2. Apply the database migration.
+3. Immediately deploy both `staff-pin` and `rotate-pin` Edge Functions.
+4. Provision distinct organizer and referee PINs with the validated interactive procedure above.
+5. Publish the role-aware frontend.
+6. Require every organizer and referee to refresh existing tabs before writes resume.
+7. Verify that the referee PIN exposes scoring but no organizer controls, and that the organizer
+   PIN exposes organizer controls and rotation for both roles.
+
+If any step after the migration fails, keep writes paused until the matching Edge Functions and
+frontend are published. Do not distribute either PIN or resume writes with a mixed-version stack.
+
 ## Run a maintenance reset
 
 Use the command only against a target whose URL and tournament identity you have reviewed. Test
@@ -232,9 +271,9 @@ in its [Pages build configuration](https://developers.cloudflare.com/pages/confi
 
 ## Staff PIN controls
 
-The staff PIN accepts 4–12 decimal digits. PostgreSQL hashes it with bcrypt cost 12 through
-`pgcrypto`; neither Edge Function logs request bodies, PINs, bearer tokens, or database error
-bodies.
+The organizer and referee PINs must differ and each accepts 4–12 decimal digits. PostgreSQL
+hashes them with bcrypt cost 12 through `pgcrypto`; neither Edge Function logs request bodies,
+PINs, bearer tokens, or database error bodies.
 
 The `staff-pin` endpoint permits four failed attempts within a rolling 15-minute window. The fifth
 failure blocks that verified Auth user for 15 minutes. A successful PIN clears the bucket. The
@@ -249,9 +288,10 @@ Every request first presents its bearer token to Supabase Auth. The function acc
 `session_id` only after Auth verifies the token and its `sub` matches the returned user. The
 service-role key remains in the Edge environment and never reaches browser code.
 
-Staff grants expire exactly seven days after issuance. Rotating the PIN increments its generation,
-revokes every existing grant, and issues a new seven-day grant only to the session that performed
-the authorized rotation. During normal operation, use the application rotation control.
+Staff grants expire exactly seven days after issuance. An organizer can rotate either role's PIN.
+Rotation increments that role's generation and revokes only that role's grants; the organizer
+session remains authorized unless its own role is being rotated, in which case the server issues
+it a replacement seven-day grant. During normal operation, use the application rotation control.
 
 ## Day-before-event smoke procedure
 
@@ -263,8 +303,9 @@ window. Record the operator, timestamp, deployed commit, project reference, and 
    show no active incident.
 2. Open the production site without staff access. Confirm the tournament name, fixtures, courts,
    standings, and knockout placeholders load. Confirm public viewing does not create an Auth user.
-3. Enter the staff PIN in browser A. Confirm organizer controls appear. In browser B, keep the
-   public matches view open.
+3. Enter the referee PIN in browser A. Confirm scoring is available and organizer controls are
+   absent. Sign out, enter the organizer PIN, and confirm organizer controls and rotation controls
+   for both role PINs appear. In browser B, keep the public matches view open.
 4. Change one unstarted match to an unused court/order combination, publish the schedule, and
    confirm browser B updates without reload. Restore the original assignment and confirm the
    second Realtime update. This verifies production read, authorized write, and Realtime paths.

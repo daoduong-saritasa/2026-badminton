@@ -8,7 +8,9 @@ function idle(overrides: Partial<IdleScoringState> = {}): IdleScoringState {
   return {
     status: 'idle',
     matchId: '00000000-0000-4000-8000-000000000002',
+    stage: 'final',
     resetGeneration: 0,
+    gameNumber: 1,
     score: { a: 10, b: 10 },
     matchVersion: 7,
     hasOwnership: true,
@@ -91,6 +93,7 @@ describe('reduceScoring', () => {
     expect(dismissed).toMatchObject({ status: 'idle', score: { a: 21, b: 19 } })
     const undone = reduceScoring(dismissed, {
       type: 'snapshot-received',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 20, b: 19 },
       matchVersion: 9,
@@ -113,6 +116,7 @@ describe('reduceScoring', () => {
 
     const recovered = reduceScoring(conflicted, {
       type: 'ownership-recovered',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 12, b: 10 },
       matchVersion: 12,
@@ -143,6 +147,7 @@ describe('reduceScoring', () => {
     const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
     const observed = reduceScoring(saving, {
       type: 'snapshot-received',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 10, b: 11 },
       matchVersion: 8,
@@ -174,6 +179,7 @@ describe('reduceScoring', () => {
 
     const recovered = reduceScoring(reconciled, {
       type: 'ownership-recovered',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 10, b: 11 },
       matchVersion: 9,
@@ -196,6 +202,7 @@ describe('reduceScoring', () => {
     const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
     const observed = reduceScoring(saving, {
       type: 'snapshot-received',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 12, b: 10 },
       matchVersion: 10,
@@ -233,6 +240,7 @@ describe('reduceScoring', () => {
     )
     const observed = reduceScoring(failed, {
       type: 'snapshot-received',
+      gameNumber: 1,
         resetGeneration: 0,
       score: { a: 10, b: 10 },
       matchVersion: 8,
@@ -240,6 +248,7 @@ describe('reduceScoring', () => {
     })
     const recovered = reduceScoring(observed, {
       type: 'ownership-recovered',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 10, b: 10 },
       matchVersion: 8,
@@ -252,6 +261,7 @@ describe('reduceScoring', () => {
 
     const newerRevocation = reduceScoring(recovered, {
       type: 'snapshot-received',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 11, b: 10 },
       matchVersion: 9,
@@ -259,6 +269,7 @@ describe('reduceScoring', () => {
     })
     expect(reduceScoring(newerRevocation, {
       type: 'ownership-recovered',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 10, b: 10 },
       matchVersion: 8,
@@ -269,6 +280,7 @@ describe('reduceScoring', () => {
     const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
     const ownedObservation = reduceScoring(saving, {
       type: 'snapshot-received',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 11, b: 10 },
       matchVersion: 8,
@@ -276,6 +288,7 @@ describe('reduceScoring', () => {
     })
     const revokedObservation = reduceScoring(ownedObservation, {
       type: 'snapshot-received',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 11, b: 10 },
       matchVersion: 8,
@@ -307,6 +320,7 @@ describe('reduceScoring', () => {
     })
     const newerObservation = reduceScoring(conflicted, {
       type: 'snapshot-received',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 12, b: 10 },
       matchVersion: 13,
@@ -314,6 +328,7 @@ describe('reduceScoring', () => {
     })
     const delayedRecovery = reduceScoring(newerObservation, {
       type: 'ownership-recovered',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 11, b: 10 },
       matchVersion: 12,
@@ -327,6 +342,7 @@ describe('reduceScoring', () => {
     expect(
       reduceScoring(current, {
         type: 'snapshot-received',
+        gameNumber: 1,
       resetGeneration: 0,
         score: { a: 3, b: 2 },
         matchVersion: 8,
@@ -336,6 +352,7 @@ describe('reduceScoring', () => {
 
     const revoked = reduceScoring(current, {
       type: 'snapshot-received',
+      gameNumber: 1,
       resetGeneration: 0,
       score: current.score,
       matchVersion: 10,
@@ -353,6 +370,7 @@ describe('reduceScoring', () => {
     })
     const snapshot = reduceScoring(saving, {
       type: 'snapshot-received',
+      gameNumber: 1,
       resetGeneration: 0,
       score: { a: 50, b: 50 },
       matchVersion: 50,
@@ -373,6 +391,7 @@ describe('reduceScoring', () => {
     const saving = reduceScoring(idle(), { type: 'point-requested', side: 'a', requestId })
     const afterReset = reduceScoring(saving, {
       type: 'snapshot-received',
+      gameNumber: 1,
       resetGeneration: 1,
       score: { a: 0, b: 0 },
       matchVersion: 0,
@@ -392,5 +411,57 @@ describe('reduceScoring', () => {
       resetGeneration: 0,
       matchVersion: 8,
     })).toBe(afterReset)
+  })
+
+  it('reviews a group game at the stage target and continues a final game past it', () => {
+    const groupReview = reduceScoring(
+      reduceScoring(idle({ stage: 'group', score: { a: 14, b: 12 } }), { type: 'point-requested', side: 'a', requestId }),
+      { type: 'point-acknowledged', resetGeneration: 0, requestId, matchVersion: 8 },
+    )
+    expect(groupReview).toMatchObject({ status: 'reviewing', winningSide: 'a', score: { a: 15, b: 12 } })
+
+    const groupDeuce = reduceScoring(
+      reduceScoring(idle({ stage: 'group', score: { a: 14, b: 14 } }), { type: 'point-requested', side: 'b', requestId }),
+      { type: 'point-acknowledged', resetGeneration: 0, requestId, matchVersion: 8 },
+    )
+    expect(groupDeuce).toMatchObject({ status: 'idle', score: { a: 14, b: 15 } })
+
+    const finalContinues = reduceScoring(
+      reduceScoring(idle({ stage: 'final', score: { a: 14, b: 12 } }), { type: 'point-requested', side: 'a', requestId }),
+      { type: 'point-acknowledged', resetGeneration: 0, requestId, matchVersion: 8 },
+    )
+    expect(finalContinues).toMatchObject({ status: 'idle', score: { a: 15, b: 12 } })
+  })
+
+  it('opens the next game at 0–0 after a confirmed game and ignores a stale confirmation', () => {
+    const reviewing = reduceScoring(idle({ stage: 'group', score: { a: 15, b: 9 } }), {
+      type: 'snapshot-received',
+      resetGeneration: 0,
+      gameNumber: 1,
+      score: { a: 15, b: 9 },
+      matchVersion: 8,
+      hasOwnership: true,
+    })
+    expect(reviewing).toMatchObject({ status: 'reviewing' })
+
+    expect(reduceScoring(reviewing, {
+      type: 'game-confirmed',
+      resetGeneration: 0,
+      gameNumber: 2,
+      matchVersion: 8,
+    })).toBe(reviewing)
+
+    const nextGame = reduceScoring(reviewing, {
+      type: 'game-confirmed',
+      resetGeneration: 0,
+      gameNumber: 2,
+      matchVersion: 9,
+    })
+    expect(nextGame).toMatchObject({ status: 'idle', gameNumber: 2, score: { a: 0, b: 0 }, matchVersion: 9 })
+    expect(reduceScoring(nextGame, { type: 'point-requested', side: 'b', requestId })).toMatchObject({
+      status: 'saving',
+      score: { a: 0, b: 1 },
+      pending: { expectedVersion: 9 },
+    })
   })
 })

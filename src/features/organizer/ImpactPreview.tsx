@@ -1,36 +1,30 @@
 import { ArrowRight } from 'lucide-react'
 
-import { calculateStandings } from '@/domain/standings'
-import { formatNumber } from '@/i18n/format'
-import { messages } from '@/i18n/vi'
 import type { MutationImpact } from '@/domain/impacts'
-import type { Group, Match, TournamentSnapshot, UUID } from '@/domain/types'
-import { pairName } from '@/features/tournament/MatchTicket'
+import type { FixtureMatch, FixtureStage, TournamentSnapshot, UUID } from '@/domain/types'
+import {
+  confirmedGames,
+  fixtureLabel,
+  fixtureScore,
+  matchLabel,
+  matchResultText,
+  scoreText,
+  sideTeamId,
+  teamName,
+} from '@/features/tournament/labels'
+import { messages } from '@/i18n/vi'
 
-const groups: Group[] = ['A', 'B']
+function matchById(snapshot: TournamentSnapshot, id: UUID): FixtureMatch | undefined {
+  return snapshot.matches.find((match) => match.id === id)
+}
 
-function scoreText(match: Match | undefined): string {
+function outcomeText(snapshot: TournamentSnapshot, match: FixtureMatch | undefined): string {
+  return match ? matchResultText(snapshot, match) : '—'
+}
+
+function gamesText(match: FixtureMatch | undefined): string {
   if (!match) return '—'
-  if (match.state === 'completed' && match.resultKind === 'walkover') return messages.matchState.walkover
-  if (!match.score) return messages.matchState.notPlayed
-  return `${formatNumber(match.score.a)}–${formatNumber(match.score.b)}`
-}
-
-function rankText(rank: number | null): string {
-  return rank === null ? '—' : `#${formatNumber(rank)}`
-}
-
-// A match without a score is fully described by its state; appending the
-// "not played" score placeholder would only repeat it.
-function outcomeText(match: Match | undefined): string {
-  if (!match) return '—'
-  if (match.state === 'completed' && match.resultKind === 'walkover') return messages.matchState.walkover
-  const state = messages.matchState[match.state]
-  return match.score ? `${state} · ${scoreText(match)}` : state
-}
-
-function matchById(snapshot: TournamentSnapshot | null, id: UUID): Match | undefined {
-  return snapshot?.matches.find((match) => match.id === id)
+  return confirmedGames(match).map((game) => scoreText(game.score)).join(', ') || '—'
 }
 
 function Row({ label, before, after }: { label: string; before: string; after: string }) {
@@ -52,12 +46,18 @@ function Row({ label, before, after }: { label: string; before: string; after: s
   )
 }
 
+function placementText(snapshot: TournamentSnapshot, stage: Exclude<FixtureStage, 'group'>): string {
+  const fixture = snapshot.fixtures.find((candidate) => candidate.stage === stage)
+  if (!fixture) return messages.common.toBeDecided
+  return messages.common.versus(teamName(snapshot, fixture.teamAId), teamName(snapshot, fixture.teamBId))
+}
+
 /**
  * Renders the server's own projection. Nothing here recomputes what the
  * tournament would become — a second derivation could disagree with the change
  * the confirm button actually sends.
  */
-export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; matchId?: UUID }) {
+export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; matchId: UUID }) {
   if (impact.blockedReason !== null) {
     return (
       <div className="space-y-2" role="alert">
@@ -70,70 +70,67 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
   const { before, after } = impact
   if (after === null) return null
 
-  const changedMatches = after.matches.filter((match) => {
-    const previous = matchById(before, match.id)
-    return !previous || previous.state !== match.state || scoreText(previous) !== scoreText(match)
-  })
-
-  const confirmationsLost = before.tieResolutions.filter(
-    (resolution) => !after.tieResolutions.some((kept) => kept.group === resolution.group),
-  )
+  const changedMatches = after.matches.filter((match) =>
+    match.id !== matchId && outcomeText(before, matchById(before, match.id)) !== outcomeText(after, match))
+  const removedMatches = before.matches.filter((match) => !matchById(after, match.id))
+  const corrected = matchById(after, matchId)
+  const fixtures = after.fixtures.filter((fixture) => fixture.stage === 'group')
 
   return (
     <div className="max-h-[50dvh] space-y-4 overflow-y-auto pr-1">
-      {matchId ? (
-        <section>
-          <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.impact.score}</h4>
-          <Row
-            label={pairName(before, matchById(before, matchId)?.pairAId ?? null)}
-            before={scoreText(matchById(before, matchId))}
-            after={scoreText(matchById(after, matchId))}
-          />
-        </section>
-      ) : null}
+      <section>
+        <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.impact.games}</h4>
+        <Row
+          label={corrected ? matchLabel(after, corrected) : messages.common.unknownMatch}
+          before={gamesText(matchById(before, matchId))}
+          after={gamesText(matchById(after, matchId))}
+        />
+      </section>
 
-      {changedMatches.length > 0 ? (
+      {changedMatches.length + removedMatches.length > 0 ? (
         <section>
           <h4 className="text-[0.6875rem] font-semibold text-muted-ink">
-            {messages.impact.affectedMatches(changedMatches.length)}
+            {messages.impact.affectedMatches(changedMatches.length + removedMatches.length)}
           </h4>
           {changedMatches.map((match) => (
             <Row
               key={match.id}
-              label={messages.common.versus(pairName(after, match.pairAId), pairName(after, match.pairBId))}
-              before={outcomeText(matchById(before, match.id))}
-              after={outcomeText(match)}
+              label={matchLabel(after, match)}
+              before={outcomeText(before, matchById(before, match.id))}
+              after={outcomeText(after, match)}
             />
+          ))}
+          {removedMatches.map((match) => (
+            <Row key={match.id} label={matchLabel(before, match)} before={outcomeText(before, match)} after="—" />
           ))}
         </section>
       ) : null}
 
-      {groups.map((group) => {
-        const beforeStandings = calculateStandings(before, group)
-        const afterStandings = calculateStandings(after, group)
-        if (afterStandings.length === 0) return null
-        return (
-          <section key={group}>
-            <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.common.group(group)}</h4>
-            {afterStandings.map((standing) => (
-              <Row
-                key={standing.pairId}
-                label={pairName(after, standing.pairId)}
-                before={rankText(beforeStandings.find((entry) => entry.pairId === standing.pairId)?.rank ?? null)}
-                after={rankText(standing.rank)}
-              />
-            ))}
-          </section>
-        )
-      })}
+      <section>
+        <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.impact.fixtures}</h4>
+        {fixtures.map((fixture) => (
+          <Row
+            key={fixture.id}
+            label={`${fixtureLabel(fixture)} · ${messages.common.versus(teamName(after, sideTeamId(fixture, 'a')), teamName(after, sideTeamId(fixture, 'b')))}`}
+            before={scoreText(fixtureScore(before, fixture.id))}
+            after={scoreText(fixtureScore(after, fixture.id))}
+          />
+        ))}
+      </section>
 
-      {confirmationsLost.length > 0 ? (
-        <p className="text-[0.8125rem] text-destructive">
-          {messages.impact.confirmationsLost(
-            confirmationsLost.map((resolution) => messages.common.group(resolution.group)).join(' và '),
-          )}
-        </p>
-      ) : null}
+      <section>
+        <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.impact.placements}</h4>
+        <Row
+          label={messages.stages.final}
+          before={placementText(before, 'final')}
+          after={placementText(after, 'final')}
+        />
+        <Row
+          label={messages.stages['third-place']}
+          before={placementText(before, 'third-place')}
+          after={placementText(after, 'third-place')}
+        />
+      </section>
     </div>
   )
 }

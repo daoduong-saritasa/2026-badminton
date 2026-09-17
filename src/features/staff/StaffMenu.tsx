@@ -33,17 +33,26 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { errorMessage } from '@/i18n/errors'
 import { messages } from '@/i18n/vi'
+import type { StaffRole } from '@/domain/types'
 
-export function StaffMenu({ onSignedOut }: { onSignedOut: () => void }) {
+export function StaffMenu({
+  role,
+  onSignedOut,
+}: {
+  role: StaffRole
+  onSignedOut: () => void
+}) {
   const [rotationOpen, setRotationOpen] = useState(false)
   const [confirmationOpen, setConfirmationOpen] = useState(false)
+  const [rotationRole, setRotationRole] = useState<StaffRole>('organizer')
   const [nextPin, setNextPin] = useState('')
   const signOutMutation = useMutation({
     mutationFn: signOutStaff,
     onSuccess: onSignedOut,
   })
   const rotationMutation = useMutation({
-    mutationFn: rotateStaffPin,
+    mutationFn: ({ role: nextRole, pin }: { role: StaffRole; pin: string }) =>
+      rotateStaffPin(nextRole, pin),
     onSuccess: () => {
       setNextPin('')
       setConfirmationOpen(false)
@@ -56,21 +65,33 @@ export function StaffMenu({ onSignedOut }: { onSignedOut: () => void }) {
     setConfirmationOpen(true)
   }
 
+  const openRotation = (nextRole: StaffRole) => {
+    setRotationRole(nextRole)
+    setRotationOpen(true)
+  }
+
   return (
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="border-rule bg-transparent text-muted-ink hover:bg-white">
-            <KeyRound /> {messages.staff.menu}
+            <KeyRound /> {messages.staff.role[role]}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>{messages.staff.menuLabel}</DropdownMenuLabel>
+          <DropdownMenuLabel>{messages.staff.role[role]}</DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setRotationOpen(true)}>
-            <KeyRound /> {messages.staff.rotatePin}
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
+          {role === 'organizer' ? (
+            <>
+              <DropdownMenuItem onSelect={() => openRotation('organizer')}>
+                <KeyRound /> {messages.staff.rotateOrganizerPin}
+              </DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => openRotation('referee')}>
+                <KeyRound /> {messages.staff.rotateRefereePin}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
           <DropdownMenuItem
             variant="destructive"
             disabled={signOutMutation.isPending}
@@ -89,8 +110,8 @@ export function StaffMenu({ onSignedOut }: { onSignedOut: () => void }) {
       <Dialog open={rotationOpen} onOpenChange={setRotationOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>{messages.staff.rotateTitle}</DialogTitle>
-            <DialogDescription>{messages.staff.rotateDescription}</DialogDescription>
+            <DialogTitle>{messages.staff.rotateTitle[rotationRole]}</DialogTitle>
+            <DialogDescription>{messages.staff.rotateDescription[rotationRole]}</DialogDescription>
           </DialogHeader>
           <form className="space-y-4" onSubmit={handleRotationSubmit}>
             <div className="space-y-2">
@@ -115,16 +136,16 @@ export function StaffMenu({ onSignedOut }: { onSignedOut: () => void }) {
       <AlertDialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{messages.staff.confirmRotateTitle}</AlertDialogTitle>
+            <AlertDialogTitle>{messages.staff.confirmRotateTitle[rotationRole]}</AlertDialogTitle>
             <AlertDialogDescription>
-              {messages.staff.confirmRotateBody}
+              {messages.staff.confirmRotateBody[rotationRole]}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{messages.staff.keepPin}</AlertDialogCancel>
             <AlertDialogAction
               disabled={rotationMutation.isPending}
-              onClick={() => rotationMutation.mutate(nextPin)}
+              onClick={() => rotationMutation.mutate({ role: rotationRole, pin: nextPin })}
             >
               {rotationMutation.isPending ? messages.staff.rotating : messages.staff.confirmRotate}
             </AlertDialogAction>

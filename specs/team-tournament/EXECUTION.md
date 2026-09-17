@@ -10,12 +10,12 @@ court-count setting removed.
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — Domain rules: pending
-- Phase 2 — Staff roles: pending
-- Phase 3 — Team tournament schema: pending
-- Phase 4 — Client replacement: pending
-- Verification debt: none
+- Current phase: 4 — done-with-debt
+- Phase 1 — Domain rules: done
+- Phase 2 — Staff roles: done-with-debt
+- Phase 3 — Team tournament schema: done-with-debt
+- Phase 4 — Client replacement: done-with-debt; required fresh review skipped at the user's direction on 2026-09-17 before opening the PR
+- Verification debt: Phase 2 integration gate is environment-blocked because the OrbStack Docker socket is absent; 3 non-database tests passed, 4 integration suites failed in setup, and 51 scenarios were skipped on 2026-09-17. Phase 3 has the same environment block; 48 non-database tests passed, 4 integration suites failed in setup, and 27 scenarios were skipped on 2026-09-17. Spec gate `npm run test` has the same environment block: 87 tests passed, 4 integration suites failed in setup, and 27 scenarios were skipped on 2026-09-17; Phase 4's own phase gate selected no integration suite and passed.
 
 ## Phase 1 — Domain rules
 
@@ -27,16 +27,17 @@ Produces: `Team`, `TeamPlayer`, `LineupPair { seed1PlayerId; seed2PlayerId }`, `
 
 Fresh review: not required
 
-- [ ] Add the Produces types to `src/domain/types.ts` beside the old `Pair`/`Match` types (new names avoid collisions; Phase 4 deletes the old ones)
-- [ ] `src/domain/roster.ts` + `roster.test.ts`: 4 teams × 16 distinct players, 2 seed 1 + 2 seed 2 per team, 2 teams per group; lineup pairs are seed 1 + seed 2 of that team, matches 1–2 disjoint and covering all four, match 3 recombined and not repeating an opening pair (PLAN.md → Acceptance review 1–2)
-- [ ] `src/domain/scoring.ts` + `scoring.test.ts`: `gameRules` 15/21 for group and third place, 21/30 for final; win by two, one-point margin at cap; two game wins end the match (Acceptance review 5). Keep `isWinningScore`/`addPointToScore` until Phase 4
-- [ ] `src/domain/team-fixtures.ts` + `team-fixtures.test.ts`: first to two match wins, walkovers count as wins, decider `eligible` only with both openers confirmed at 1–1, `unnecessary` at 2–0, no winner when a match is unresolved (Acceptance review 6, 10)
-- [ ] `src/domain/progression.ts` + `progression.test.ts`: group winners → final, losers → third place; completion needs both placement outcomes; `correctionBlockCode` returns `'decider-started'` when a correction flips 1–1 with a started decider, `'placement-started'` when it changes advancement after either placement fixture starts (Acceptance review 7, 9)
-- [ ] Extend `impactBlockCodes` in `src/domain/impacts.ts` with `'decider-started'` and `'placement-started'` (old codes stay until Phase 4)
+- [x] Add the Produces types to `src/domain/types.ts` beside the old `Pair`/`Match` types (new names avoid collisions; Phase 4 deletes the old ones)
+- [x] `src/domain/roster.ts` + `roster.test.ts`: 4 teams × 16 distinct players, 2 seed 1 + 2 seed 2 per team, 2 teams per group; lineup pairs are seed 1 + seed 2 of that team, matches 1–2 disjoint and covering all four, match 3 recombined and not repeating an opening pair (PLAN.md → Acceptance review 1–2)
+- [x] `src/domain/scoring.ts` + `scoring.test.ts`: `gameRules` 15/21 for group and third place, 21/30 for final; win by two, one-point margin at cap; two game wins end the match (Acceptance review 5). Keep `isWinningScore`/`addPointToScore` until Phase 4
+- [x] `src/domain/team-fixtures.ts` + `team-fixtures.test.ts`: first to two match wins, walkovers count as wins, decider `eligible` only with both openers confirmed at 1–1, `unnecessary` at 2–0, no winner when a match is unresolved (Acceptance review 6, 10)
+- [x] `src/domain/progression.ts` + `progression.test.ts`: group winners → final, losers → third place; completion needs both placement outcomes; `correctionBlockCode` returns `'decider-started'` when a correction flips 1–1 with a started decider, `'placement-started'` when it changes advancement after either placement fixture starts (Acceptance review 7, 9)
+- [x] Extend `impactBlockCodes` in `src/domain/impacts.ts` with `'decider-started'` and `'placement-started'` (old codes stay until Phase 4)
+- [x] `(amended 2026-09-17)` Add exhaustive Vietnamese messages for the new impact block codes in `src/i18n/vi.ts`, required by the existing `ImpactPreview` lookup
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npm run test:related -- <changed files>`
+- [x] `npm run typecheck`
+- [x] `npm run test:related -- <changed files>`
 
 **On completion:** run the phase gate; run `fresh-review` when the recorded or actual-diff
 decision requires it; update STATUS + checkboxes; stop and ask before push/PR. Review
@@ -52,19 +53,22 @@ Produces: `StaffRole = 'organizer' | 'referee'` and `StaffAccess.role: StaffRole
 
 Fresh review: required — authentication/authorization and a persistent-data migration
 
-- [ ] `supabase/migrations/202609170001_staff_roles.sql`: re-key `private.staff_config` by `role text check (role in ('organizer','referee'))` (drop `singleton`), add `role` to `private.staff_grants`, revoke every existing grant (`revoked_at = clock_timestamp()`) so no pre-role grant survives
-- [ ] Same migration: `exchange_staff_pin` matches the PIN against both hashes and issues a grant carrying the matched role, keeping `consume_pin_attempt` rate limiting and expiry; `rotate_staff_pin_for_session(p_session_id, p_user_id, p_role, p_pin)` requires an organizer grant, rejects a PIN equal to the other role's PIN (judgment call: identical PINs would make the role ambiguous), bumps that role's generation and revokes that role's grants
-- [ ] Same migration: add `private.require_organizer()` / `private.require_scorer()`; `has_staff_access` validates `pin_generation` against the grant's role row; replace `private.require_staff_access()` call sites in `private.invoke_legacy_mutation` so `start_scoring`, `take_over`, `add_point`, `undo_point`, `confirm_result` require scorer and every other command, `preview_result_correction` and `preview_withdrawal` require organizer
-- [ ] `supabase/functions/staff-pin/index.ts` passes through the role in the access body; `supabase/functions/rotate-pin/index.ts` parses and forwards `role`, returning 400 on an unknown role
-- [ ] `src/data/staff.ts`: `staffAccessSchema` gains `role: z.enum(['organizer','referee'])`; `rotateStaffPin(role, pin)`
-- [ ] `src/features/staff/StaffMenu.tsx`, `src/App.tsx`: show organizer navigation and PIN rotation only when `role === 'organizer'` (server enforces regardless)
-- [ ] `src/lib/database.types.ts`: hand-edit `rotate_staff_pin_for_session` args and `get_staff_access` return to match the SQL
-- [ ] `tests/integration/auth.test.ts`: referee PIN yields a referee grant; referee cannot call an organizer command or preview; organizer can score; rotation by a referee is rejected; rotating one role revokes only that role's grants; pre-migration grants are revoked (Acceptance review 11)
-- [ ] `docs/deployment.md`, `README.md`: provision both role PINs in the `psql` procedure
+- [x] `supabase/migrations/202609170001_staff_roles.sql`: re-key `private.staff_config` by `role text check (role in ('organizer','referee'))` (drop `singleton`), add `role` to `private.staff_grants`, revoke every existing grant (`revoked_at = clock_timestamp()`) so no pre-role grant survives
+- [x] Same migration: `exchange_staff_pin` matches the PIN against both hashes and issues a grant carrying the matched role, keeping `consume_pin_attempt` rate limiting and expiry; `rotate_staff_pin_for_session(p_session_id, p_user_id, p_role, p_pin)` requires an organizer grant, rejects a PIN equal to the other role's PIN (judgment call: identical PINs would make the role ambiguous), bumps that role's generation and revokes that role's grants
+- [x] Same migration: add `private.require_organizer()` / `private.require_scorer()`; `has_staff_access` validates `pin_generation` against the grant's role row; replace `private.require_staff_access()` call sites in `private.invoke_legacy_mutation` so `start_scoring`, `take_over`, `add_point`, `undo_point`, `confirm_result` require scorer and every other command, `preview_result_correction` and `preview_withdrawal` require organizer
+- [x] `supabase/functions/staff-pin/index.ts` passes through the role in the access body; `supabase/functions/rotate-pin/index.ts` parses and forwards `role`, returning 400 on an unknown role
+- [x] `src/data/staff.ts`: `staffAccessSchema` gains `role: z.enum(['organizer','referee'])`; `rotateStaffPin(role, pin)`
+- [x] `src/features/staff/StaffMenu.tsx`, `src/App.tsx`: show organizer navigation and PIN rotation only when `role === 'organizer'` (server enforces regardless)
+- [x] `src/lib/database.types.ts`: hand-edit `rotate_staff_pin_for_session` args and `get_staff_access` return to match the SQL
+- [x] `tests/integration/auth.test.ts`: referee PIN yields a referee grant; referee cannot call an organizer command or preview; organizer can score; rotation by a referee is rejected; rotating one role revokes only that role's grants; pre-migration grants are revoked (Acceptance review 11)
+- [x] `docs/deployment.md`, `README.md`: provision both role PINs in the `psql` procedure
+- [x] `(amended 2026-09-17)` Validate that provisioned role PINs are distinct 4–12 digit values before either hash is written
+- [x] `(amended 2026-09-17)` Exercise the forward role migration from a legacy active grant and assert that it is revoked
+- [x] `(amended 2026-09-17)` Document the maintenance-window rollout boundary for the migration, both Edge Functions, the frontend, PIN provisioning, and tab refresh
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npm run test:related -- <changed files>` (integration suites fail at setup without local Supabase; report the skip count, never as a pass)
+- [x] `npm run typecheck`
+- [~] `npm run test:related -- <changed files>` — environment-blocked: missing `/Users/thomasduong/.orbstack/run/docker.sock`; 3 tests passed, 4 integration suites failed in setup, 51 scenarios skipped (integration suites fail at setup without local Supabase; report the skip count, never as a pass)
 
 **Review checklist (user, at PR review):**
 - [ ] Sign in with the referee PIN: organizer controls absent, scoring available
@@ -85,20 +89,24 @@ Produces: tables `public.teams`, `public.players.team_id`, `public.team_fixtures
 
 Fresh review: required — persistent-data migration and authorization on every command
 
-- [ ] `supabase/migrations/202609170002_team_tournament.sql`: raise if any `public.pairs` or `public.matches` rows exist (Reset all must precede), then drop `public.pairs`, `public.tie_resolutions`, pair columns and `void` state, and every legacy wrapper/`private.legacy_*` function, including `withdraw_pair`, `resolve_tie`, `confirm_groups`, `preview_withdrawal`, `generate_fixtures`, `enter_result`, `set_court_count`; drop `public.tournament.court_count` (courts are always 1 and 2, enforced by `matches.court in (1, 2)`)
-- [ ] Same migration: create the Produces tables with constraints (seed per player, `match_number in (1,2,3)`, unique `(match_id, game_number)`), `public` read policies for teams/players/fixtures/matches/match_games, no grants on `private.lineups`; add the new public tables to the `supabase_realtime` publication set up in `202609080004_realtime.sql`
-- [ ] `private.snapshot_body()` / `get_tournament_snapshot()`: include a fixture's lineups only when both teams confirmed, or when `private.staff_role() = 'organizer'` (Acceptance review 3)
-- [ ] Roster and lineup commands (organizer): `save_roster` blocked once group play started; `save_lineup` validates three legal pairs; `confirm_lineup` locks when both confirmed; `reopen_lineups` clears both confirmations only before any fixture match starts; `start_group_play` requires valid rosters, 2 teams per group, all four group lineups confirmed, then creates both group fixtures and their three matches (Acceptance review 1, 2, 4)
-- [ ] Scoring commands (scorer): `start_match` requires confirmed lineups, assigned free court, no participating player in another `playing` match, and for match 3 both openers confirmed at 1–1; `add_point`/`undo_point` on the open game only; `confirm_game` applies stage target/cap, completes the match at two game wins, marks match 3 unnecessary at 2–0, completes the fixture (Acceptance review 5, 6, 8)
-- [ ] Progression: completing both group fixtures populates third place and final teams; completing both placement fixtures sets tournament `completed` (Acceptance review 7)
-- [ ] `mark_walkover` (organizer) per match without score; no double walkover; `correct_result` + `preview_result_correction` (organizer) block `decider-started` / `placement-started` / `tournament-completed`, recompute placement participants and clear placement lineup confirmations when advancement changes before placement starts (Acceptance review 9, 10)
-- [ ] `take_over` (scorer): atomically reassign `private.match_ownership`, insert `private.scoring_handovers (match_id, from_session_id, to_session_id, created_at)`; ownership checks reject the former owner's writes (Acceptance review 11)
-- [ ] `public.reset_tournament` clears the new tables and handovers and no longer reads `court_count`; `scripts/reset-tournament.ts` unchanged unless its table list diverges
-- [ ] Rewrite `tests/integration/tournament.test.ts`, `impacts.test.ts`, `reset.test.ts` for the team format, covering Acceptance review 1–12 server-side; removed pair/withdrawal/tie scenarios are replaced, not skipped — list removed scenario names in the PR description
+- [x] `supabase/migrations/202609170002_team_tournament.sql`: raise if any `public.pairs` or `public.matches` rows exist (Reset all must precede), then drop `public.pairs`, `public.tie_resolutions`, pair columns and `void` state, and every legacy wrapper/`private.legacy_*` function, including `withdraw_pair`, `resolve_tie`, `confirm_groups`, `preview_withdrawal`, `generate_fixtures`, `enter_result`, `set_court_count`; drop `public.tournament.court_count` (courts are always 1 and 2, enforced by `matches.court in (1, 2)`)
+- [x] Same migration: create the Produces tables with constraints (seed per player, `match_number in (1,2,3)`, unique `(match_id, game_number)`), `public` read policies for teams/players/fixtures/matches/match_games, no grants on `private.lineups`; add the new public tables to the `supabase_realtime` publication set up in `202609080004_realtime.sql`
+- [x] `private.snapshot_body()` / `get_tournament_snapshot()`: include a fixture's lineups only when both teams confirmed, or when `private.staff_role() = 'organizer'` (Acceptance review 3)
+- [x] Roster and lineup commands (organizer): `save_roster` blocked once group play started; `save_lineup` validates three legal pairs; `confirm_lineup` locks when both confirmed; `reopen_lineups` clears both confirmations only before any fixture match starts; `start_group_play` requires valid rosters, 2 teams per group, all four group lineups confirmed, then creates both group fixtures and their three matches (Acceptance review 1, 2, 4)
+- [x] Scoring commands (scorer): `start_match` requires confirmed lineups, assigned free court, no participating player in another `playing` match, and for match 3 both openers confirmed at 1–1; `add_point`/`undo_point` on the open game only; `confirm_game` applies stage target/cap, completes the match at two game wins, marks match 3 unnecessary at 2–0, completes the fixture (Acceptance review 5, 6, 8)
+- [x] Progression: completing both group fixtures populates third place and final teams; completing both placement fixtures sets tournament `completed` (Acceptance review 7)
+- [x] `mark_walkover` (organizer) per match without score; no double walkover; `correct_result` + `preview_result_correction` (organizer) block `decider-started` / `placement-started` / `tournament-completed`, recompute placement participants and clear placement lineup confirmations when advancement changes before placement starts (Acceptance review 9, 10)
+- [x] `take_over` (scorer): atomically reassign `private.match_ownership`, insert `private.scoring_handovers (match_id, from_session_id, to_session_id, created_at)`; ownership checks reject the former owner's writes (Acceptance review 11)
+- [x] `public.reset_tournament` clears the new tables and handovers and no longer reads `court_count`; `scripts/reset-tournament.ts` unchanged unless its table list diverges
+- [x] Rewrite `tests/integration/tournament.test.ts`, `impacts.test.ts`, `reset.test.ts` for the team format, covering Acceptance review 1–12 server-side; removed pair/withdrawal/tie scenarios are replaced, not skipped — list removed scenario names in the PR description
+- [x] `(amended 2026-09-17)` Update `tests/integration/local-supabase.ts` reset tables and `auth.test.ts` authorization probes for the replacement RPC surface
+- [x] `(amended 2026-09-17)` Accept reachable two-point cap wins in `src/domain/scoring.ts` and `private.is_game_won`, with unit and integration coverage for 21–19 and 30–28
+- [x] `(amended 2026-09-17)` Reopen a corrected 1–1 decider and remove stale unstarted placement fixtures/lineups when advancement becomes incomplete
+- [x] `(amended 2026-09-17)` Apply the 1–1 opener eligibility rule to match-3 walkovers and cover premature walkovers
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npm run test:related -- <changed files>` (integration suites fail at setup without local Supabase; report the skip count, never as a pass)
+- [x] `npm run typecheck`
+- [~] `npm run test:related -- <changed files>` — environment-blocked: missing `/Users/thomasduong/.orbstack/run/docker.sock`; 48 non-database tests passed, 4 integration suites failed in setup, and 27 scenarios were skipped
 
 **Review checklist (user, at PR review):**
 - [ ] Confirm Reset all ran on the target database before applying the migration
@@ -116,21 +124,27 @@ Branch: `team-tournament/phase-4-client` (`gh stack add`)
 Consumes: all Phase 1 exports; `StaffRole` and `StaffAccess.role` from Phase 2; Phase 3 snapshot JSON and mutation RPC names/payloads.
 Produces: none.
 
-Fresh review: not required
+Fresh review: required — upgraded 2026-09-17: the phase diff now edits the persistent-data migration
 
-- [ ] `src/lib/database.types.ts`: hand-edit tables and `Functions` to the Phase 3 SQL; remove legacy entries
-- [ ] `src/domain/commands.ts`: `CommandPayloads` keys and payloads = Phase 3 RPCs; `src/domain/types.ts`: `TournamentSnapshot { tournament, teams, players, fixtures, matches, lineups }`, delete `Pair`, old `Match` union, `TieResolution`, `Standing`, `Fixture`/`GroupFixture`/`KnockoutFixture`, `SetupPairInput`
-- [ ] Delete `src/domain/standings.ts`, `src/domain/fixtures.ts`, `src/domain/setup.ts` (including `availableCourts`) and their tests (replaced by Phase 1 modules and tests); drop old codes from `impactBlockCodes`
-- [ ] Remove the court-count setting: `CourtCount`, `Tournament.courtCount`, `SetupInput.courtCount`, the `set_court_count` command, and its controls and reads in `SetupForm.tsx`, `OrganizerPage.tsx`, `TournamentPage.tsx`, `ScoreTracker.tsx`; `Court = 1 | 2` stays
-- [ ] `src/data/tournament.ts` (`parseSnapshot` zod schemas, `mutateTournament`), `src/data/tournament.test.ts`; `src/data/impacts.ts` (remove `previewWithdrawal`), `src/data/impacts.test.ts`
-- [ ] `src/features/scoring/scoring-state.ts` + `scoring-state.test.ts`: per-game score, `confirm_game` event, stage target/cap; `ScoreTracker.tsx`: game tally, confirm game, take over with explicit confirmation
-- [ ] Organizer UI: `SetupForm.tsx` → team roster entry; new `src/features/organizer/LineupEditor.tsx` (enter, confirm, reopen); `ResultSchedule.tsx`, `ResultEditor.tsx`, `ImpactPreview.tsx` on fixtures/matches/games; delete `WithdrawalPanel.tsx`; `OrganizerPage.tsx` wiring
-- [ ] Public UI: `StandingsTable.tsx` → group fixture results and final positions; `KnockoutBracket.tsx` → third place + final; `MatchTicket.tsx` pairs and game scores; `TournamentPage.tsx` wiring; lineups shown only when present in the snapshot
-- [ ] `src/i18n/vi.ts`, `src/i18n/errors.ts` (+ `errors.test.ts`): Đội, Cặp, Cuộc đối đầu, Trận, Ván, Trọng tài copy and new block/error codes per `CONTEXT.md`
+- [x] `src/lib/database.types.ts`: hand-edit tables and `Functions` to the Phase 3 SQL; remove legacy entries
+- [x] `src/domain/commands.ts`: `CommandPayloads` keys and payloads = Phase 3 RPCs; `src/domain/types.ts`: `TournamentSnapshot { tournament, teams, players, fixtures, matches, lineups }`, delete `Pair`, old `Match` union, `TieResolution`, `Standing`, `Fixture`/`GroupFixture`/`KnockoutFixture`, `SetupPairInput`
+- [x] Delete `src/domain/standings.ts`, `src/domain/fixtures.ts`, `src/domain/setup.ts` (including `availableCourts`) and their tests (replaced by Phase 1 modules and tests); drop old codes from `impactBlockCodes`
+- [x] Remove the court-count setting: `CourtCount`, `Tournament.courtCount`, `SetupInput.courtCount`, the `set_court_count` command, and its controls and reads in `SetupForm.tsx`, `OrganizerPage.tsx`, `TournamentPage.tsx`, `ScoreTracker.tsx`; `Court = 1 | 2` stays
+- [x] `src/data/tournament.ts` (`parseSnapshot` zod schemas, `mutateTournament`), `src/data/tournament.test.ts`; `src/data/impacts.ts` (remove `previewWithdrawal`), `src/data/impacts.test.ts`
+- [x] `src/features/scoring/scoring-state.ts` + `scoring-state.test.ts`: per-game score, `confirm_game` event, stage target/cap; `ScoreTracker.tsx`: game tally, confirm game, take over with explicit confirmation
+- [x] `(amended 2026-09-17)` Extend `FixtureMatch` with `pairA`, `pairB`, `court`, and `version`, and take the preview's reset generation from the request because `preview_result_correction` does not return one
+- [x] Organizer UI: `SetupForm.tsx` → team roster entry; new `src/features/organizer/LineupEditor.tsx` (enter, confirm, reopen); `ResultSchedule.tsx`, `ResultEditor.tsx`, `ImpactPreview.tsx` on fixtures/matches/games; delete `WithdrawalPanel.tsx`; `OrganizerPage.tsx` wiring
+- [x] Public UI: `StandingsTable.tsx` → group fixture results and final positions; `KnockoutBracket.tsx` → third place + final; `MatchTicket.tsx` pairs and game scores; `TournamentPage.tsx` wiring; lineups shown only when present in the snapshot
+- [x] `src/i18n/vi.ts`, `src/i18n/errors.ts` (+ `errors.test.ts`): Đội, Cặp, Cuộc đối đầu, Trận, Ván, Trọng tài copy and new block/error codes per `CONTEXT.md`
+- [x] `(amended 2026-09-17)` Move `correctedMatchWinner` into `src/domain/scoring.ts` (+ tests) and shared display helpers into `src/features/tournament/labels.ts`; referees start eligible matches from a match picker in `ScoreTracker.tsx`, because the old tracker only listed playing matches
+- [x] `(amended 2026-09-17)` Drop legacy `private.require_match_version(uuid, integer)` in `supabase/migrations/202609170002_team_tournament.sql`; its `public.matches` return type blocked `drop table public.matches` on the remote push, which rolled back
+- [x] `(amended 2026-09-17)` Add `supabase/migrations/202609170003_fix_save_roster_team_variable.sql`: rename the `team_id` variable in `private.team_save_roster`, which made the players delete ambiguous (42702) on every roster save
+- [x] `(amended 2026-09-17)` `src/features/tournament/StandingsTable.tsx` + `src/i18n/vi.ts`: list each group's team players under labelled seed headings on the standings view (user request)
+- [x] `(amended 2026-09-17)` `src/i18n/vi.ts`: rename the court schedule, PIN rotation, and result correction buttons, which said "Xem trước" although two of them open only a confirmation (user request)
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npm run test:related -- <changed files>`
+- [x] `npm run typecheck`
+- [x] `npm run test:related -- <changed files>` — 8 files, 72 tests passed, 0 skipped
 
 **Review checklist (user, at PR review):**
 - [ ] Organizer enters 4 teams; invalid seed split or duplicate player blocks group play
@@ -148,5 +162,5 @@ checklist goes into the PR description.
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] `npm run test` (integration suites fail at setup without local Supabase; report pass and skip counts, never as a pass)
-- [ ] `npm run build`
+- [~] `npm run test` (integration suites fail at setup without local Supabase; report pass and skip counts, never as a pass) — environment-blocked: missing `/Users/thomasduong/.orbstack/run/docker.sock`; 11 files and 87 tests passed, 4 integration suites failed in setup, 27 scenarios skipped
+- [x] `npm run build`

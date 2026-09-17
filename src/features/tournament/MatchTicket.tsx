@@ -1,78 +1,43 @@
-import type { Group, Match, TournamentSnapshot, UUID } from '@/domain/types'
+import type { FixtureMatch, Side, TournamentSnapshot } from '@/domain/types'
+import { matchGameTally } from '@/domain/scoring'
 import { Badge } from '@/components/ui/badge'
 import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
 import { cn } from '@/lib/utils'
 
-/** "Bảng A" / "Bán kết" / "Chung kết" — the round a match belongs to. */
-export function matchRoundLabel(match: Match): string {
-  if (match.round === 'group') {
-    return match.group ? messages.common.group(match.group) : messages.rounds.group
-  }
-  return match.round === 'semifinal' ? messages.rounds.semifinal : messages.rounds.final
-}
-
-/** Group colour, shared by the ticket head, the bracket and the standings. */
-export function groupTone(group: Group): string {
-  return group === 'A' ? 'bg-mist text-navy' : 'bg-ice text-ink'
-}
-
-function playerName(snapshot: TournamentSnapshot, playerId: UUID): string {
-  return snapshot.players.find((player) => player.id === playerId)?.name ?? messages.ticket.unknownPlayer
-}
-
-export function pairName(snapshot: TournamentSnapshot, pairId: UUID | null): string {
-  if (pairId === null) return messages.common.toBeDecided
-  const pair = snapshot.pairs.find((candidate) => candidate.id === pairId)
-  if (!pair) return messages.common.unknownPair
-  return pair.teamName ?? pairPlayers(snapshot, pairId)
-}
-
-export function pairPlayers(snapshot: TournamentSnapshot, pairId: UUID | null): string {
-  if (pairId === null) return messages.common.awaitingQualifier
-  const pair = snapshot.pairs.find((candidate) => candidate.id === pairId)
-  if (!pair) return messages.common.unknownPlayers
-  return `${playerName(snapshot, pair.playerAId)} / ${playerName(snapshot, pair.playerBId)}`
-}
-
-export function pairTeamName(snapshot: TournamentSnapshot, pairId: UUID | null): string | null {
-  if (pairId === null) return null
-  return snapshot.pairs.find((candidate) => candidate.id === pairId)?.teamName ?? null
-}
-
-export function pairSeeds(snapshot: TournamentSnapshot, pairId: UUID | null): string {
-  if (pairId === null) return messages.common.awaitingQualifier
-  const pair = snapshot.pairs.find((candidate) => candidate.id === pairId)
-  if (!pair) return messages.common.seedsUnavailable
-  const first = snapshot.players.find((player) => player.id === pair.playerAId)?.seed
-  const second = snapshot.players.find((player) => player.id === pair.playerBId)?.seed
-  return first && second ? messages.common.seeds(first, second) : messages.common.seedsUnavailable
-}
-
-function sideLabel(match: Match, side: 'a' | 'b'): string | null {
-  return side === 'a' ? match.sourceALabel : match.sourceBLabel
-}
+import {
+  fixtureLabel,
+  fixtureOf,
+  groupTone,
+  matchPair,
+  openGame,
+  pairPlayers,
+  scoreText,
+  sideTeamId,
+  teamName,
+} from './labels'
 
 function TicketSide({
   match,
   side,
   snapshot,
 }: {
-  match: Match
-  side: 'a' | 'b'
+  match: FixtureMatch
+  side: Side
   snapshot: TournamentSnapshot
 }) {
-  const pairId = side === 'a' ? match.pairAId : match.pairBId
-  const score = match.score ? formatNumber(match.score[side]) : '–'
-  const teamName = pairTeamName(snapshot, pairId)
+  const fixture = fixtureOf(snapshot, match)
+  const live = openGame(match)
+  const tally = matchGameTally(match.games)
+  // A live game shows its points; anything else shows the games won.
+  const value = match.state === 'playing' && live ? live.score[side] : tally[side]
   return (
     <div className="flex min-w-0 flex-col items-center text-center">
       <p className="max-w-full [overflow-wrap:anywhere] text-[0.9375rem] font-medium tracking-[-0.027em]">
-        {pairId ? pairName(snapshot, pairId) : sideLabel(match, side)}
+        {teamName(snapshot, sideTeamId(fixture, side))}
       </p>
-      {teamName ? <p className="mt-1 max-w-full [overflow-wrap:anywhere] text-[0.6875rem] text-muted-ink">{pairPlayers(snapshot, pairId)}</p> : null}
-      <p className="mt-1.5 text-[0.625rem] text-muted-ink">
-        {pairSeeds(snapshot, pairId)}
+      <p className="mt-1 max-w-full [overflow-wrap:anywhere] text-[0.6875rem] text-muted-ink">
+        {pairPlayers(snapshot, matchPair(snapshot, match, side))}
       </p>
       <strong
         className={cn(
@@ -80,7 +45,7 @@ function TicketSide({
           side === 'a' ? 'bg-peach' : 'bg-ice',
         )}
       >
-        {score}
+        {match.state === 'unstarted' ? '–' : formatNumber(value)}
       </strong>
     </div>
   )
@@ -91,10 +56,12 @@ export function MatchTicket({
   snapshot,
   nextLabel,
 }: {
-  match: Match
+  match: FixtureMatch
   snapshot: TournamentSnapshot
   nextLabel?: string
 }) {
+  const fixture = fixtureOf(snapshot, match)
+  const live = openGame(match)
   const status = match.state === 'playing'
     ? messages.ticket.status.playing
     : match.state === 'completed' ? messages.ticket.status.completed : messages.ticket.status.upNext
@@ -104,20 +71,21 @@ export function MatchTicket({
         'ticket lift-card rounded-card border-t-[5px] bg-white p-[1.625rem] shadow-card',
         match.court === 2 ? 'border-t-cyan' : 'border-t-orange',
       )}
-      aria-label={match.court ? messages.common.court(match.court) : messages.ticket.roundMatch(matchRoundLabel(match))}
+      aria-label={match.court ? messages.common.court(match.court) : messages.common.fixtureMatch(fixtureLabel(fixture), match.matchNumber)}
     >
       <div className="mb-7 flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <h3 className="text-sm font-semibold">
-            {match.court
-              ? messages.common.court(match.court)
-              : match.round === 'final' ? messages.ticket.theFinal : messages.rounds.semifinal}
+            {match.court ? messages.common.court(match.court) : messages.publicView.courtPending}
           </h3>
-          {match.group ? (
-            <span className={cn('shrink-0 rounded-pill px-2.5 py-1 text-[0.625rem] font-semibold', groupTone(match.group))}>
-              {messages.common.group(match.group)}
-            </span>
-          ) : null}
+          <span
+            className={cn(
+              'shrink-0 rounded-pill px-2.5 py-1 text-[0.625rem] font-semibold',
+              fixture?.group ? groupTone(fixture.group) : 'bg-well text-muted-ink',
+            )}
+          >
+            {fixtureLabel(fixture)}
+          </span>
         </div>
         <Badge variant="status" className={match.state === 'playing' ? 'text-navy' : 'text-muted-ink'}>
           {status}
@@ -129,10 +97,18 @@ export function MatchTicket({
         <TicketSide match={match} side="b" snapshot={snapshot} />
       </div>
       <div className="tear -mx-[1.625rem] -mb-[1.625rem] mt-[1.9375rem] px-[1.625rem] pt-5 pb-[1.1875rem]">
-        <small className="text-[0.625rem] text-muted-ink">{messages.ticket.upNext}</small>
+        <small className="text-[0.625rem] text-muted-ink">{messages.common.matchNumber(match.matchNumber)}</small>
         <p className="mt-[7px] text-xs/[1.6]">
-          <span className="font-medium">{messages.ticket.order(match.playingOrder)}</span>
-          {nextLabel ? <span className="text-muted-ink"> · {nextLabel}</span> : null}
+          {match.state === 'playing' && live ? (
+            <span className="font-medium">
+              {messages.ticket.gameTally(live.gameNumber, scoreText(matchGameTally(match.games)))}
+            </span>
+          ) : null}
+          {nextLabel ? (
+            <span className="text-muted-ink">
+              {match.state === 'playing' && live ? ' · ' : ''}{messages.ticket.upNext}: {nextLabel}
+            </span>
+          ) : null}
         </p>
       </div>
     </article>
