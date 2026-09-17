@@ -17,6 +17,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -88,7 +89,12 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
   })
 
   if (!match) {
-    return <p className="text-[0.8125rem] text-muted-ink">{messages.results.matchGone}</p>
+    return (
+      <DialogHeader>
+        <DialogTitle>{messages.results.enterResult}</DialogTitle>
+        <DialogDescription>{messages.results.matchGone}</DialogDescription>
+      </DialogHeader>
+    )
   }
 
   const score = { a: Number(scoreA), b: Number(scoreB) }
@@ -99,42 +105,39 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
   const impact = reviewed && reviewed.revision === snapshot.tournament.resultRevision ? reviewed.impact : null
 
   return (
-    <section className="space-y-4">
-      <header>
-        <h3 className="text-sm font-semibold">
-          {matchRoundLabel(match)} · {messages.common.versus(pairName(snapshot, match.pairAId), pairName(snapshot, match.pairBId))}
-        </h3>
-        <p className="mt-1 text-[0.6875rem] text-muted-ink">
+    <>
+      <DialogHeader className="pr-6">
+        <DialogTitle>{isCorrection ? messages.results.correctTitle : messages.results.enterResult}</DialogTitle>
+        <DialogDescription>
           {isCorrection ? messages.results.correctionIntro : messages.results.entryIntro}
-        </p>
-      </header>
+        </DialogDescription>
+      </DialogHeader>
 
-      <div className="grid grid-cols-2 gap-3">
-        <div className="space-y-2">
-          <Label htmlFor="score-a">{pairName(snapshot, match.pairAId)}</Label>
-          <Input id="score-a" type="number" inputMode="numeric" min="0" max="30" value={scoreA} onChange={(event) => setScoreA(event.target.value)} />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="score-b">{pairName(snapshot, match.pairBId)}</Label>
-          <Input id="score-b" type="number" inputMode="numeric" min="0" max="30" value={scoreB} onChange={(event) => setScoreB(event.target.value)} />
-        </div>
+      <div className="min-w-0 rounded-field bg-well px-3.5 py-2.5">
+        <p className="truncate text-[0.8125rem] font-medium">
+          {messages.common.versus(pairName(snapshot, match.pairAId), pairName(snapshot, match.pairBId))}
+        </p>
+        <p className="mt-0.5 text-[0.6875rem] text-muted-ink">{matchRoundLabel(match)}</p>
       </div>
 
-      {!scoreValid ? (
-        <p className="text-[0.6875rem] text-muted-ink">{messages.results.scoreHint}</p>
-      ) : null}
-
-      <div className="flex flex-wrap gap-2">
-        <Button disabled={!scoreValid || previewMutation.isPending} onClick={() => previewMutation.mutate(score)}>
-          {previewMutation.isPending
-            ? messages.common.checking
-            : isCorrection ? messages.results.reviewCorrection : messages.results.reviewResult}
-        </Button>
-        <Button variant="ghost" onClick={onClose}>{messages.common.cancel}</Button>
+      <div className="space-y-2">
+        <div className="grid grid-cols-2 gap-3">
+          <div className="min-w-0 space-y-2">
+            <Label htmlFor="score-a" className="block truncate">{pairName(snapshot, match.pairAId)}</Label>
+            <Input id="score-a" className="numeric" type="number" inputMode="numeric" min="0" max="30" value={scoreA} onChange={(event) => setScoreA(event.target.value)} />
+          </div>
+          <div className="min-w-0 space-y-2">
+            <Label htmlFor="score-b" className="block truncate">{pairName(snapshot, match.pairBId)}</Label>
+            <Input id="score-b" className="numeric" type="number" inputMode="numeric" min="0" max="30" value={scoreB} onChange={(event) => setScoreB(event.target.value)} />
+          </div>
+        </div>
+        <p className={scoreValid ? 'text-[0.6875rem] text-muted-ink' : 'text-[0.6875rem] text-destructive'}>
+          {messages.results.scoreHint}
+        </p>
       </div>
 
       {match.state === 'unstarted' ? (
-        <div className="flex flex-wrap items-center gap-2 border-t pt-4">
+        <div className="flex flex-wrap items-center gap-2 border-t border-hairline pt-4">
           <Select value={walkoverWinner} onValueChange={setWalkoverWinner}>
             <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder={messages.results.walkoverWinner} /></SelectTrigger>
             <SelectContent>
@@ -154,6 +157,15 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
       {saveMutation.isError ? (
         <p className="text-sm text-destructive" role="alert">{errorMessage(saveMutation.error)}</p>
       ) : null}
+
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>{messages.common.cancel}</Button>
+        <Button disabled={!scoreValid || previewMutation.isPending} onClick={() => previewMutation.mutate(score)}>
+          {previewMutation.isPending
+            ? messages.common.checking
+            : isCorrection ? messages.results.reviewCorrection : messages.results.reviewResult}
+        </Button>
+      </DialogFooter>
 
       <AlertDialog open={impact !== null} onOpenChange={(open) => { if (!open) setReviewed(null) }}>
         <AlertDialogContent size="wide">
@@ -199,6 +211,6 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </section>
+    </>
   )
 }

@@ -8,7 +8,6 @@ import { matchRoundLabel, pairName } from '@/features/tournament/MatchTicket'
 
 export interface ResultScheduleProps {
   snapshot: TournamentSnapshot
-  selectedMatchId: UUID | null
   onSelect: (matchId: UUID) => void
 }
 
@@ -21,24 +20,16 @@ function scoreText(match: Match): string {
 function MatchRow({
   snapshot,
   match,
-  selected,
   actionLabel,
   onSelect,
 }: {
   snapshot: TournamentSnapshot
   match: Match
-  selected: boolean
   actionLabel: string
   onSelect: (matchId: UUID) => void
 }) {
   return (
-    <li
-      className={
-        selected
-          ? 'flex flex-wrap items-center justify-between gap-2 rounded-md border border-ink/20 bg-ink/[0.03] px-3 py-2'
-          : 'flex flex-wrap items-center justify-between gap-2 rounded-md border border-ink/5 px-3 py-2'
-      }
-    >
+    <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-ink/5 px-3 py-2">
       <span className="min-w-0">
         <span className="block truncate text-[0.8125rem] font-medium">
           {messages.common.versus(pairName(snapshot, match.pairAId), pairName(snapshot, match.pairBId))}
@@ -61,7 +52,7 @@ function MatchRow({
  * page, rather than from a flat list that gives no ordering or court context.
  * Completed matches stay reachable so a result can be corrected.
  */
-export function ResultSchedule({ snapshot, selectedMatchId, onSelect }: ResultScheduleProps) {
+export function ResultSchedule({ snapshot, onSelect }: ResultScheduleProps) {
   const { upcoming, completed } = useMemo(() => {
     const known = snapshot.matches.filter(
       (match) => match.pairAId !== null && match.pairBId !== null,
@@ -90,7 +81,6 @@ export function ResultSchedule({ snapshot, selectedMatchId, onSelect }: ResultSc
               key={match.id}
               snapshot={snapshot}
               match={match}
-              selected={match.id === selectedMatchId}
               actionLabel={messages.results.enterResult}
               onSelect={onSelect}
             />
@@ -108,7 +98,6 @@ export function ResultSchedule({ snapshot, selectedMatchId, onSelect }: ResultSc
               key={match.id}
               snapshot={snapshot}
               match={match}
-              selected={match.id === selectedMatchId}
               actionLabel={messages.results.correct}
               onSelect={onSelect}
             />

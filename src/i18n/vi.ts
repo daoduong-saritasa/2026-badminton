@@ -321,6 +321,7 @@ export const messages = {
     noCompleted: 'Chưa ghi kết quả nào.',
     enterResult: 'Ghi kết quả',
     correct: 'Sửa',
+    correctTitle: 'Sửa kết quả',
     matchGone: 'Trận đấu này không còn nữa.',
     correctionIntro: 'Đang sửa một kết quả đã ghi. Hãy xem lại ảnh hưởng trước khi xác nhận.',
     entryIntro: 'Ghi kết quả cho trận đã đấu mà không ghi điểm trực tiếp.',

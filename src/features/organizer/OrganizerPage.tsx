@@ -18,6 +18,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -35,8 +36,8 @@ type OrganizerAction = 'fixtures' | 'confirm-groups' | 'reopen'
 
 /**
  * Result entry is driven from the schedule: pick a match, then edit that one
- * match. Withdrawals are a separate section because they act on a pair, not a
- * match.
+ * match in a dialog, so the schedule never shifts underneath it. Withdrawals are
+ * a separate section because they act on a pair, not a match.
  */
 function ResultsSection({
   snapshot,
@@ -45,23 +46,33 @@ function ResultsSection({
   snapshot: TournamentSnapshot
   resetGeneration: number
 }) {
-  const [selectedMatchId, setSelectedMatchId] = useState<UUID | null>(null)
+  // The match outlives `open` so the dialog keeps its content while it animates
+  // closed; `session` remounts the editor so reopening never shows a stale draft.
+  const [editing, setEditing] = useState<{ matchId: UUID; session: number } | null>(null)
+  const [open, setOpen] = useState(false)
+
+  const select = (matchId: UUID) => {
+    setEditing((previous) => ({ matchId, session: (previous?.session ?? 0) + 1 }))
+    setOpen(true)
+  }
 
   return (
-    <div className="space-y-4">
-      <ResultSchedule snapshot={snapshot} selectedMatchId={selectedMatchId} onSelect={setSelectedMatchId} />
-      {selectedMatchId ? (
-        <div className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
-          <ResultEditor
-            key={selectedMatchId}
-            snapshot={snapshot}
-            resetGeneration={resetGeneration}
-            matchId={selectedMatchId}
-            onClose={() => setSelectedMatchId(null)}
-          />
-        </div>
-      ) : null}
-    </div>
+    <>
+      <ResultSchedule snapshot={snapshot} onSelect={select} />
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-md">
+          {editing ? (
+            <ResultEditor
+              key={editing.session}
+              snapshot={snapshot}
+              resetGeneration={resetGeneration}
+              matchId={editing.matchId}
+              onClose={() => setOpen(false)}
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
+    </>
   )
 }
 
