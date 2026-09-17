@@ -1,9 +1,12 @@
-import type { Score, Side, UUID } from '../../domain/types'
-import { isWinningScore } from '../../domain/scoring'
+import type { FixtureStage, Score, Side, UUID } from '../../domain/types'
+import { isGameWon } from '../../domain/scoring'
 
+/** The score is always the open game's; confirmed games are history. */
 interface ScoringContext {
   readonly matchId: UUID
+  readonly stage: FixtureStage
   readonly resetGeneration: number
+  readonly gameNumber: number
   readonly score: Score
   readonly matchVersion: number
   readonly hasOwnership: boolean
@@ -23,6 +26,7 @@ export interface PendingPoint {
 
 export interface AuthoritativeObservation {
   readonly resetGeneration: number
+  readonly gameNumber: number
   readonly score: Score
   readonly matchVersion: number
   readonly hasOwnership: boolean
@@ -66,15 +70,23 @@ export type ScoringEvent =
       readonly message: string
     }
   | { readonly type: 'retry-requested' }
-  | { readonly type: 'ownership-recovered'; readonly resetGeneration: number; readonly score: Score; readonly matchVersion: number }
+  | {
+      readonly type: 'ownership-recovered'
+      readonly resetGeneration: number
+      readonly gameNumber: number
+      readonly score: Score
+      readonly matchVersion: number
+    }
   | {
       readonly type: 'snapshot-received'
       readonly resetGeneration: number
+      readonly gameNumber: number
       readonly score: Score
       readonly matchVersion: number
       readonly hasOwnership: boolean
     }
   | { readonly type: 'review-dismissed' }
+  | { readonly type: 'game-confirmed'; readonly resetGeneration: number; readonly gameNumber: number; readonly matchVersion: number }
   | { readonly type: 'version-conflict-reconciled' }
 
 function addPoint(score: Score, side: Side): Score {
@@ -87,23 +99,28 @@ function winningSide(score: Score): Side {
   return score.a > score.b ? 'a' : 'b'
 }
 
+function settle(context: ScoringContext): IdleScoringState | ReviewingScoringState {
+  if (isGameWon(context.score, context.stage)) {
+    return { ...context, status: 'reviewing', winningSide: winningSide(context.score) }
+  }
+  return { ...context, status: 'idle' }
+}
+
 function settlePoint(state: SavingScoringState, matchVersion: number): ScoringState {
   const observation = state.observed !== null && state.observed.matchVersion >= matchVersion
     ? state.observed
     : null
-  const context: ScoringContext = observation === null
+  return settle(observation === null
     ? {
         matchId: state.matchId,
+        stage: state.stage,
         resetGeneration: state.resetGeneration,
+        gameNumber: state.gameNumber,
         score: state.score,
         matchVersion,
         hasOwnership: state.hasOwnership,
       }
-    : { matchId: state.matchId, ...observation }
-  if (isWinningScore(context.score)) {
-    return { ...context, status: 'reviewing', winningSide: winningSide(context.score) }
-  }
-  return { ...context, status: 'idle' }
+    : { matchId: state.matchId, stage: state.stage, ...observation })
 }
 
 function restoreSnapshot(
@@ -112,17 +129,15 @@ function restoreSnapshot(
 ): ScoringState {
   if (event.resetGeneration < state.resetGeneration) return state
   if (event.resetGeneration > state.resetGeneration) {
-    const context: ScoringContext = {
+    return settle({
       matchId: state.matchId,
+      stage: state.stage,
       resetGeneration: event.resetGeneration,
+      gameNumber: event.gameNumber,
       score: event.score,
       matchVersion: event.matchVersion,
       hasOwnership: false,
-    }
-    if (isWinningScore(event.score)) {
-      return { ...context, status: 'reviewing', winningSide: winningSide(event.score) }
-    }
-    return { ...context, status: 'idle' }
+    })
   }
   if (event.matchVersion < state.matchVersion) return state
   if (state.status === 'saving' || state.status === 'failed') {
@@ -131,6 +146,7 @@ function restoreSnapshot(
       ...state,
       observed: {
         resetGeneration: event.resetGeneration,
+        gameNumber: event.gameNumber,
         score: event.score,
         matchVersion: event.matchVersion,
         hasOwnership: event.hasOwnership,
@@ -138,23 +154,21 @@ function restoreSnapshot(
     }
   }
 
-  const context: ScoringContext = {
+  return settle({
     matchId: state.matchId,
+    stage: state.stage,
     resetGeneration: event.resetGeneration,
+    gameNumber: event.gameNumber,
     score: event.score,
     matchVersion: event.matchVersion,
     hasOwnership: event.hasOwnership,
-  }
-  if (isWinningScore(event.score)) {
-    return { ...context, status: 'reviewing', winningSide: winningSide(event.score) }
-  }
-  return { ...context, status: 'idle' }
+  })
 }
 
 export function reduceScoring(state: ScoringState, event: ScoringEvent): ScoringState {
   switch (event.type) {
     case 'point-requested': {
-      if (state.status !== 'idle' || !state.hasOwnership || isWinningScore(state.score)) return state
+      if (state.status !== 'idle' || !state.hasOwnership || isGameWon(state.score, state.stage)) return state
       return {
         ...state,
         status: 'saving',
@@ -194,16 +208,14 @@ export function reduceScoring(state: ScoringState, event: ScoringEvent): Scoring
       if (event.resetGeneration !== state.resetGeneration) return state
       const observation: AuthoritativeObservation = {
         resetGeneration: event.resetGeneration,
+        gameNumber: event.gameNumber,
         score: event.score,
         matchVersion: event.matchVersion,
         hasOwnership: true,
       }
       if (state.status === 'idle' || state.status === 'reviewing') {
         if (event.matchVersion < state.matchVersion) return state
-        if (isWinningScore(event.score)) {
-          return { ...state, ...observation, status: 'reviewing', winningSide: winningSide(event.score) }
-        }
-        return { ...state, ...observation, status: 'idle' }
+        return settle({ matchId: state.matchId, stage: state.stage, ...observation })
       }
       if (state.status !== 'failed') return state
       if (event.matchVersion < state.matchVersion) return state
@@ -224,13 +236,25 @@ export function reduceScoring(state: ScoringState, event: ScoringEvent): Scoring
       const { winningSide: _winningSide, ...idleState } = state
       return { ...idleState, status: 'idle' }
     }
+    case 'game-confirmed': {
+      // The server opened the next game at 0–0; a snapshot already past this
+      // version has said so, and more, first.
+      if (state.status !== 'reviewing' && state.status !== 'idle') return state
+      if (event.resetGeneration !== state.resetGeneration || event.matchVersion <= state.matchVersion) return state
+      return {
+        matchId: state.matchId,
+        stage: state.stage,
+        resetGeneration: state.resetGeneration,
+        gameNumber: event.gameNumber,
+        score: { a: 0, b: 0 },
+        matchVersion: event.matchVersion,
+        hasOwnership: state.hasOwnership,
+        status: 'idle',
+      }
+    }
     case 'version-conflict-reconciled': {
       if (state.status !== 'failed' || state.reason !== 'version-conflict' || state.observed === null) return state
-      const context: ScoringContext = { matchId: state.matchId, ...state.observed }
-      if (isWinningScore(context.score)) {
-        return { ...context, status: 'reviewing', winningSide: winningSide(context.score) }
-      }
-      return { ...context, status: 'idle' }
+      return settle({ matchId: state.matchId, stage: state.stage, ...state.observed })
     }
   }
 }

@@ -29,6 +29,10 @@ function match(
     resultKind,
     winnerSide,
     games: [],
+    pairA: null,
+    pairB: null,
+    court: null,
+    version: 0,
   }
 }
 
