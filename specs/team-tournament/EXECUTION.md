@@ -32,7 +32,8 @@ Fresh review: not required
 - [x] `src/domain/scoring.ts` + `scoring.test.ts`: `gameRules` 15/21 for group and third place, 21/30 for final; win by two, one-point margin at cap; two game wins end the match (Acceptance review 5). Keep `isWinningScore`/`addPointToScore` until Phase 4
 - [x] `src/domain/team-fixtures.ts` + `team-fixtures.test.ts`: first to two match wins, walkovers count as wins, decider `eligible` only with both openers confirmed at 1–1, `unnecessary` at 2–0, no winner when a match is unresolved (Acceptance review 6, 10)
 - [x] `src/domain/progression.ts` + `progression.test.ts`: group winners → final, losers → third place; completion needs both placement outcomes; `correctionBlockCode` returns `'decider-started'` when a correction flips 1–1 with a started decider, `'placement-started'` when it changes advancement after either placement fixture starts (Acceptance review 7, 9)
-- [ ] Extend `impactBlockCodes` in `src/domain/impacts.ts` with `'decider-started'` and `'placement-started'` (old codes stay until Phase 4)
+- [x] Extend `impactBlockCodes` in `src/domain/impacts.ts` with `'decider-started'` and `'placement-started'` (old codes stay until Phase 4)
+- [x] `(amended 2026-09-17)` Add exhaustive Vietnamese messages for the new impact block codes in `src/i18n/vi.ts`, required by the existing `ImpactPreview` lookup
 
 **Phase gate (hard):**
 - [ ] `npm run typecheck`

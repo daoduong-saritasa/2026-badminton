@@ -6,6 +6,8 @@ export const impactBlockCodes = [
   'too-few-active-pairs',
   'invalid-match-state',
   'tournament-completed',
+  'decider-started',
+  'placement-started',
 ] as const
 
 export type ImpactBlockCode = (typeof impactBlockCodes)[number]

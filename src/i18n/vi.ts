@@ -367,6 +367,10 @@ export const messages = {
       'invalid-match-state':
         'Trạng thái trận đấu không cho phép ghi kết quả này. Trận đang ghi điểm trực tiếp cần được kết thúc trước.',
       'tournament-completed': 'Giải đấu đã kết thúc. Hãy mở lại giải trước khi sửa kết quả.',
+      'decider-started':
+        'Trận quyết định đã bắt đầu nên không thể sửa kết quả làm cho trận này không còn cần thiết.',
+      'placement-started':
+        'Trận tranh hạng đã bắt đầu nên không thể sửa kết quả làm thay đổi đội đi tiếp.',
     },
   },
 } as const
