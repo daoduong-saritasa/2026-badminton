@@ -16,8 +16,8 @@ export const messages = {
     checking: 'Đang kiểm tra…',
     toBeDecided: 'TBD',
     versus: (a: string, b: string) => `${a} - ${b}`,
-    awaitingQualifier: 'Chờ cặp thắng',
-    unknownPair: 'Cặp không xác định',
+    awaitingQualifier: 'Chờ đội thắng',
+    unknownPair: 'Đội không xác định',
     unknownPlayers: 'Không rõ người chơi',
     unknownMatch: 'Trận không xác định',
     court: (court: number) => `Sân ${formatNumber(court)}`,
@@ -103,13 +103,13 @@ export const messages = {
 
     tie: {
       heading: (group: string) => `Đồng hạng bảng ${group}`,
-      description: 'Hãy xếp thứ tự chính xác cho từng cặp còn đồng hạng và ghi lại lý do.',
+      description: 'Hãy xếp thứ tự chính xác cho từng đội còn đồng hạng và ghi lại lý do.',
       moveUp: 'Lên một bậc',
       moveDown: 'Xuống một bậc',
       explanation: 'Lý do quyết định',
       review: 'Xem trước thứ tự',
       confirmTitle: (group: string) => `Ghi lại thứ tự bảng ${group}?`,
-      confirmBody: 'Thứ tự này quyết định cặp nào đi tiếp khi xác nhận bảng xếp hạng.',
+      confirmBody: 'Thứ tự này quyết định đội nào đi tiếp khi xác nhận bảng xếp hạng.',
       back: 'Xem lại thứ tự',
       record: 'Ghi lại thứ tự',
     },
@@ -121,7 +121,7 @@ export const messages = {
 
     confirmGroups: {
       heading: 'Xác nhận bảng xếp hạng',
-      description: 'Hãy xử lý các trường hợp đồng hạng, rồi chốt các cặp vào bán kết.',
+      description: 'Hãy xử lý các trường hợp đồng hạng, rồi chốt các đội vào bán kết.',
       review: 'Xem trước xác nhận',
       unresolved: 'Cần ghi lại thứ tự cho mọi trường hợp đồng hạng trước khi xác nhận.',
     },
@@ -140,7 +140,7 @@ export const messages = {
       },
       confirmGroups: {
         title: 'Xác nhận bảng xếp hạng?',
-        description: 'Hai cặp đứng đầu mỗi bảng sẽ vào bán kết.',
+        description: 'Hai đội đứng đầu mỗi bảng sẽ vào bán kết.',
         confirm: 'Xác nhận',
       },
       reopen: {
@@ -153,30 +153,30 @@ export const messages = {
 
   setup: {
     heading: 'Người chơi và bảng đấu',
-    description: 'Từ 4 đến 10 cặp, chia đều cho bảng A và bảng B.',
+    description: 'Từ 4 đến 10 đội, chia đều cho bảng A và bảng B.',
     lockedTitle: 'Thiết lập đã khoá',
     lockedBody: 'Không đổi được người chơi và bảng sau khi giải bắt đầu.',
     seedAdvisoryTitle: 'Lưu ý về hạt giống',
     seedAdvisory: (count: number) =>
-      `${formatNumber(count)} cặp có hai người cùng hạt giống. Vẫn có thể lưu.`,
+      `${formatNumber(count)} đội có hai người cùng hạt giống. Vẫn có thể lưu.`,
     tournamentName: 'Tên giải đấu',
     courts: 'Số sân',
     selectCourts: 'Chọn số sân',
     courtOption: (count: number) => `${formatNumber(count)} sân`,
     courtsHint: 'Hãy chọn trước khi tạo lịch thi đấu.',
-    pairLegend: (index: number) => `Cặp ${formatNumber(index)}`,
-    removePair: (index: number) => `Xoá cặp ${formatNumber(index)}`,
-    teamNameLabel: (index: number) => `Tên đội của cặp ${formatNumber(index)}`,
+    pairLegend: (index: number) => `Đội ${formatNumber(index)}`,
+    removePair: (index: number) => `Xoá đội ${formatNumber(index)}`,
+    teamNameLabel: (index: number) => `Tên của đội ${formatNumber(index)}`,
     teamNamePlaceholder: 'Tên đội (không bắt buộc)',
-    groupFor: (index: number) => `Bảng của cặp ${formatNumber(index)}`,
+    groupFor: (index: number) => `Bảng của đội ${formatNumber(index)}`,
     playerLabel: (pair: number, player: number) =>
-      `Cặp ${formatNumber(pair)} người chơi ${formatNumber(player)}`,
+      `Đội ${formatNumber(pair)} người chơi ${formatNumber(player)}`,
     playerPlaceholder: (player: number) => `Người chơi ${formatNumber(player)}`,
     seedFor: (pair: number, player: number) =>
-      `Hạt giống của cặp ${formatNumber(pair)} người chơi ${formatNumber(player)}`,
+      `Hạt giống của đội ${formatNumber(pair)} người chơi ${formatNumber(player)}`,
     seedOption: (seed: number) => `Hạt giống ${formatNumber(seed)}`,
-    groupsInvalid: 'Bảng A và bảng B phải bằng nhau, hoặc lệch nhau đúng một cặp nếu tổng số lẻ.',
-    addPair: 'Thêm cặp',
+    groupsInvalid: 'Bảng A và bảng B phải bằng nhau, hoặc lệch nhau đúng một đội nếu tổng số lẻ.',
+    addPair: 'Thêm đội',
     save: 'Lưu thiết lập',
     confirmTitle: 'Thay thế thiết lập và lịch thi đấu?',
     confirmBody: 'Toàn bộ thiết lập hiện tại và các trận chưa bắt đầu sẽ được tạo lại theo biểu mẫu này.',
@@ -196,7 +196,7 @@ export const messages = {
     retry: 'Thử lại',
     takeOverScoring: 'Nhận quyền ghi điểm',
     addPoint: (pair: string) => `Cộng một điểm cho ${pair}`,
-    qualifier: 'Cặp thắng',
+    qualifier: 'Đội thắng',
     confirmTitle: 'Kết thúc trận với tỉ số này?',
     confirmBody: (a: number, b: number) =>
       `Tỉ số ${formatNumber(a)}–${formatNumber(b)}. Đóng thông báo này nếu cần hoàn tác điểm cuối.`,
@@ -270,7 +270,7 @@ export const messages = {
 
   publicView: {
     awaitingConfirmationTitle: 'Chờ xác nhận bảng xếp hạng',
-    awaitingConfirmationBody: 'Ban tổ chức cần xử lý đồng hạng và xác nhận các cặp vào bán kết.',
+    awaitingConfirmationBody: 'Ban tổ chức cần xử lý đồng hạng và xác nhận các đội vào bán kết.',
     playingNow: 'Đang thi đấu',
     upcomingOrder: 'Thứ tự sắp tới',
     recentResults: 'Kết quả gần đây',
@@ -282,24 +282,24 @@ export const messages = {
 
   bracket: {
     heading: 'Vòng loại trực tiếp',
-    description: 'Hai cặp thắng bán kết gặp nhau ở chung kết.',
+    description: 'Hai đội thắng bán kết gặp nhau ở chung kết.',
     awaitingStandings: 'Chờ xác nhận bảng xếp hạng',
     active: 'Đang thi đấu',
     semifinals: 'Bán kết',
     semifinalCount: (count: number) => `${formatNumber(count)} trận`,
     finalHeading: 'Chung kết',
-    finalPairs: (count: number) => `${formatNumber(count)} cặp`,
+    finalPairs: (count: number) => `${formatNumber(count)} đội`,
     semifinalNumber: (index: number) => `Bán kết ${formatNumber(index)}`,
     courtPending: 'Chưa xếp sân',
     championLabel: 'Vô địch',
     championshipMatch: 'Trận tranh vô địch',
-    winnerAdvances: 'Cặp thắng vào chung kết',
+    winnerAdvances: 'Đội thắng vào chung kết',
   },
 
   standings: {
     heading: 'Bảng xếp hạng',
-    description: 'Hai cặp đứng đầu mỗi bảng vào vòng loại trực tiếp.',
-    pair: 'Cặp',
+    description: 'Hai đội đứng đầu mỗi bảng vào vòng loại trực tiếp.',
+    pair: 'Đội',
     // Abbreviated to fit a 320px table; the full term is the accessible name.
     playedShort: 'Trận',
     played: 'Số trận đã đấu',
@@ -315,7 +315,7 @@ export const messages = {
       'Ghi kết quả cho trận đã đấu mà không ghi điểm trực tiếp, hoặc sửa kết quả đã ghi.',
     upcoming: 'Sắp đấu',
     completed: 'Đã kết thúc',
-    noUpcoming: 'Chưa có trận nào đủ hai cặp để ghi kết quả.',
+    noUpcoming: 'Chưa có trận nào đủ hai đội để ghi kết quả.',
     noCompleted: 'Chưa ghi kết quả nào.',
     enterResult: 'Ghi kết quả',
     correct: 'Sửa',
@@ -331,7 +331,7 @@ export const messages = {
     reviewBeforeConfirm: 'Xem lại những thay đổi trước khi xác nhận.',
     cannotApply: 'Không thể thực hiện thay đổi này.',
     confirmChange: 'Xác nhận thay đổi',
-    walkoverWinner: 'Cặp được xử thắng',
+    walkoverWinner: 'Đội được xử thắng',
     recordWalkover: 'Xử thắng',
     confirmWalkoverTitle: 'Xử thắng trận này?',
     walkoverConsequence: (pair: string) =>
@@ -342,13 +342,13 @@ export const messages = {
   withdrawals: {
     heading: 'Rút lui',
     description:
-      'Rút lui sẽ huỷ các trận vòng bảng của cặp đó và tính lại bảng xếp hạng. Hãy xem lại ảnh hưởng trước khi xác nhận.',
+      'Rút lui sẽ huỷ các trận vòng bảng của đội đó và tính lại bảng xếp hạng. Hãy xem lại ảnh hưởng trước khi xác nhận.',
     review: 'Xem trước',
     withdrawn: (names: string) => `Đã rút lui: ${names}`,
     confirmTitle: (pair: string) => `Cho ${pair} rút lui?`,
-    confirmTitleFallback: 'Cho cặp này rút lui?',
-    consequence: 'Các trận vòng bảng của cặp này sẽ bị huỷ và bảng xếp hạng được tính lại.',
-    cannotApply: 'Không thể cho cặp này rút lui.',
+    confirmTitleFallback: 'Cho đội này rút lui?',
+    consequence: 'Các trận vòng bảng của đội này sẽ bị huỷ và bảng xếp hạng được tính lại.',
+    cannotApply: 'Không thể cho đội này rút lui.',
     confirm: 'Xác nhận rút lui',
   },
 
@@ -360,10 +360,10 @@ export const messages = {
     confirmationsLost: (groups: string) => `${groups} cần được xác nhận lại.`,
     blocked: {
       'knockouts-started':
-        'Vòng loại trực tiếp đã bắt đầu nên không sửa được kết quả vòng bảng, kể cả khi cặp thắng không đổi. Hãy xử thắng cho trận bị ảnh hưởng.',
-      'final-started': 'Trận chung kết đã phụ thuộc vào trận bán kết này nên không đổi được cặp thắng.',
+        'Vòng loại trực tiếp đã bắt đầu nên không sửa được kết quả vòng bảng, kể cả khi đội thắng không đổi. Hãy xử thắng cho trận bị ảnh hưởng.',
+      'final-started': 'Trận chung kết đã phụ thuộc vào trận bán kết này nên không đổi được đội thắng.',
       'too-few-active-pairs':
-        'Mỗi bảng phải còn ít nhất hai cặp thi đấu. Hãy xử thắng cho những trận cặp này không đấu được, thay vì cho rút lui.',
+        'Mỗi bảng phải còn ít nhất hai đội thi đấu. Hãy xử thắng cho những trận đội này không đấu được, thay vì cho rút lui.',
       'invalid-match-state':
         'Trạng thái trận đấu không cho phép ghi kết quả này. Trận đang ghi điểm trực tiếp cần được kết thúc trước.',
       'tournament-completed': 'Giải đấu đã kết thúc. Hãy mở lại giải trước khi sửa kết quả.',

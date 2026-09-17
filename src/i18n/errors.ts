@@ -20,12 +20,12 @@ const serverMessages: Record<string, string> = {
   // Setup
   'Tournament is not configured': 'Chưa có giải đấu nào được thiết lập.',
   'Invalid setup payload': 'Thông tin thiết lập không hợp lệ.',
-  'Invalid pair in setup': 'Có cặp không hợp lệ trong thiết lập.',
+  'Invalid pair in setup': 'Có đội không hợp lệ trong thiết lập.',
   'Setup requires 4 to 10 pairs split evenly between groups':
-    'Cần 4 đến 10 cặp, chia đều cho hai bảng.',
-  'Setup requires groups sized 3+3, 4+3, or 4+4': 'Hai bảng phải có 3+3, 4+3 hoặc 4+4 cặp.',
+    'Cần 4 đến 10 đội, chia đều cho hai bảng.',
+  'Setup requires groups sized 3+3, 4+3, or 4+4': 'Hai bảng phải có 3+3, 4+3 hoặc 4+4 đội.',
   'Setup is locked after play starts': 'Không thể sửa thiết lập sau khi giải đã bắt đầu.',
-  'A player can belong to only one pair': 'Mỗi người chỉ thuộc một cặp.',
+  'A player can belong to only one pair': 'Mỗi người chỉ thuộc một đội.',
   'Court count must be one or two': 'Chỉ có thể chọn một hoặc hai sân.',
   'Select one or two courts before generating fixtures': 'Hãy chọn số sân trước khi tạo lịch thi đấu.',
 
@@ -35,7 +35,7 @@ const serverMessages: Record<string, string> = {
   'Invalid court assignment': 'Phân sân không hợp lệ.',
   'Only unstarted matches can be assigned': 'Chỉ xếp được sân cho trận chưa bắt đầu.',
   'Court 2 has an active match': 'Sân 2 đang có trận. Hãy kết thúc trận đó trước khi bỏ sân.',
-  'Court or pair is already playing': 'Sân hoặc cặp này đang thi đấu.',
+  'Court or pair is already playing': 'Sân hoặc đội này đang thi đấu.',
 
   // Scoring
   'Match is not ready to start': 'Trận đấu chưa sẵn sàng để bắt đầu.',
@@ -51,26 +51,26 @@ const serverMessages: Record<string, string> = {
   'Match not found': 'Không tìm thấy trận đấu.',
   'Match state does not allow this result': 'Trạng thái trận đấu không cho phép ghi kết quả này.',
   'Invalid completed score': 'Tỉ số không hợp lệ. Thắng cách 2 điểm từ 21, tối đa 30.',
-  'Walkover winner must be a participant': 'Cặp được xử thắng phải là một trong hai cặp thi đấu.',
+  'Walkover winner must be a participant': 'Đội được xử thắng phải là một trong hai đội thi đấu.',
   'Knockout play already depends on group participants':
-    'Vòng loại trực tiếp đã bắt đầu nên không sửa được kết quả vòng bảng, kể cả khi cặp thắng không đổi.',
+    'Vòng loại trực tiếp đã bắt đầu nên không sửa được kết quả vòng bảng, kể cả khi đội thắng không đổi.',
   'Final play already depends on this semifinal':
-    'Trận chung kết đã phụ thuộc vào trận bán kết này nên không đổi được cặp thắng.',
+    'Trận chung kết đã phụ thuộc vào trận bán kết này nên không đổi được đội thắng.',
 
   // Withdrawals and ties
-  'Active pair not found': 'Không tìm thấy cặp đang thi đấu.',
+  'Active pair not found': 'Không tìm thấy đội đang thi đấu.',
   'Pair cannot withdraw after knockout play starts':
-    'Không thể rút lui sau khi vòng loại trực tiếp bắt đầu. Hãy xử thắng cho trận cặp này không thi đấu được.',
+    'Không thể rút lui sau khi vòng loại trực tiếp bắt đầu. Hãy xử thắng cho trận đội này không thi đấu được.',
   'Each group must retain at least two active pairs':
-    'Mỗi bảng phải còn ít nhất hai cặp thi đấu.',
+    'Mỗi bảng phải còn ít nhất hai đội thi đấu.',
   'All active group matches must be completed': 'Cần hoàn tất các trận vòng bảng trước.',
   'All active group matches must be completed before resolving a tie':
     'Cần hoàn tất các trận vòng bảng trước khi xử lý đồng hạng.',
   'Ties can only be resolved during the group stage': 'Chỉ xử lý đồng hạng trong vòng bảng.',
   'Invalid tie resolution': 'Thứ tự xử lý đồng hạng không hợp lệ.',
   'Tie order must contain exactly the unresolved group pairs':
-    'Thứ tự phải gồm đúng các cặp đang đồng hạng.',
-  'Residual ties require an exact recorded order': 'Cần ghi rõ thứ tự cho các cặp còn đồng hạng.',
+    'Thứ tự phải gồm đúng các đội đang đồng hạng.',
+  'Residual ties require an exact recorded order': 'Cần ghi rõ thứ tự cho các đội còn đồng hạng.',
   'Only a completed tournament can be reopened': 'Chỉ mở lại được giải đã kết thúc.',
 
   // Staff access

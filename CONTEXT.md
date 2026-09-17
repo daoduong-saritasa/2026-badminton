@@ -6,8 +6,9 @@ The interface is written in Vietnamese, so each term carries the Vietnamese word
 the interface uses. Never translate a player, pair, or tournament name that
 someone entered.
 
-**Pair** (_Cặp_):
-Two players who compete together. _Avoid_: "team", and the longer "cặp đôi".
+**Pair** (_Đội_):
+Two players who compete together. _Avoid_: "team" in English, and "cặp" or
+"cặp đôi" in Vietnamese.
 
 **Group** (_Bảng_):
 A pool of doubles pairs that play one another in the group stage. The tournament

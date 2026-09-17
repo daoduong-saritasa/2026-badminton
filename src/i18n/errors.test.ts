@@ -12,12 +12,12 @@ describe('errorMessage', () => {
     expect(errorMessage(new Error('Pair cannot withdraw after knockout play starts')))
       .toContain('xử thắng')
     expect(errorMessage(new Error('Each group must retain at least two active pairs')))
-      .toBe('Mỗi bảng phải còn ít nhất hai cặp thi đấu.')
+      .toBe('Mỗi bảng phải còn ít nhất hai đội thi đấu.')
   })
 
   it('states that a same-winner group correction is also blocked', () => {
     expect(errorMessage(new Error('Knockout play already depends on group participants')))
-      .toContain('kể cả khi cặp thắng không đổi')
+      .toContain('kể cả khi đội thắng không đổi')
   })
 
   it('accepts a plain string and a PostgREST-shaped object', () => {
