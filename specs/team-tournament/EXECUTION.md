@@ -10,12 +10,12 @@ court-count setting removed.
 
 ## STATUS
 
-- Current phase: 2 — in-progress
+- Current phase: 2 — done-with-debt
 - Phase 1 — Domain rules: done
-- Phase 2 — Staff roles: in-progress
+- Phase 2 — Staff roles: done-with-debt
 - Phase 3 — Team tournament schema: pending
 - Phase 4 — Client replacement: pending
-- Verification debt: none
+- Verification debt: Phase 2 integration gate is environment-blocked because the OrbStack Docker socket is absent; 3 non-database tests passed, 4 integration suites failed in setup, and 51 scenarios were skipped on 2026-09-17.
 
 ## Phase 1 — Domain rules
 
@@ -67,8 +67,8 @@ Fresh review: required — authentication/authorization and a persistent-data mi
 - [x] `(amended 2026-09-17)` Document the maintenance-window rollout boundary for the migration, both Edge Functions, the frontend, PIN provisioning, and tab refresh
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npm run test:related -- <changed files>` (integration suites fail at setup without local Supabase; report the skip count, never as a pass)
+- [x] `npm run typecheck`
+- [~] `npm run test:related -- <changed files>` — environment-blocked: missing `/Users/thomasduong/.orbstack/run/docker.sock`; 3 tests passed, 4 integration suites failed in setup, 51 scenarios skipped (integration suites fail at setup without local Supabase; report the skip count, never as a pass)
 
 **Review checklist (user, at PR review):**
 - [ ] Sign in with the referee PIN: organizer controls absent, scoring available
