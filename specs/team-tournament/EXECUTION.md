@@ -10,12 +10,12 @@ court-count setting removed.
 
 ## STATUS
 
-- Current phase: 3 — in-progress
+- Current phase: 3 — done-with-debt
 - Phase 1 — Domain rules: done
 - Phase 2 — Staff roles: done-with-debt
-- Phase 3 — Team tournament schema: in-progress
+- Phase 3 — Team tournament schema: done-with-debt
 - Phase 4 — Client replacement: pending
-- Verification debt: Phase 2 integration gate is environment-blocked because the OrbStack Docker socket is absent; 3 non-database tests passed, 4 integration suites failed in setup, and 51 scenarios were skipped on 2026-09-17.
+- Verification debt: Phase 2 integration gate is environment-blocked because the OrbStack Docker socket is absent; 3 non-database tests passed, 4 integration suites failed in setup, and 51 scenarios were skipped on 2026-09-17. Phase 3 has the same environment block; 48 non-database tests passed, 4 integration suites failed in setup, and 27 scenarios were skipped on 2026-09-17.
 
 ## Phase 1 — Domain rules
 
@@ -105,8 +105,8 @@ Fresh review: required — persistent-data migration and authorization on every 
 - [x] `(amended 2026-09-17)` Apply the 1–1 opener eligibility rule to match-3 walkovers and cover premature walkovers
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npm run test:related -- <changed files>` (integration suites fail at setup without local Supabase; report the skip count, never as a pass)
+- [x] `npm run typecheck`
+- [~] `npm run test:related -- <changed files>` — environment-blocked: missing `/Users/thomasduong/.orbstack/run/docker.sock`; 48 non-database tests passed, 4 integration suites failed in setup, and 27 scenarios were skipped
 
 **Review checklist (user, at PR review):**
 - [ ] Confirm Reset all ran on the target database before applying the migration
