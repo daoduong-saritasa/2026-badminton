@@ -1,79 +1,45 @@
-import type { Group, TournamentSnapshot } from '@/domain/types'
-import { calculateStandings } from '@/domain/standings'
-import { formatNumber } from '@/i18n/format'
+import { finalPositions } from '@/domain/progression'
+import type { TournamentSnapshot } from '@/domain/types'
 import { messages } from '@/i18n/vi'
-import { cn } from '@/lib/utils'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
 
-import { groupTone, pairName, pairPlayers, pairTeamName } from './MatchTicket'
+import { FixtureCard } from './FixtureCard'
+import { teamName } from './labels'
 
-function GroupTable({ group, snapshot }: { group: Group; snapshot: TournamentSnapshot }) {
-  const standings = calculateStandings(snapshot, group)
+export function FinalPositions({ snapshot }: { snapshot: TournamentSnapshot }) {
+  const positions = finalPositions(snapshot.fixtures, snapshot.matches)
+  if (positions === null) return null
   return (
     <section className="rounded-card border border-line bg-white p-6">
-      <h3 className="mb-4 flex items-center gap-2.5 text-[0.9375rem] font-semibold">
-        <span className={cn('grid size-[1.625rem] place-items-center rounded-chip text-[0.625rem] font-bold', groupTone(group))}>{group}</span>
-        {messages.common.group(group)}
-      </h3>
-      {/* Pulled out by the cell padding so the text still lines up with the
-          heading, while a highlighted row extends past it on both sides. */}
-      <div className="-mx-4">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>{messages.standings.pair}</TableHead>
-              <TableHead className="text-right"><abbr className="no-underline" title={messages.standings.played}>{messages.standings.playedShort}</abbr></TableHead>
-              <TableHead className="text-right"><abbr className="no-underline" title={messages.standings.wins}>{messages.standings.winsShort}</abbr></TableHead>
-              <TableHead className="text-right"><abbr className="no-underline" title={messages.standings.difference}>{messages.standings.differenceShort}</abbr></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {standings.map((standing) => (
-              <TableRow
-                className={cn(
-                  standing.rank !== null && standing.rank <= 2
-                    && 'bg-navy/5',
-                )}
-                key={standing.pairId}
-              >
-                <TableCell className="max-w-44 font-medium">
-                  <span>{pairName(snapshot, standing.pairId)}</span>
-                  {pairTeamName(snapshot, standing.pairId) ? (
-                    <span className="mt-1 block truncate text-[0.625rem] font-normal text-muted-ink">
-                      {pairPlayers(snapshot, standing.pairId)}
-                    </span>
-                  ) : null}
-                </TableCell>
-                <TableCell className="numeric text-right">{formatNumber(standing.played)}</TableCell>
-                <TableCell className="numeric text-right">{formatNumber(standing.wins)}</TableCell>
-                <TableCell className="numeric text-right">{formatNumber(standing.pointDifference)}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      <h3 className="mb-4 text-[0.9375rem] font-semibold">{messages.fixtures.positionsHeading}</h3>
+      <ol className="space-y-2">
+        {positions.map((teamId, index) => (
+          <li className="grid grid-cols-[4.5rem_minmax(0,1fr)] gap-3 text-[0.8125rem]" key={teamId}>
+            <span className="text-muted-ink">{messages.fixtures.position(index + 1)}</span>
+            <span className="font-medium [overflow-wrap:anywhere]">{teamName(snapshot, teamId)}</span>
+          </li>
+        ))}
+      </ol>
     </section>
   )
 }
 
 export function StandingsTable({ snapshot }: { snapshot: TournamentSnapshot }) {
   return (
-    <section className="view-enter">
-      <div className="mb-5">
-        <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.standings.heading}</h2>
-        <p className="mt-2 text-xs text-muted-ink">{messages.standings.description}</p>
+    <section className="view-enter space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.fixtures.groupHeading}</h2>
+        <p className="mt-2 text-xs text-muted-ink">{messages.fixtures.groupDescription}</p>
       </div>
       <div className="grid gap-6 md:grid-cols-2">
-        <GroupTable group="A" snapshot={snapshot} />
-        <GroupTable group="B" snapshot={snapshot} />
+        {(['A', 'B'] as const).map((group) => (
+          <FixtureCard
+            key={group}
+            snapshot={snapshot}
+            fixture={snapshot.fixtures.find((fixture) => fixture.stage === 'group' && fixture.group === group)}
+          />
+        ))}
       </div>
+      <FinalPositions snapshot={snapshot} />
     </section>
   )
 }
