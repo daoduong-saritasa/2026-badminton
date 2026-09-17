@@ -29,9 +29,9 @@ function GroupTable({ group, snapshot }: { group: Group; snapshot: TournamentSna
           <TableHeader>
             <TableRow>
               <TableHead>{messages.standings.pair}</TableHead>
-              <TableHead className="text-right"><abbr title={messages.standings.played}>{messages.standings.playedShort}</abbr></TableHead>
-              <TableHead className="text-right"><abbr title={messages.standings.wins}>{messages.standings.winsShort}</abbr></TableHead>
-              <TableHead className="text-right"><abbr title={messages.standings.difference}>{messages.standings.differenceShort}</abbr></TableHead>
+              <TableHead className="text-right"><abbr className="no-underline" title={messages.standings.played}>{messages.standings.playedShort}</abbr></TableHead>
+              <TableHead className="text-right"><abbr className="no-underline" title={messages.standings.wins}>{messages.standings.winsShort}</abbr></TableHead>
+              <TableHead className="text-right"><abbr className="no-underline" title={messages.standings.difference}>{messages.standings.differenceShort}</abbr></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
