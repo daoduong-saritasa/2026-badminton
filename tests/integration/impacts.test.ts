@@ -124,6 +124,34 @@ describe('team result impacts', () => {
     expect(await preview.json()).toMatchObject({ blockedReason: 'decider-started', after: null })
   })
 
+  it('reopens the decider and removes stale placements when correction restores 1-1', async () => {
+    const organizer = await signInAnonymously()
+    await elevate(organizer)
+    const seeded = seedFixture({ secondWinner: 'a' })
+    const placementFixture = crypto.randomUUID()
+    runSql(`
+      update public.matches set state = 'unnecessary' where id = '${seeded.deciderId}';
+      insert into public.team_fixtures (id, tournament_id, stage)
+      values ('${placementFixture}', '${seeded.tournamentId}', 'final');
+      update public.tournament set stage = 'knockouts' where singleton;
+    `)
+    const previewResponse = await rpc(
+      'preview_result_correction',
+      mutation(0, correctionPayload(seeded.matchTwoId, 'b')),
+      organizer,
+    )
+    const preview = (await previewResponse.json()) as Impact
+    expect(preview.blockedReason).toBeNull()
+    const correction = await rpc(
+      'correct_result',
+      mutation(0, correctionPayload(seeded.matchTwoId, 'b', preview.tournamentVersion)),
+      organizer,
+    )
+    expect(correction.ok).toBe(true)
+    expect(runSql(`select state from public.matches where id = '${seeded.deciderId}';`)).toBe('unstarted')
+    expect(runSql("select count(*) from public.team_fixtures where stage <> 'group';")).toBe('0')
+  })
+
   it('blocks changed advancement after a placement match starts', async () => {
     const organizer = await signInAnonymously()
     await elevate(organizer)

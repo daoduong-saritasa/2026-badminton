@@ -343,7 +343,7 @@ begin
     return false;
   end if;
   if winner = cap then
-    return loser = cap - 1;
+    return loser = cap - 1 or winner - loser = 2;
   end if;
   if winner = target then
     return loser <= target - 2;
@@ -466,10 +466,6 @@ begin
 
   winner_a := private.fixture_winner_team_id(group_a.id);
   winner_b := private.fixture_winner_team_id(group_b.id);
-  if winner_a is null or winner_b is null then return; end if;
-  loser_a := case when winner_a = group_a.team_a_id then group_a.team_b_id else group_a.team_a_id end;
-  loser_b := case when winner_b = group_b.team_a_id then group_b.team_b_id else group_b.team_a_id end;
-
   select exists (
     select 1 from public.matches as match
     join public.team_fixtures as fixture on fixture.id = match.fixture_id
@@ -479,6 +475,17 @@ begin
   ) into placement_started;
 
   if placement_started then return; end if;
+
+  if winner_a is null or winner_b is null then
+    delete from public.team_fixtures
+    where tournament_id = target_tournament_id and stage <> 'group';
+    update public.tournament
+    set stage = 'groups', updated_at = clock_timestamp()
+    where id = target_tournament_id and stage = 'knockouts';
+    return;
+  end if;
+  loser_a := case when winner_a = group_a.team_a_id then group_a.team_b_id else group_a.team_a_id end;
+  loser_b := case when winner_b = group_b.team_a_id then group_b.team_b_id else group_b.team_a_id end;
 
   delete from private.lineups as lineup
   using public.team_fixtures as placement
@@ -1053,13 +1060,20 @@ create or replace function private.team_mark_walkover(
   p_payload jsonb
 )
 returns jsonb language plpgsql security definer set search_path = '' as $$
-declare target_match public.matches%rowtype; side text := p_payload ->> 'winnerSide'; next_match_version integer; next_tournament_version integer;
+declare target_match public.matches%rowtype; side text := p_payload ->> 'winnerSide'; tally record; next_match_version integer; next_tournament_version integer;
 begin
   select * into strict target_match from public.matches where id = (p_payload ->> 'matchId')::uuid for update;
   if target_match.version <> p_expected_version then raise exception 'Match version conflict' using errcode = '40001'; end if;
   if target_match.state not in ('unstarted', 'playing') or side not in ('a', 'b')
     or exists (select 1 from public.match_games where match_id = target_match.id and (score_a <> 0 or score_b <> 0 or confirmed_at is not null)) then
     raise exception 'Walkover requires an unscored match and one winner' using errcode = '55000';
+  end if;
+  if target_match.match_number = 3 then
+    select * into tally from private.fixture_tally(target_match.fixture_id);
+    if tally.wins_a <> 1 or tally.wins_b <> 1
+      or (select count(*) from public.matches where fixture_id = target_match.fixture_id and match_number in (1, 2) and state = 'completed') <> 2 then
+      raise exception 'Decider is not eligible' using errcode = '55000';
+    end if;
   end if;
   delete from public.match_games where match_id = target_match.id;
   delete from private.match_ownership where match_id = target_match.id;
@@ -1151,6 +1165,7 @@ as $$
 declare
   target_match public.matches%rowtype;
   fixture_stage text;
+  fixture_tally record;
   game_data jsonb;
   game_number integer := 0;
   score_a integer;
@@ -1188,6 +1203,18 @@ begin
   set state = 'completed', result_kind = 'played', winner_side = p_winner_side,
       court = null, version = version + 1, updated_at = clock_timestamp()
   where id = target_match.id returning version into next_match_version;
+  if fixture_stage = 'group' then
+    select * into fixture_tally from private.fixture_tally(target_match.fixture_id);
+    if fixture_tally.wins_a = 1 and fixture_tally.wins_b = 1 then
+      update public.matches
+      set state = 'unstarted', version = version + 1, updated_at = clock_timestamp()
+      where fixture_id = target_match.fixture_id and match_number = 3 and state = 'unnecessary';
+    elsif greatest(fixture_tally.wins_a, fixture_tally.wins_b) >= 2 then
+      update public.matches
+      set state = 'unnecessary', court = null, version = version + 1, updated_at = clock_timestamp()
+      where fixture_id = target_match.fixture_id and match_number = 3 and state = 'unstarted';
+    end if;
+  end if;
   perform private.finish_fixture_if_decided(target_match.fixture_id);
   perform private.populate_placement_fixtures();
   return next_match_version;

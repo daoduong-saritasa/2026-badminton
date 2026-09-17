@@ -261,11 +261,20 @@ describe('team tournament commands', () => {
     await elevate(organizer)
     expect(runSql("select private.is_game_won(15, 14, 'group');")).toBe('f')
     expect(runSql("select private.is_game_won(21, 20, 'group');")).toBe('t')
+    expect(runSql("select private.is_game_won(21, 19, 'group');")).toBe('t')
     expect(runSql("select private.is_game_won(30, 29, 'final');")).toBe('t')
+    expect(runSql("select private.is_game_won(30, 28, 'final');")).toBe('t')
 
     const groups = await startGroups(organizer)
     const assigned = await assignCourt(organizer, groups.matches[0].id, 1)
     await callMutation('start_match', organizer, assigned.version, { matchId: assigned.id })
+    runSql(`update public.match_games set score_a = 21, score_b = 19 where match_id = '${assigned.id}'::uuid and confirmed_at is null;`)
+    const capped = (await snapshot(organizer)).matches.find((match) => match.id === assigned.id)
+    expect((await rpc('add_point', mutation(capped?.version ?? -1, {
+      matchId: assigned.id,
+      side: 'a',
+    }), organizer)).ok).toBe(false)
+    runSql(`update public.match_games set score_a = 0, score_b = 0 where match_id = '${assigned.id}'::uuid and confirmed_at is null;`)
     for (let gameNumber = 1; gameNumber <= 2; gameNumber += 1) {
       runSql(`update public.match_games set score_a = 15, score_b = 10 where match_id = '${assigned.id}'::uuid and confirmed_at is null;`)
       const playing = (await snapshot(organizer)).matches.find((match) => match.id === assigned.id)
@@ -285,6 +294,10 @@ describe('team tournament commands', () => {
     const [firstFixture, secondFixture] = groups.fixtures.filter((fixture) => fixture.stage === 'group')
     const firstMatches = groups.matches.filter((match) => match.fixture_id === firstFixture.id)
     const secondMatches = groups.matches.filter((match) => match.fixture_id === secondFixture.id)
+    expect((await rpc('mark_walkover', mutation(firstMatches[2].version, {
+      matchId: firstMatches[2].id,
+      winnerSide: 'a',
+    }), organizer)).ok).toBe(false)
     await walkover(organizer, firstMatches[0].id, 'a')
     await walkover(organizer, firstMatches[1].id, 'b')
     const assigned = await assignCourt(organizer, firstMatches[2].id, 1)

@@ -100,6 +100,9 @@ Fresh review: required — persistent-data migration and authorization on every 
 - [x] `public.reset_tournament` clears the new tables and handovers and no longer reads `court_count`; `scripts/reset-tournament.ts` unchanged unless its table list diverges
 - [x] Rewrite `tests/integration/tournament.test.ts`, `impacts.test.ts`, `reset.test.ts` for the team format, covering Acceptance review 1–12 server-side; removed pair/withdrawal/tie scenarios are replaced, not skipped — list removed scenario names in the PR description
 - [x] `(amended 2026-09-17)` Update `tests/integration/local-supabase.ts` reset tables and `auth.test.ts` authorization probes for the replacement RPC surface
+- [x] `(amended 2026-09-17)` Accept reachable two-point cap wins in `src/domain/scoring.ts` and `private.is_game_won`, with unit and integration coverage for 21–19 and 30–28
+- [x] `(amended 2026-09-17)` Reopen a corrected 1–1 decider and remove stale unstarted placement fixtures/lineups when advancement becomes incomplete
+- [x] `(amended 2026-09-17)` Apply the 1–1 opener eligibility rule to match-3 walkovers and cover premature walkovers
 
 **Phase gate (hard):**
 - [ ] `npm run typecheck`

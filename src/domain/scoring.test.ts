@@ -84,11 +84,14 @@ describe('team tournament game rules', () => {
     ['group', { a: 15, b: 14 }, false],
     ['group', { a: 20, b: 19 }, false],
     ['group', { a: 21, b: 20 }, true],
+    ['group', { a: 21, b: 19 }, true],
     ['third-place', { a: 21, b: 20 }, true],
+    ['third-place', { a: 21, b: 19 }, true],
     ['final', { a: 21, b: 19 }, true],
     ['final', { a: 21, b: 20 }, false],
     ['final', { a: 29, b: 28 }, false],
     ['final', { a: 30, b: 29 }, true],
+    ['final', { a: 30, b: 28 }, true],
   ] as const)('validates %s score %o as %s', (stage, score, expected) => {
     expect(isGameWon(score, stage)).toBe(expected)
     expect(isGameWon(reverse(score), stage)).toBe(expected)

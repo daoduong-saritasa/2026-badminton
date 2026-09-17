@@ -68,7 +68,7 @@ export function isGameWon(score: Score, stage: FixtureStage): boolean {
   const loser = Math.min(a, b)
 
   if (winner === cap) {
-    return loser === cap - 1
+    return loser === cap - 1 || winner - loser === 2
   }
 
   if (winner === target) {
