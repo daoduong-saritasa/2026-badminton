@@ -10,12 +10,12 @@ court-count setting removed.
 
 ## STATUS
 
-- Current phase: 4 — in-progress
+- Current phase: 4 — done-with-debt
 - Phase 1 — Domain rules: done
 - Phase 2 — Staff roles: done-with-debt
 - Phase 3 — Team tournament schema: done-with-debt
-- Phase 4 — Client replacement: in-progress
-- Verification debt: Phase 2 integration gate is environment-blocked because the OrbStack Docker socket is absent; 3 non-database tests passed, 4 integration suites failed in setup, and 51 scenarios were skipped on 2026-09-17. Phase 3 has the same environment block; 48 non-database tests passed, 4 integration suites failed in setup, and 27 scenarios were skipped on 2026-09-17.
+- Phase 4 — Client replacement: done-with-debt
+- Verification debt: Phase 2 integration gate is environment-blocked because the OrbStack Docker socket is absent; 3 non-database tests passed, 4 integration suites failed in setup, and 51 scenarios were skipped on 2026-09-17. Phase 3 has the same environment block; 48 non-database tests passed, 4 integration suites failed in setup, and 27 scenarios were skipped on 2026-09-17. Spec gate `npm run test` has the same environment block: 87 tests passed, 4 integration suites failed in setup, and 27 scenarios were skipped on 2026-09-17; Phase 4's own phase gate selected no integration suite and passed.
 
 ## Phase 1 — Domain rules
 
@@ -139,8 +139,8 @@ Fresh review: not required
 - [x] `(amended 2026-09-17)` Move `correctedMatchWinner` into `src/domain/scoring.ts` (+ tests) and shared display helpers into `src/features/tournament/labels.ts`; referees start eligible matches from a match picker in `ScoreTracker.tsx`, because the old tracker only listed playing matches
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npm run test:related -- <changed files>`
+- [x] `npm run typecheck`
+- [x] `npm run test:related -- <changed files>` — 8 files, 72 tests passed, 0 skipped
 
 **Review checklist (user, at PR review):**
 - [ ] Organizer enters 4 teams; invalid seed split or duplicate player blocks group play
@@ -158,5 +158,5 @@ checklist goes into the PR description.
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] `npm run test` (integration suites fail at setup without local Supabase; report pass and skip counts, never as a pass)
-- [ ] `npm run build`
+- [~] `npm run test` (integration suites fail at setup without local Supabase; report pass and skip counts, never as a pass) — environment-blocked: missing `/Users/thomasduong/.orbstack/run/docker.sock`; 11 files and 87 tests passed, 4 integration suites failed in setup, 27 scenarios skipped
+- [x] `npm run build`
