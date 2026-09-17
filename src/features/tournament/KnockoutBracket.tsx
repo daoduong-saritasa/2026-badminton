@@ -120,7 +120,7 @@ export function KnockoutBracket({ snapshot }: { snapshot: TournamentSnapshot }) 
           ))}
         </div>
         {final ? (
-          <div className="relative before:absolute before:-left-[2.125rem] before:top-[calc(50%-4.25rem)] before:hidden before:h-34 before:w-[1.0625rem] before:rounded-r-chip before:border before:border-l-0 before:border-rule before:content-[''] after:absolute after:-left-[1.0625rem] after:top-1/2 after:hidden after:w-[1.0625rem] after:border-t after:border-rule after:content-[''] md:before:block md:after:block">
+          <div className="relative before:absolute before:-left-[2.6875rem] before:top-[calc(50%-4.25rem)] before:hidden before:h-34 before:w-[1.0625rem] before:rounded-r-chip before:border before:border-l-0 before:border-rule before:content-[''] after:absolute after:-left-[1.625rem] after:top-1/2 after:hidden after:w-[1.0625rem] after:border-t after:border-rule after:content-[''] md:before:block md:after:block">
             <h3 className="mb-4 flex items-center gap-2.5 text-xs font-semibold">
               {messages.bracket.finalHeading} <span className="font-normal text-muted-ink">{messages.bracket.finalPairs(2)}</span>
             </h3>
