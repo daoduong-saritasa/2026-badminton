@@ -138,6 +138,7 @@ Fresh review: required — upgraded 2026-09-17: the phase diff now edits the per
 - [x] `src/i18n/vi.ts`, `src/i18n/errors.ts` (+ `errors.test.ts`): Đội, Cặp, Cuộc đối đầu, Trận, Ván, Trọng tài copy and new block/error codes per `CONTEXT.md`
 - [x] `(amended 2026-09-17)` Move `correctedMatchWinner` into `src/domain/scoring.ts` (+ tests) and shared display helpers into `src/features/tournament/labels.ts`; referees start eligible matches from a match picker in `ScoreTracker.tsx`, because the old tracker only listed playing matches
 - [x] `(amended 2026-09-17)` Drop legacy `private.require_match_version(uuid, integer)` in `supabase/migrations/202609170002_team_tournament.sql`; its `public.matches` return type blocked `drop table public.matches` on the remote push, which rolled back
+- [x] `(amended 2026-09-17)` Add `supabase/migrations/202609170003_fix_save_roster_team_variable.sql`: rename the `team_id` variable in `private.team_save_roster`, which made the players delete ambiguous (42702) on every roster save
 
 **Phase gate (hard):**
 - [x] `npm run typecheck`
