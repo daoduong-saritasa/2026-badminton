@@ -70,7 +70,7 @@ export const messages = {
       empty: 'Chưa có trận nào chờ xếp sân.',
       courtFor: (match: string) => `Sân cho ${match}`,
       noCourt: 'Chưa xếp sân',
-      review: 'Xem trước thay đổi sân',
+      review: 'Công bố xếp sân',
       confirmTitle: 'Công bố xếp sân mới?',
       confirmBody: 'Lịch thi đấu công khai sẽ thay đổi ngay.',
       keep: 'Giữ xếp sân hiện tại',
@@ -248,7 +248,7 @@ export const messages = {
       referee: 'Mọi quyền trọng tài khác sẽ bị thu hồi ngay.',
     },
     newPinLabel: 'Mã PIN mới',
-    reviewRotation: 'Xem trước thay đổi',
+    reviewRotation: 'Đổi mã PIN…',
     confirmRotateTitle: {
       organizer: 'Đổi mã PIN điều hành?',
       referee: 'Đổi mã PIN trọng tài?',
@@ -307,7 +307,7 @@ export const messages = {
     removeGame: 'Bỏ ván 3',
     scoreHint: (target: number, cap: number) =>
       `Mỗi ván chạm ${formatNumber(target)}, cách 2 điểm, tối đa ${formatNumber(cap)}. Cặp thắng hai ván thắng trận.`,
-    reviewCorrection: 'Xem trước thay đổi',
+    reviewCorrection: 'Kiểm tra ảnh hưởng',
     confirmCorrectionTitle: 'Sửa kết quả này?',
     reviewBeforeConfirm: 'Xem lại những thay đổi trước khi xác nhận.',
     cannotApply: 'Không thể thực hiện thay đổi này.',
