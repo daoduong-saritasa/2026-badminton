@@ -14,7 +14,7 @@ court-count setting removed.
 - Phase 1 — Domain rules: done
 - Phase 2 — Staff roles: done-with-debt
 - Phase 3 — Team tournament schema: done-with-debt
-- Phase 4 — Client replacement: done-with-debt
+- Phase 4 — Client replacement: done-with-debt; required fresh review skipped at the user's direction on 2026-09-17 before opening the PR
 - Verification debt: Phase 2 integration gate is environment-blocked because the OrbStack Docker socket is absent; 3 non-database tests passed, 4 integration suites failed in setup, and 51 scenarios were skipped on 2026-09-17. Phase 3 has the same environment block; 48 non-database tests passed, 4 integration suites failed in setup, and 27 scenarios were skipped on 2026-09-17. Spec gate `npm run test` has the same environment block: 87 tests passed, 4 integration suites failed in setup, and 27 scenarios were skipped on 2026-09-17; Phase 4's own phase gate selected no integration suite and passed.
 
 ## Phase 1 — Domain rules
