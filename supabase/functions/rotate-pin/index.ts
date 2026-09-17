@@ -1,7 +1,7 @@
 import {
   corsHeaders,
   jsonResponse,
-  parsePin,
+  parsePinRotation,
   serviceRpc,
   verifyIdentity,
 } from '../_shared/server.ts'
@@ -16,20 +16,21 @@ Deno.serve(async (request) => {
   }
 
   const identity = await verifyIdentity(request)
-  const pin = await parsePin(request)
+  const rotation = await parsePinRotation(request)
 
   if (!identity) {
     return jsonResponse({ error: 'authentication_required' }, 401)
   }
 
-  if (!pin) {
-    return jsonResponse({ error: 'invalid_pin_format' }, 400)
+  if (!rotation) {
+    return jsonResponse({ error: 'invalid_role_or_pin_format' }, 400)
   }
 
   const rpcResponse = await serviceRpc('rotate_staff_pin_for_session', {
     p_session_id: identity.sessionId,
     p_user_id: identity.userId,
-    p_pin: pin,
+    p_role: rotation.role,
+    p_pin: rotation.pin,
   })
 
   if (!rpcResponse.ok) {

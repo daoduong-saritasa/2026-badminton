@@ -43,10 +43,6 @@ function defaultView(stage: TournamentStage): PublicView {
   return 'matches'
 }
 
-function isStaffView(view: AppView): view is StaffView {
-  return view === 'scoring' || view === 'organizer'
-}
-
 function LoadingScreen() {
   return (
     <main className="grid min-h-svh place-items-center px-6 text-center">
@@ -76,13 +72,13 @@ function ErrorScreen({ error, onRetry }: { error: Error; onRetry: () => void }) 
 }
 
 function SetupRequiredScreen({
-  isStaff,
+  isOrganizer,
   staffDialogOpen,
   onStaffDialogChange,
   onStaffGranted,
   resetGeneration,
 }: {
-  isStaff: boolean
+  isOrganizer: boolean
   staffDialogOpen: boolean
   onStaffDialogChange: (open: boolean) => void
   onStaffGranted: (access: StaffAccess) => void
@@ -95,7 +91,7 @@ function SetupRequiredScreen({
         <h1 className="mt-2 text-2xl font-extrabold tracking-tight"><span className="brand-mark" aria-hidden="true" />{messages.app.setupHeading}</h1>
         <p className="ml-[2.5625rem] mt-2 text-xs text-muted-ink">{messages.app.setupNote}</p>
       </header>
-      {isStaff ? (
+      {isOrganizer ? (
         <SetupForm snapshot={null} resetGeneration={resetGeneration} />
       ) : (
         <section className="rounded-card border border-ink/5 bg-white p-8 text-center shadow-card">
@@ -138,9 +134,10 @@ export default function App() {
 
   const staffAccess = staffQuery.data ?? null
   const isStaff = staffAccess !== null && Date.parse(staffAccess.expiresAt) > now
+  const isOrganizer = isStaff && staffAccess.role === 'organizer'
   const handleStaffGranted = (access: NonNullable<typeof staffAccess>) => {
     queryClient.setQueryData(staffQueryKey, access)
-    setSelectedView('organizer')
+    setSelectedView(access.role === 'organizer' ? 'organizer' : 'scoring')
   }
 
   useEffect(() => subscribeTournament((state) => {
@@ -173,7 +170,7 @@ export default function App() {
   if (snapshot === null) {
     return (
       <SetupRequiredScreen
-        isStaff={isStaff}
+        isOrganizer={isOrganizer}
         staffDialogOpen={staffDialogOpen}
         onStaffDialogChange={setStaffDialogOpen}
         onStaffGranted={handleStaffGranted}
@@ -181,13 +178,15 @@ export default function App() {
       />
     )
   }
-  const accessibleSelection = selectedView !== null && isStaffView(selectedView) && !isStaff
-    ? null
-    : selectedView
+  const accessibleSelection =
+    (selectedView === 'scoring' && !isStaff) ||
+    (selectedView === 'organizer' && !isOrganizer)
+      ? null
+      : selectedView
   const view = accessibleSelection ?? defaultView(snapshot.tournament.stage)
   const handleViewChange = (nextView: string) => setSelectedView(nextView as AppView)
   const handleStaffAction = () => {
-    if (isStaff) setSelectedView('organizer')
+    if (isStaff) setSelectedView(isOrganizer ? 'organizer' : 'scoring')
     else setStaffDialogOpen(true)
   }
   const handleSignedOut = () => {
@@ -202,12 +201,8 @@ export default function App() {
     { value: 'matches', label: messages.app.tabs.matches },
     { value: 'standings', label: messages.app.tabs.standings },
     { value: 'knockouts', label: messages.app.tabs.knockouts },
-    ...(isStaff
-      ? ([
-        { value: 'scoring', label: messages.app.tabs.scoring },
-        { value: 'organizer', label: messages.app.tabs.organizer },
-      ] as const)
-      : []),
+    ...(isStaff ? [{ value: 'scoring', label: messages.app.tabs.scoring } as const] : []),
+    ...(isOrganizer ? [{ value: 'organizer', label: messages.app.tabs.organizer } as const] : []),
   ]
 
   return (
@@ -223,7 +218,7 @@ export default function App() {
           </p>
         </div>
         {isStaff ? (
-          <StaffMenu onSignedOut={handleSignedOut} />
+          <StaffMenu role={staffAccess.role} onSignedOut={handleSignedOut} />
         ) : (
           <Button
             variant="outline"

@@ -246,7 +246,10 @@ export interface CourtAssignment {
   playingOrder: number
 }
 
+export type StaffRole = 'organizer' | 'referee'
+
 export interface StaffAccess {
   sessionId: UUID
   expiresAt: string
+  role: StaffRole
 }

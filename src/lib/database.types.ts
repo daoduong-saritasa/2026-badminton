@@ -222,7 +222,14 @@ export type Database = {
       }
       generate_fixtures: MutationFunction
       get_score_access: { Args: { p_match_id: string }; Returns: boolean }
-      get_staff_access: { Args: Record<PropertyKey, never>; Returns: Json }
+      get_staff_access: {
+        Args: Record<PropertyKey, never>
+        Returns: {
+          expiresAt: string
+          role: 'organizer' | 'referee'
+          sessionId: string
+        } | null
+      }
       get_tournament_snapshot: { Args: Record<PropertyKey, never>; Returns: Json }
       mark_walkover: MutationFunction
       preview_result_correction: {
@@ -237,7 +244,12 @@ export type Database = {
       resolve_tie: MutationFunction
       revoke_staff_access: { Args: Record<PropertyKey, never>; Returns: undefined }
       rotate_staff_pin_for_session: {
-        Args: { p_pin: string; p_session_id: string; p_user_id: string }
+        Args: {
+          p_pin: string
+          p_role: 'organizer' | 'referee'
+          p_session_id: string
+          p_user_id: string
+        }
         Returns: Json
       }
       save_setup: MutationFunction
