@@ -210,7 +210,7 @@ export function SetupForm({ snapshot, resetGeneration }: { snapshot: TournamentS
                   <Minus />
                 </Button>
               </div>
-              <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_7.5rem]">
+              <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_9rem]">
                 <Input
                   aria-label={messages.setup.teamNameLabel(pairIndex + 1)}
                   placeholder={messages.setup.teamNamePlaceholder}
@@ -236,7 +236,7 @@ export function SetupForm({ snapshot, resetGeneration }: { snapshot: TournamentS
                 </Select>
               </div>
               {[0, 1].map((playerIndex) => (
-                <div className="mt-2.5 grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_7.5rem]" key={playerIndex}>
+                <div className="mt-2.5 grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_9rem]" key={playerIndex}>
                   <Input
                     aria-label={messages.setup.playerLabel(pairIndex + 1, playerIndex + 1)}
                     placeholder={messages.setup.playerPlaceholder(playerIndex + 1)}
