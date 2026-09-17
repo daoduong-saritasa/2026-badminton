@@ -98,7 +98,8 @@ Fresh review: required — persistent-data migration and authorization on every 
 - [x] `mark_walkover` (organizer) per match without score; no double walkover; `correct_result` + `preview_result_correction` (organizer) block `decider-started` / `placement-started` / `tournament-completed`, recompute placement participants and clear placement lineup confirmations when advancement changes before placement starts (Acceptance review 9, 10)
 - [x] `take_over` (scorer): atomically reassign `private.match_ownership`, insert `private.scoring_handovers (match_id, from_session_id, to_session_id, created_at)`; ownership checks reject the former owner's writes (Acceptance review 11)
 - [x] `public.reset_tournament` clears the new tables and handovers and no longer reads `court_count`; `scripts/reset-tournament.ts` unchanged unless its table list diverges
-- [ ] Rewrite `tests/integration/tournament.test.ts`, `impacts.test.ts`, `reset.test.ts` for the team format, covering Acceptance review 1–12 server-side; removed pair/withdrawal/tie scenarios are replaced, not skipped — list removed scenario names in the PR description
+- [x] Rewrite `tests/integration/tournament.test.ts`, `impacts.test.ts`, `reset.test.ts` for the team format, covering Acceptance review 1–12 server-side; removed pair/withdrawal/tie scenarios are replaced, not skipped — list removed scenario names in the PR description
+- [x] `(amended 2026-09-17)` Update `tests/integration/local-supabase.ts` reset tables and `auth.test.ts` authorization probes for the replacement RPC surface
 
 **Phase gate (hard):**
 - [ ] `npm run typecheck`

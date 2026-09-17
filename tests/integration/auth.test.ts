@@ -24,12 +24,12 @@ describe('staff authorization', () => {
   })
 
   it('denies mutations to public viewers and Auth sessions without a staff grant', async () => {
-    const payload = mutation(0, { setup: {} })
-    const viewerResponse = await anonymousRpc('save_setup', payload)
+    const payload = mutation(0, { tournamentName: '', teams: [] })
+    const viewerResponse = await anonymousRpc('save_roster', payload)
     expect(viewerResponse.ok).toBe(false)
 
     const session = await signInAnonymously()
-    const sessionResponse = await rpc('save_setup', payload, session)
+    const sessionResponse = await rpc('save_roster', payload, session)
     expect(sessionResponse.ok).toBe(false)
     expect([401, 403]).toContain(sessionResponse.status)
   })
@@ -115,19 +115,19 @@ describe('staff authorization', () => {
     })
 
     const organizerCommand = await rpc(
-      'save_setup',
-      mutation(0, { setup: {} }),
+      'save_roster',
+      mutation(0, { tournamentName: '', teams: [] }),
       referee,
     )
     expect([401, 403]).toContain(organizerCommand.status)
 
     const preview = await rpc(
       'preview_result_correction',
-      {
-        p_match_id: crypto.randomUUID(),
-        p_score: { a: 21, b: 19 },
-        p_reset_generation: 0,
-      },
+      mutation(0, {
+        matchId: crypto.randomUUID(),
+        winnerSide: 'a',
+        games: [{ a: 15, b: 10 }, { a: 15, b: 10 }],
+      }),
       referee,
     )
     expect([401, 403]).toContain(preview.status)
@@ -138,7 +138,7 @@ describe('staff authorization', () => {
       const session = await signInAnonymously()
       await elevate(session, pin)
       const response = await rpc(
-        'start_scoring',
+        'start_match',
         mutation(0, { matchId: crypto.randomUUID() }),
         session,
       )

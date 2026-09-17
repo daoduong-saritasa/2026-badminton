@@ -135,14 +135,17 @@ export function resetLocalDatabase(organizerPin = '2468', refereePin = '1357'): 
   runSql(`
     truncate table
       private.mutation_log,
+      private.scoring_handovers,
+      private.lineups,
       private.match_ownership,
       private.staff_grants,
       private.pin_attempts,
       private.staff_config,
-      public.tie_resolutions,
+      public.match_games,
       public.matches,
-      public.pairs,
+      public.team_fixtures,
       public.players,
+      public.teams,
       public.tournament
     cascade;
     insert into private.staff_config (role, pin_hash, generation)
