@@ -32,18 +32,20 @@ describe('staff authorization', () => {
     expect([401, 403]).toContain(sessionResponse.status)
   })
 
-  it('keeps authorization, ownership, PIN, and audit tables outside public reads', () => {
+  it('keeps authorization, ownership, PIN, audit, and maintenance state outside public reads', () => {
     const privileges = runSql(
       [
         "select concat_ws(',',",
         "  has_table_privilege('anon', 'private.staff_grants', 'select'),",
         "  has_table_privilege('authenticated', 'private.match_ownership', 'select'),",
         "  has_table_privilege('anon', 'private.staff_config', 'select'),",
-        "  has_table_privilege('authenticated', 'private.mutation_log', 'select')",
+        "  has_table_privilege('authenticated', 'private.mutation_log', 'select'),",
+        "  has_table_privilege('anon', 'private.maintenance_state', 'select'),",
+        "  has_table_privilege('authenticated', 'public.tournament_generation', 'select')",
         ');',
       ].join('\n'),
     )
-    expect(privileges).toBe('false,false,false,false')
+    expect(privileges).toBe('false,false,false,false,false,true')
   })
 
   it('rejects expired and explicitly revoked grants', async () => {

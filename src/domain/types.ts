@@ -4,6 +4,7 @@ export type Group = 'A' | 'B'
 export type Side = 'a' | 'b'
 export type Seed = 1 | 2
 export type Court = 1 | 2
+export type CourtCount = 1 | 2
 
 export interface Score {
   a: number
@@ -17,7 +18,14 @@ export interface Tournament {
   name: string
   stage: TournamentStage
   setupLockedAt: string | null
+  courtCount: CourtCount | null
   version: number
+  /**
+   * Bumps for every change a preview's projection depends on, and stays still
+   * while a live score moves. `version` bumps for both, so it cannot tell a
+   * reviewed projection from one a scored point invalidated.
+   */
+  resultRevision: number
 }
 
 export interface Player {
@@ -110,6 +118,11 @@ export interface TournamentSnapshot {
   tieResolutions: TieResolution[]
 }
 
+export interface TournamentState {
+  resetGeneration: number
+  snapshot: TournamentSnapshot | null
+}
+
 export type StandingTieStatus =
   | 'clear'
   | 'head-to-head'
@@ -169,6 +182,7 @@ export interface SetupPairInput {
 export interface SetupInput {
   tournamentName: string
   pairs: SetupPairInput[]
+  courtCount: CourtCount | null
 }
 
 export interface CourtAssignment {

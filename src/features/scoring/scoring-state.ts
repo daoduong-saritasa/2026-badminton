@@ -3,6 +3,7 @@ import { isWinningScore } from '../../domain/scoring'
 
 interface ScoringContext {
   readonly matchId: UUID
+  readonly resetGeneration: number
   readonly score: Score
   readonly matchVersion: number
   readonly hasOwnership: boolean
@@ -14,12 +15,14 @@ export interface IdleScoringState extends ScoringContext {
 
 export interface PendingPoint {
   readonly requestId: UUID
+  readonly resetGeneration: number
   readonly side: Side
   readonly expectedVersion: number
   readonly previousScore: Score
 }
 
 export interface AuthoritativeObservation {
+  readonly resetGeneration: number
   readonly score: Score
   readonly matchVersion: number
   readonly hasOwnership: boolean
@@ -54,17 +57,19 @@ export type ScoringState =
 
 export type ScoringEvent =
   | { readonly type: 'point-requested'; readonly side: Side; readonly requestId: UUID }
-  | { readonly type: 'point-acknowledged'; readonly requestId: UUID; readonly matchVersion: number }
+  | { readonly type: 'point-acknowledged'; readonly requestId: UUID; readonly resetGeneration: number; readonly matchVersion: number }
   | {
       readonly type: 'point-failed'
       readonly requestId: UUID
+      readonly resetGeneration: number
       readonly reason: SaveFailureReason
       readonly message: string
     }
   | { readonly type: 'retry-requested' }
-  | { readonly type: 'ownership-recovered'; readonly score: Score; readonly matchVersion: number }
+  | { readonly type: 'ownership-recovered'; readonly resetGeneration: number; readonly score: Score; readonly matchVersion: number }
   | {
       readonly type: 'snapshot-received'
+      readonly resetGeneration: number
       readonly score: Score
       readonly matchVersion: number
       readonly hasOwnership: boolean
@@ -89,6 +94,7 @@ function settlePoint(state: SavingScoringState, matchVersion: number): ScoringSt
   const context: ScoringContext = observation === null
     ? {
         matchId: state.matchId,
+        resetGeneration: state.resetGeneration,
         score: state.score,
         matchVersion,
         hasOwnership: state.hasOwnership,
@@ -104,12 +110,27 @@ function restoreSnapshot(
   state: ScoringState,
   event: Extract<ScoringEvent, { type: 'snapshot-received' }>,
 ): ScoringState {
+  if (event.resetGeneration < state.resetGeneration) return state
+  if (event.resetGeneration > state.resetGeneration) {
+    const context: ScoringContext = {
+      matchId: state.matchId,
+      resetGeneration: event.resetGeneration,
+      score: event.score,
+      matchVersion: event.matchVersion,
+      hasOwnership: false,
+    }
+    if (isWinningScore(event.score)) {
+      return { ...context, status: 'reviewing', winningSide: winningSide(event.score) }
+    }
+    return { ...context, status: 'idle' }
+  }
   if (event.matchVersion < state.matchVersion) return state
   if (state.status === 'saving' || state.status === 'failed') {
     if (state.observed !== null && event.matchVersion < state.observed.matchVersion) return state
     return {
       ...state,
       observed: {
+        resetGeneration: event.resetGeneration,
         score: event.score,
         matchVersion: event.matchVersion,
         hasOwnership: event.hasOwnership,
@@ -119,6 +140,7 @@ function restoreSnapshot(
 
   const context: ScoringContext = {
     matchId: state.matchId,
+    resetGeneration: event.resetGeneration,
     score: event.score,
     matchVersion: event.matchVersion,
     hasOwnership: event.hasOwnership,
@@ -139,6 +161,7 @@ export function reduceScoring(state: ScoringState, event: ScoringEvent): Scoring
         score: addPoint(state.score, event.side),
         pending: {
           requestId: event.requestId,
+          resetGeneration: state.resetGeneration,
           side: event.side,
           expectedVersion: state.matchVersion,
           previousScore: state.score,
@@ -147,11 +170,11 @@ export function reduceScoring(state: ScoringState, event: ScoringEvent): Scoring
       }
     }
     case 'point-acknowledged': {
-      if (state.status !== 'saving' || state.pending.requestId !== event.requestId) return state
+      if (state.status !== 'saving' || state.pending.requestId !== event.requestId || state.pending.resetGeneration !== event.resetGeneration) return state
       return settlePoint(state, event.matchVersion)
     }
     case 'point-failed': {
-      if (state.status !== 'saving' || state.pending.requestId !== event.requestId) return state
+      if (state.status !== 'saving' || state.pending.requestId !== event.requestId || state.pending.resetGeneration !== event.resetGeneration) return state
       return {
         ...state,
         status: 'failed',
@@ -168,7 +191,9 @@ export function reduceScoring(state: ScoringState, event: ScoringEvent): Scoring
       return { ...retryState, status: 'saving' }
     }
     case 'ownership-recovered': {
+      if (event.resetGeneration !== state.resetGeneration) return state
       const observation: AuthoritativeObservation = {
+        resetGeneration: event.resetGeneration,
         score: event.score,
         matchVersion: event.matchVersion,
         hasOwnership: true,

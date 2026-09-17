@@ -13,6 +13,10 @@ independently shippable phase per item.
 - Keep all five backlog items in one plan, with one phase per item.
 - Resolve tournament structure before reset semantics and organizer workflows.
 - Translate the resulting interface before finalizing the application identity.
+- Vietnamese copy addresses no one: state the action or its consequence without
+  a second-person pronoun. Chosen on 2026-09-16 to avoid an age- or
+  status-laden pronoun the application cannot choose correctly, and to keep
+  confirmations short. Terminology itself lives in `CONTEXT.md`.
 
 ### Phase 1 — Flexible pair count and courts
 

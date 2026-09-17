@@ -1,5 +1,6 @@
 import type {
   CourtAssignment,
+  CourtCount,
   Group,
   Score,
   SetupInput,
@@ -9,6 +10,7 @@ import type {
 
 export interface CommandPayloads {
   save_setup: { setup: SetupInput }
+  set_court_count: { courtCount: CourtCount }
   generate_fixtures: Record<string, never>
   assign_courts: { assignments: CourtAssignment[] }
   start_scoring: { matchId: UUID }
@@ -17,9 +19,13 @@ export interface CommandPayloads {
   undo_point: { matchId: UUID }
   confirm_result: { matchId: UUID }
   enter_result: { matchId: UUID; score: Score }
-  correct_result: { matchId: UUID; score: Score }
+  correct_result: {
+    matchId: UUID
+    score: Score
+    previewTournamentVersion: number
+  }
   mark_walkover: { matchId: UUID; winnerId: UUID }
-  withdraw_pair: { pairId: UUID }
+  withdraw_pair: { pairId: UUID; previewTournamentVersion: number }
   resolve_tie: {
     group: Group
     orderedPairIds: UUID[]
@@ -31,12 +37,14 @@ export interface CommandPayloads {
 
 export type MutationInput<K extends keyof CommandPayloads> = {
   requestId: UUID
+  resetGeneration: number
   expectedVersion: number
   payload: CommandPayloads[K]
 }
 
 export interface MutationReceipt {
   requestId: UUID
+  resetGeneration: number
   tournamentVersion: number
   matchId: UUID | null
   matchVersion: number | null

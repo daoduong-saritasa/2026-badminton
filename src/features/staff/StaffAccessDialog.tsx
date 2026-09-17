@@ -13,13 +13,15 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { errorMessage } from '@/i18n/errors'
+import { messages } from '@/i18n/vi'
 
 function accessErrorMessage(error: Error): string {
   if (error instanceof StaffAccessError && error.code === 'rate_limited' && error.retryAfterSeconds) {
     const minutes = Math.max(1, Math.ceil(error.retryAfterSeconds / 60))
-    return `Too many attempts. Try again in about ${minutes} minute${minutes === 1 ? '' : 's'}.`
+    return messages.staff.rateLimited(minutes)
   }
-  return error.message
+  return errorMessage(error)
 }
 
 export function StaffAccessDialog({
@@ -58,12 +60,12 @@ export function StaffAccessDialog({
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Staff access</DialogTitle>
-          <DialogDescription>Enter the tournament staff PIN.</DialogDescription>
+          <DialogTitle>{messages.staff.accessTitle}</DialogTitle>
+          <DialogDescription>{messages.staff.accessDescription}</DialogDescription>
         </DialogHeader>
         <form className="space-y-4" onSubmit={handleSubmit}>
           <div className="space-y-2">
-            <Label htmlFor="staff-pin">Staff PIN</Label>
+            <Label htmlFor="staff-pin">{messages.staff.pinLabel}</Label>
             <Input
               id="staff-pin"
               inputMode="numeric"
@@ -80,7 +82,7 @@ export function StaffAccessDialog({
             </p>
           ) : null}
           <Button className="w-full" disabled={signInMutation.isPending || pin.trim().length === 0}>
-            {signInMutation.isPending ? 'Checking…' : 'Continue'}
+            {signInMutation.isPending ? messages.common.checking : messages.staff.continueAction}
           </Button>
         </form>
       </DialogContent>

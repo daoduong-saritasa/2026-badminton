@@ -1,5 +1,5 @@
-// Schema-derived fallback generated while the local Supabase container is unavailable.
-// Regenerate from the running local schema before clearing the Phase 2 verification debt.
+// Schema-derived fallback maintained while the local Supabase container is unavailable.
+// Regenerate from the running local schema before clearing the verification debt.
 
 export type Json =
   | string
@@ -19,6 +19,7 @@ type MutationFunction = {
     p_expected_version: number
     p_payload: Json
     p_request_id: string
+    p_reset_generation: number
   }
   Returns: Json
 }
@@ -28,9 +29,11 @@ export type Database = {
     Tables: {
       tournament: {
         Row: {
+          court_count: number | null
           created_at: string
           id: string
           name: string
+          result_revision: number
           setup_locked_at: string | null
           singleton: boolean
           stage: TournamentStage
@@ -38,9 +41,11 @@ export type Database = {
           version: number
         }
         Insert: {
+          court_count?: number | null
           created_at?: string
           id?: string
           name: string
+          result_revision?: number
           setup_locked_at?: string | null
           singleton?: boolean
           stage?: TournamentStage
@@ -48,15 +53,23 @@ export type Database = {
           version?: number
         }
         Update: {
+          court_count?: number | null
           created_at?: string
           id?: string
           name?: string
+          result_revision?: number
           setup_locked_at?: string | null
           singleton?: boolean
           stage?: TournamentStage
           updated_at?: string
           version?: number
         }
+        Relationships: []
+      }
+      tournament_generation: {
+        Row: { reset_generation: number; singleton: boolean }
+        Insert: { reset_generation: number; singleton?: boolean }
+        Update: { reset_generation?: number; singleton?: boolean }
         Relationships: []
       }
       players: {
@@ -212,6 +225,14 @@ export type Database = {
       get_staff_access: { Args: Record<PropertyKey, never>; Returns: Json }
       get_tournament_snapshot: { Args: Record<PropertyKey, never>; Returns: Json }
       mark_walkover: MutationFunction
+      preview_result_correction: {
+        Args: { p_match_id: string; p_reset_generation: number; p_score: Json }
+        Returns: Json
+      }
+      preview_withdrawal: {
+        Args: { p_pair_id: string; p_reset_generation: number }
+        Returns: Json
+      }
       reopen_tournament: MutationFunction
       resolve_tie: MutationFunction
       revoke_staff_access: { Args: Record<PropertyKey, never>; Returns: undefined }
@@ -220,6 +241,19 @@ export type Database = {
         Returns: Json
       }
       save_setup: MutationFunction
+      set_court_count: MutationFunction
+      set_reset_enabled: { Args: { p_enabled: boolean }; Returns: undefined }
+      reset_tournament: {
+        Args: {
+          p_confirmation_name: string
+          p_expected_generation: number
+          p_expected_tournament_id: string
+          p_expected_version: number
+          p_mode: string
+          p_request_id: string
+        }
+        Returns: Json
+      }
       start_scoring: MutationFunction
       take_over: MutationFunction
       undo_point: MutationFunction

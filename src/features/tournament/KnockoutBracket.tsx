@@ -1,6 +1,8 @@
 import { Trophy } from 'lucide-react'
 
 import type { Match, TournamentSnapshot } from '@/domain/types'
+import { formatNumber } from '@/i18n/format'
+import { messages } from '@/i18n/vi'
 import { cn } from '@/lib/utils'
 
 import { pairName, pairPlayers, pairSeeds, pairTeamName } from './MatchTicket'
@@ -40,7 +42,7 @@ function BracketMatch({
           {label}
         </h3>
         <span className={cn('text-[0.625rem]', final ? 'text-navy-soft' : 'text-muted-ink')}>
-          {match.court ? `Court ${match.court}` : 'Court pending'}
+          {match.court ? messages.common.court(match.court) : messages.bracket.courtPending}
         </span>
       </div>
       <div className={cn('px-5 pb-[1.0625rem]', final && 'pt-2.5 pb-6')}>
@@ -55,19 +57,19 @@ function BracketMatch({
               <p className={cn('mt-[3px] truncate text-[0.625rem] font-normal', final ? 'text-white/65' : 'text-muted-ink')}>
                 {side.pairId
                   ? `${pairTeamName(snapshot, side.pairId) ? `${pairPlayers(snapshot, side.pairId)} · ` : ''}${pairSeeds(snapshot, side.pairId)}`
-                  : 'Awaiting qualifier'}
+                  : messages.common.awaitingQualifier}
               </p>
             </div>
             <strong className={cn('numeric grid h-9 w-[2.125rem] place-items-center rounded-chip text-[1.375rem] font-normal',
               final ? 'bg-white/[0.07] text-navy-soft' : 'bg-well text-dim-ink')}>
-              {side.score ?? '–'}
+              {side.score === undefined ? '–' : formatNumber(side.score)}
             </strong>
           </div>
         ))}
       </div>
       <div className={cn('tear tear-sm flex items-center justify-between px-[1.375rem] py-[0.8125rem] text-[0.625rem]',
         final ? 'border-white/25 text-navy-soft' : 'border-line text-muted-ink')}>
-        <span>{final ? 'Championship match' : 'Winner advances to final'}</span>
+        <span>{final ? messages.bracket.championshipMatch : messages.bracket.winnerAdvances}</span>
         <span className={cn(final ? 'text-[1.375rem] font-bold tracking-[-1px] text-cyan' : 'text-[0.9375rem] text-navy')} aria-hidden="true">
           {final ? '01' : '↗'}
         </span>
@@ -86,7 +88,7 @@ export function KnockoutBracket({ snapshot }: { snapshot: TournamentSnapshot }) 
     return (
       <section className="view-enter rounded-[2rem] bg-navy px-7 py-12 text-center text-white shadow-final">
         <Trophy className="mx-auto size-9 text-cyan" aria-hidden="true" />
-        <p className="mt-5 text-xs uppercase tracking-[0.25em] text-navy-soft">Tournament champion</p>
+        <p className="mt-5 text-xs font-semibold tracking-[0.12em] text-navy-soft">{messages.bracket.championLabel}</p>
         <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-5xl">{champion}</h2>
         {championId ? (
           <p className="mt-3 text-sm text-navy-soft">
@@ -101,28 +103,28 @@ export function KnockoutBracket({ snapshot }: { snapshot: TournamentSnapshot }) 
     <section className="view-enter">
       <div className="mb-7 flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold tracking-[-0.033em]">The knockout stage</h2>
-          <p className="mt-2 text-xs text-muted-ink">Semifinal winners advance to the championship match.</p>
+          <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.bracket.heading}</h2>
+          <p className="mt-2 text-xs text-muted-ink">{messages.bracket.description}</p>
         </div>
         <span className="text-[0.625rem] text-muted-ink">
-          {snapshot.tournament.stage === 'groups' ? 'Awaiting confirmed group standings' : 'Bracket active'}
+          {snapshot.tournament.stage === 'groups' ? messages.bracket.awaitingStandings : messages.bracket.active}
         </span>
       </div>
       <div className="grid items-center gap-13 md:grid-cols-2">
         <div>
           <h3 className="mb-4 flex items-center gap-2.5 text-xs font-semibold">
-            Semifinals <span className="font-normal text-muted-ink">{semifinals.length} matches</span>
+            {messages.bracket.semifinals} <span className="font-normal text-muted-ink">{messages.bracket.semifinalCount(semifinals.length)}</span>
           </h3>
           {semifinals.map((match, index) => (
-            <BracketMatch key={match.id} match={match} snapshot={snapshot} label={`Semifinal ${index + 1}`} />
+            <BracketMatch key={match.id} match={match} snapshot={snapshot} label={messages.bracket.semifinalNumber(index + 1)} />
           ))}
         </div>
         {final ? (
           <div className="relative before:absolute before:-left-[2.125rem] before:top-[calc(50%-4.25rem)] before:hidden before:h-34 before:w-[1.0625rem] before:rounded-r-chip before:border before:border-l-0 before:border-rule before:content-[''] after:absolute after:-left-[1.0625rem] after:top-1/2 after:hidden after:w-[1.0625rem] after:border-t after:border-rule after:content-[''] md:before:block md:after:block">
             <h3 className="mb-4 flex items-center gap-2.5 text-xs font-semibold">
-              Final <span className="font-normal text-muted-ink">2 pairs</span>
+              {messages.bracket.finalHeading} <span className="font-normal text-muted-ink">{messages.bracket.finalPairs(2)}</span>
             </h3>
-            <BracketMatch match={final} snapshot={snapshot} label="The final" final />
+            <BracketMatch match={final} snapshot={snapshot} label={messages.ticket.theFinal} final />
           </div>
         ) : null}
       </div>

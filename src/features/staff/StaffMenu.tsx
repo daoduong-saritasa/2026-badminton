@@ -31,6 +31,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
+import { errorMessage } from '@/i18n/errors'
+import { messages } from '@/i18n/vi'
 
 export function StaffMenu({ onSignedOut }: { onSignedOut: () => void }) {
   const [rotationOpen, setRotationOpen] = useState(false)
@@ -59,14 +61,14 @@ export function StaffMenu({ onSignedOut }: { onSignedOut: () => void }) {
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button variant="outline" className="border-rule bg-transparent text-muted-ink hover:bg-white">
-            <KeyRound /> Staff menu
+            <KeyRound /> {messages.staff.menu}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-56">
-          <DropdownMenuLabel>Tournament staff</DropdownMenuLabel>
+          <DropdownMenuLabel>{messages.staff.menuLabel}</DropdownMenuLabel>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => setRotationOpen(true)}>
-            <KeyRound /> Rotate PIN
+            <KeyRound /> {messages.staff.rotatePin}
           </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem
@@ -74,11 +76,11 @@ export function StaffMenu({ onSignedOut }: { onSignedOut: () => void }) {
             disabled={signOutMutation.isPending}
             onSelect={() => signOutMutation.mutate()}
           >
-            <LogOut /> Sign out
+            <LogOut /> {messages.staff.signOut}
           </DropdownMenuItem>
           {signOutMutation.isError ? (
             <p className="mx-1 mt-1 rounded-chip bg-[#fdeceb] px-3 py-2 text-[0.6875rem]/[1.5] text-[#a32118]" role="alert">
-              {signOutMutation.error.message}
+              {errorMessage(signOutMutation.error)}
             </p>
           ) : null}
         </DropdownMenuContent>
@@ -87,12 +89,12 @@ export function StaffMenu({ onSignedOut }: { onSignedOut: () => void }) {
       <Dialog open={rotationOpen} onOpenChange={setRotationOpen}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Rotate staff PIN</DialogTitle>
-            <DialogDescription>All other staff grants will be revoked immediately.</DialogDescription>
+            <DialogTitle>{messages.staff.rotateTitle}</DialogTitle>
+            <DialogDescription>{messages.staff.rotateDescription}</DialogDescription>
           </DialogHeader>
           <form className="space-y-4" onSubmit={handleRotationSubmit}>
             <div className="space-y-2">
-              <Label htmlFor="new-staff-pin">New PIN</Label>
+              <Label htmlFor="new-staff-pin">{messages.staff.newPinLabel}</Label>
               <Input
                 id="new-staff-pin"
                 inputMode="numeric"
@@ -103,9 +105,9 @@ export function StaffMenu({ onSignedOut }: { onSignedOut: () => void }) {
               />
             </div>
             {rotationMutation.isError ? (
-              <p className="text-[0.75rem]/[1.6] text-[#a32118]" role="alert">{rotationMutation.error.message}</p>
+              <p className="text-[0.75rem]/[1.6] text-[#a32118]" role="alert">{errorMessage(rotationMutation.error)}</p>
             ) : null}
-            <Button className="w-full" disabled={nextPin.trim().length === 0}>Review rotation</Button>
+            <Button className="w-full" disabled={nextPin.trim().length === 0}>{messages.staff.reviewRotation}</Button>
           </form>
         </DialogContent>
       </Dialog>
@@ -113,18 +115,18 @@ export function StaffMenu({ onSignedOut }: { onSignedOut: () => void }) {
       <AlertDialog open={confirmationOpen} onOpenChange={setConfirmationOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Rotate the staff PIN?</AlertDialogTitle>
+            <AlertDialogTitle>{messages.staff.confirmRotateTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              Other staff browsers will lose access and must enter the new PIN.
+              {messages.staff.confirmRotateBody}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Keep current PIN</AlertDialogCancel>
+            <AlertDialogCancel>{messages.staff.keepPin}</AlertDialogCancel>
             <AlertDialogAction
               disabled={rotationMutation.isPending}
               onClick={() => rotationMutation.mutate(nextPin)}
             >
-              {rotationMutation.isPending ? 'Rotating…' : 'Rotate PIN'}
+              {rotationMutation.isPending ? messages.staff.rotating : messages.staff.confirmRotate}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

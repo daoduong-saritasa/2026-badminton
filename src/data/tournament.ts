@@ -3,6 +3,7 @@ import { z } from 'zod'
 import type { CommandPayloads, MutationInput, MutationReceipt } from '../domain/commands'
 import type {
   Court,
+  CourtCount,
   Group,
   Match,
   Pair,
@@ -11,6 +12,7 @@ import type {
   TieResolution,
   Tournament,
   TournamentSnapshot,
+  TournamentState,
 } from '../domain/types'
 import type { Json } from '../lib/database.types'
 import { getSupabaseClient } from '../lib/supabase'
@@ -24,7 +26,9 @@ const tournamentDtoSchema = z.object({
   name: z.string(),
   stage: z.enum(['setup', 'groups', 'knockouts', 'completed']),
   setup_locked_at: z.string().nullable(),
+  court_count: courtSchema.nullable(),
   version: z.int().nonnegative(),
+  result_revision: z.int().nonnegative(),
 })
 
 const playerDtoSchema = z.object({
@@ -77,8 +81,14 @@ const snapshotDtoSchema = z.object({
   tieResolutions: z.array(tieResolutionDtoSchema),
 })
 
+const tournamentStateDtoSchema = z.object({
+  resetGeneration: z.int().nonnegative(),
+  snapshot: snapshotDtoSchema.nullable(),
+})
+
 const receiptSchema = z.object({
   requestId: uuidSchema,
+  resetGeneration: z.int().nonnegative(),
   tournamentVersion: z.int().nonnegative(),
   matchId: uuidSchema.nullable(),
   matchVersion: z.int().nonnegative().nullable(),
@@ -86,7 +96,11 @@ const receiptSchema = z.object({
 
 type MatchDto = z.infer<typeof matchDtoSchema>
 
+let newestResetGeneration = -1
+let newestTournamentId: string | null = null
 let newestTournamentVersion = -1
+let fetchSequence = 0
+let newestAcceptedFetchSequence = -1
 let subscriptionSequence = 0
 
 /**
@@ -94,7 +108,7 @@ let subscriptionSequence = 0
  * write it straight into its cache instead of triggering a second fetch of data
  * this module already holds. A bare call means "something changed, go and look".
  */
-type InvalidationListener = (snapshot?: TournamentSnapshot) => void
+type InvalidationListener = (state?: TournamentState) => void
 
 const invalidationListeners = new Set<InvalidationListener>()
 
@@ -120,13 +134,6 @@ export class StaleTournamentSnapshotError extends Error {
   }
 }
 
-export class TournamentNotConfiguredError extends Error {
-  constructor() {
-    super('No tournament has been configured yet')
-    this.name = 'TournamentNotConfiguredError'
-  }
-}
-
 function parseDto<T>(schema: z.ZodType<T>, value: unknown, label: string): T {
   const result = schema.safeParse(value)
   if (!result.success) {
@@ -142,7 +149,9 @@ function mapTournament(dto: z.infer<typeof tournamentDtoSchema>): Tournament {
     name: dto.name,
     stage: dto.stage,
     setupLockedAt: dto.setup_locked_at,
+    courtCount: dto.court_count as CourtCount | null,
     version: dto.version,
+    resultRevision: dto.result_revision,
   }
 }
 
@@ -207,14 +216,30 @@ function mapTieResolution(dto: z.infer<typeof tieResolutionDtoSchema>): TieResol
   }
 }
 
-function mapSnapshot(value: unknown): TournamentSnapshot {
-  const dto = parseDto(snapshotDtoSchema, value, 'tournament snapshot')
+function mapSnapshotDto(dto: z.infer<typeof snapshotDtoSchema>): TournamentSnapshot {
   return {
     tournament: mapTournament(dto.tournament),
     players: dto.players.map(mapPlayer),
     pairs: dto.pairs.map(mapPair),
     matches: dto.matches.map(mapMatch),
     tieResolutions: dto.tieResolutions.map(mapTieResolution),
+  }
+}
+
+/**
+ * Shared with the preview API, whose before/after bodies are the same shape the
+ * snapshot RPC returns. Parsing them in one place keeps a preview from
+ * accepting a snapshot the tournament fetch would reject.
+ */
+export function parseSnapshot(value: unknown): TournamentSnapshot {
+  return mapSnapshotDto(parseDto(snapshotDtoSchema, value, 'tournament snapshot'))
+}
+
+function mapState(value: unknown): TournamentState {
+  const dto = parseDto(tournamentStateDtoSchema, value, 'tournament state')
+  return {
+    resetGeneration: dto.resetGeneration,
+    snapshot: dto.snapshot === null ? null : mapSnapshotDto(dto.snapshot),
   }
 }
 
@@ -227,29 +252,60 @@ function toJson(value: unknown): Json {
   throw new TypeError('Mutation payload contains a value that cannot be encoded as JSON')
 }
 
-async function fetchAtLeast(requiredVersion: number): Promise<TournamentSnapshot> {
+async function fetchAtLeast(
+  requiredGeneration: number,
+  requiredVersion: number,
+): Promise<TournamentState> {
+  fetchSequence += 1
+  const currentFetchSequence = fetchSequence
   const { data, error } = await getSupabaseClient().rpc('get_tournament_snapshot')
   if (error) throw error
-  if (data === null) throw new TournamentNotConfiguredError()
-  const snapshot = mapSnapshot(data)
-  const minimumVersion = Math.max(requiredVersion, newestTournamentVersion)
-  if (snapshot.tournament.version < minimumVersion) {
-    throw new StaleTournamentSnapshotError(snapshot.tournament.version, minimumVersion)
+  if (data === null) throw new InvalidTournamentDataError('The server returned no tournament state')
+  const state = mapState(data)
+  const minimumGeneration = Math.max(requiredGeneration, newestResetGeneration)
+  if (state.resetGeneration < minimumGeneration) {
+    throw new StaleTournamentSnapshotError(state.resetGeneration, minimumGeneration)
   }
-  newestTournamentVersion = snapshot.tournament.version
-  return snapshot
+  const snapshotId = state.snapshot?.tournament.id ?? null
+  // Versions only order snapshots of one tournament; a later fetch that already
+  // replaced the identity makes an earlier response unorderable.
+  if (state.resetGeneration === newestResetGeneration
+    && snapshotId !== newestTournamentId
+    && currentFetchSequence < newestAcceptedFetchSequence) {
+    throw new StaleTournamentSnapshotError(currentFetchSequence, newestAcceptedFetchSequence)
+  }
+
+  const snapshotVersion = state.snapshot?.tournament.version ?? 0
+  const sameKnownTournament = state.resetGeneration === newestResetGeneration
+    && newestTournamentId !== null
+    && snapshotId === newestTournamentId
+  const minimumVersion = state.resetGeneration === requiredGeneration
+    ? requiredVersion
+    : 0
+  if ((sameKnownTournament && snapshotVersion < newestTournamentVersion)
+    || (state.resetGeneration === requiredGeneration && snapshotVersion < minimumVersion)) {
+    throw new StaleTournamentSnapshotError(
+      snapshotVersion,
+      Math.max(sameKnownTournament ? newestTournamentVersion : 0, minimumVersion),
+    )
+  }
+  newestResetGeneration = state.resetGeneration
+  newestTournamentId = snapshotId
+  newestTournamentVersion = snapshotVersion
+  newestAcceptedFetchSequence = Math.max(newestAcceptedFetchSequence, currentFetchSequence)
+  return state
 }
 
-export function fetchTournament(): Promise<TournamentSnapshot> {
-  return fetchAtLeast(0)
+export function fetchTournament(): Promise<TournamentState> {
+  return fetchAtLeast(0, 0)
 }
 
-function notifyInvalidation(snapshot?: TournamentSnapshot): void {
-  for (const listener of invalidationListeners) listener(snapshot)
+function notifyInvalidation(state?: TournamentState): void {
+  for (const listener of invalidationListeners) listener(state)
 }
 
-async function refreshAndNotify(requiredVersion: number): Promise<void> {
-  notifyInvalidation(await fetchAtLeast(requiredVersion))
+async function refreshAndNotify(requiredGeneration: number, requiredVersion: number): Promise<void> {
+  notifyInvalidation(await fetchAtLeast(requiredGeneration, requiredVersion))
 }
 
 export async function mutateTournament<K extends keyof CommandPayloads>(
@@ -258,12 +314,13 @@ export async function mutateTournament<K extends keyof CommandPayloads>(
 ): Promise<MutationReceipt> {
   const { data, error } = await getSupabaseClient().rpc(operation, {
     p_request_id: input.requestId,
+    p_reset_generation: input.resetGeneration,
     p_expected_version: input.expectedVersion,
     p_payload: toJson(input.payload),
   })
   if (error) throw error
   const receipt = parseDto(receiptSchema, data, 'mutation receipt')
-  await refreshAndNotify(receipt.tournamentVersion)
+  await refreshAndNotify(receipt.resetGeneration, receipt.tournamentVersion)
   return receipt
 }
 
@@ -279,6 +336,14 @@ function changedVersion(payload: unknown): number | null {
   return typeof version === 'number' ? version : null
 }
 
+function changedGeneration(payload: unknown): number | null {
+  if (typeof payload !== 'object' || payload === null) return null
+  const { new: record } = payload as { new?: unknown }
+  if (typeof record !== 'object' || record === null) return null
+  const { reset_generation: generation } = record as { reset_generation?: unknown }
+  return typeof generation === 'number' ? generation : null
+}
+
 export function subscribeTournament(onChange: InvalidationListener): () => void {
   invalidationListeners.add(onChange)
   let disconnectedAfterSubscription = false
@@ -286,7 +351,7 @@ export function subscribeTournament(onChange: InvalidationListener): () => void 
   let active = true
 
   const refreshAfterReconnect = () => {
-    void refreshAndNotify(newestTournamentVersion).catch((error: unknown) => {
+    void refreshAndNotify(newestResetGeneration, newestTournamentVersion).catch((error: unknown) => {
       console.error('Tournament refresh after reconnect failed', { error })
     })
   }
@@ -306,6 +371,11 @@ export function subscribeTournament(onChange: InvalidationListener): () => void 
       // `refreshAndNotify`; its echo would only refetch what we already hold.
       const version = changedVersion(payload)
       if (version !== null && version <= newestTournamentVersion) return
+      notifyInvalidation()
+    })
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'tournament_generation' }, (payload) => {
+      const generation = changedGeneration(payload)
+      if (generation !== null && generation <= newestResetGeneration) return
       notifyInvalidation()
     })
     .subscribe((status) => {
