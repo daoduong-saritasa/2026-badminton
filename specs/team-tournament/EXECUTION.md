@@ -10,8 +10,8 @@ court-count setting removed.
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — Domain rules: in-progress
+- Current phase: 1 — done
+- Phase 1 — Domain rules: done
 - Phase 2 — Staff roles: pending
 - Phase 3 — Team tournament schema: pending
 - Phase 4 — Client replacement: pending
@@ -36,8 +36,8 @@ Fresh review: not required
 - [x] `(amended 2026-09-17)` Add exhaustive Vietnamese messages for the new impact block codes in `src/i18n/vi.ts`, required by the existing `ImpactPreview` lookup
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npm run test:related -- <changed files>`
+- [x] `npm run typecheck`
+- [x] `npm run test:related -- <changed files>`
 
 **On completion:** run the phase gate; run `fresh-review` when the recorded or actual-diff
 decision requires it; update STATUS + checkboxes; stop and ask before push/PR. Review
