@@ -124,7 +124,7 @@ Branch: `team-tournament/phase-4-client` (`gh stack add`)
 Consumes: all Phase 1 exports; `StaffRole` and `StaffAccess.role` from Phase 2; Phase 3 snapshot JSON and mutation RPC names/payloads.
 Produces: none.
 
-Fresh review: not required
+Fresh review: required — upgraded 2026-09-17: the phase diff now edits the persistent-data migration
 
 - [x] `src/lib/database.types.ts`: hand-edit tables and `Functions` to the Phase 3 SQL; remove legacy entries
 - [x] `src/domain/commands.ts`: `CommandPayloads` keys and payloads = Phase 3 RPCs; `src/domain/types.ts`: `TournamentSnapshot { tournament, teams, players, fixtures, matches, lineups }`, delete `Pair`, old `Match` union, `TieResolution`, `Standing`, `Fixture`/`GroupFixture`/`KnockoutFixture`, `SetupPairInput`
@@ -137,6 +137,7 @@ Fresh review: not required
 - [x] Public UI: `StandingsTable.tsx` → group fixture results and final positions; `KnockoutBracket.tsx` → third place + final; `MatchTicket.tsx` pairs and game scores; `TournamentPage.tsx` wiring; lineups shown only when present in the snapshot
 - [x] `src/i18n/vi.ts`, `src/i18n/errors.ts` (+ `errors.test.ts`): Đội, Cặp, Cuộc đối đầu, Trận, Ván, Trọng tài copy and new block/error codes per `CONTEXT.md`
 - [x] `(amended 2026-09-17)` Move `correctedMatchWinner` into `src/domain/scoring.ts` (+ tests) and shared display helpers into `src/features/tournament/labels.ts`; referees start eligible matches from a match picker in `ScoreTracker.tsx`, because the old tracker only listed playing matches
+- [x] `(amended 2026-09-17)` Drop legacy `private.require_match_version(uuid, integer)` in `supabase/migrations/202609170002_team_tournament.sql`; its `public.matches` return type blocked `drop table public.matches` on the remote push, which rolled back
 
 **Phase gate (hard):**
 - [x] `npm run typecheck`

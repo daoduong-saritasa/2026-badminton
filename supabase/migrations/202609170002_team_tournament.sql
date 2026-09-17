@@ -41,7 +41,7 @@ begin
           'compute_standings', 'apply_progression', 'is_winning_score',
           'finish_direct_result', 'correction_block_code',
           'withdrawal_block_code', 'assert_correction_safe',
-          'project_mutation', 'impact'
+          'project_mutation', 'impact', 'require_match_version'
         )
       )
     )
