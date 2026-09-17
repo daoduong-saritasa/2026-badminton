@@ -60,8 +60,8 @@ Fresh review: required — authentication/authorization and a persistent-data mi
 - [x] `src/data/staff.ts`: `staffAccessSchema` gains `role: z.enum(['organizer','referee'])`; `rotateStaffPin(role, pin)`
 - [x] `src/features/staff/StaffMenu.tsx`, `src/App.tsx`: show organizer navigation and PIN rotation only when `role === 'organizer'` (server enforces regardless)
 - [x] `src/lib/database.types.ts`: hand-edit `rotate_staff_pin_for_session` args and `get_staff_access` return to match the SQL
-- [ ] `tests/integration/auth.test.ts`: referee PIN yields a referee grant; referee cannot call an organizer command or preview; organizer can score; rotation by a referee is rejected; rotating one role revokes only that role's grants; pre-migration grants are revoked (Acceptance review 11)
-- [ ] `docs/deployment.md`, `README.md`: provision both role PINs in the `psql` procedure
+- [x] `tests/integration/auth.test.ts`: referee PIN yields a referee grant; referee cannot call an organizer command or preview; organizer can score; rotation by a referee is rejected; rotating one role revokes only that role's grants; pre-migration grants are revoked (Acceptance review 11)
+- [x] `docs/deployment.md`, `README.md`: provision both role PINs in the `psql` procedure
 
 **Phase gate (hard):**
 - [ ] `npm run typecheck`

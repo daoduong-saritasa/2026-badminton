@@ -127,8 +127,10 @@ export function runSql(statement: string): string {
   }
 }
 
-export function resetLocalDatabase(pin = '2468'): void {
-  if (!/^\d{4,12}$/.test(pin)) throw new Error('Test PIN must contain 4 to 12 digits')
+export function resetLocalDatabase(organizerPin = '2468', refereePin = '1357'): void {
+  if (!/^\d{4,12}$/.test(organizerPin) || !/^\d{4,12}$/.test(refereePin)) {
+    throw new Error('Test PINs must contain 4 to 12 digits')
+  }
 
   runSql(`
     truncate table
@@ -143,8 +145,10 @@ export function resetLocalDatabase(pin = '2468'): void {
       public.players,
       public.tournament
     cascade;
-    insert into private.staff_config (singleton, pin_hash, generation)
-    values (true, extensions.crypt('${pin}', extensions.gen_salt('bf', 4)), 1);
+    insert into private.staff_config (role, pin_hash, generation)
+    values
+      ('organizer', extensions.crypt('${organizerPin}', extensions.gen_salt('bf', 4)), 1),
+      ('referee', extensions.crypt('${refereePin}', extensions.gen_salt('bf', 4)), 1);
     update private.maintenance_state
     set reset_enabled = false, reset_generation = 0, updated_at = clock_timestamp()
     where singleton;
@@ -176,6 +180,7 @@ export async function edgeRequest(
   operation: 'staff-pin' | 'rotate-pin',
   session: LocalSession,
   pin: string,
+  role?: string,
 ): Promise<Response> {
   const status = localStatus()
   return fetch(`${status.apiUrl}/functions/v1/${operation}`, {
@@ -185,7 +190,7 @@ export async function edgeRequest(
       authorization: `Bearer ${session.accessToken}`,
       'content-type': 'application/json',
     },
-    body: JSON.stringify({ pin }),
+    body: JSON.stringify(role ? { pin, role } : { pin }),
   })
 }
 

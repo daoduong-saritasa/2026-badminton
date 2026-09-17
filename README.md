@@ -11,7 +11,7 @@ company-owned Supabase project only when you are ready to deploy:
 1. Create the Supabase project and enable anonymous sign-ins.
 2. Link this repository to that project and publish the checked-in migrations and Edge
    Functions.
-3. Provision the initial staff PIN through a secured database session.
+3. Provision the initial organizer and referee PINs through a secured database session.
 4. Create the company-owned Cloudflare Pages project and add the two public Supabase build
    variables.
 
@@ -30,7 +30,7 @@ npm exec supabase -- start
 npm exec supabase -- db reset
 ~~~
 
-Provision a local staff PIN through the interactive procedure in
+Provision local organizer and referee PINs through the interactive procedure in
 [the deployment guide](docs/deployment.md), then serve the Edge Functions and frontend in
 separate terminals:
 
