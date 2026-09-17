@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
-import { groupTone, pairName, pairPlayers, pairSeeds, pairTeamName } from './MatchTicket'
+import { groupTone, pairName, pairPlayers, pairTeamName } from './MatchTicket'
 
 function GroupTable({ group, snapshot }: { group: Group; snapshot: TournamentSnapshot }) {
   const standings = calculateStandings(snapshot, group)
@@ -45,9 +45,11 @@ function GroupTable({ group, snapshot }: { group: Group; snapshot: TournamentSna
               >
                 <TableCell className="max-w-44 font-medium">
                   <span>{pairName(snapshot, standing.pairId)}</span>
-                  <span className="mt-1 block truncate text-[0.625rem] font-normal text-muted-ink">
-                    {pairTeamName(snapshot, standing.pairId) ? `${pairPlayers(snapshot, standing.pairId)} · ` : ''}{pairSeeds(snapshot, standing.pairId)}
-                  </span>
+                  {pairTeamName(snapshot, standing.pairId) ? (
+                    <span className="mt-1 block truncate text-[0.625rem] font-normal text-muted-ink">
+                      {pairPlayers(snapshot, standing.pairId)}
+                    </span>
+                  ) : null}
                 </TableCell>
                 <TableCell className="numeric text-right">{formatNumber(standing.played)}</TableCell>
                 <TableCell className="numeric text-right">{formatNumber(standing.wins)}</TableCell>
