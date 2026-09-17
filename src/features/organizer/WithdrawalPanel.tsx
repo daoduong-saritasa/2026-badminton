@@ -68,16 +68,17 @@ export function WithdrawalPanel({ snapshot, resetGeneration }: WithdrawalPanelPr
         {messages.withdrawals.description}
       </p>
 
-      <ul className="mt-5 space-y-2">
+      <ul className="mt-5 grid gap-2 sm:grid-cols-2">
         {activePairs.map((pair) => (
-          <li key={pair.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-ink/5 px-3 py-2">
-            <span className="min-w-0">
+          <li key={pair.id} className="flex min-w-0 items-center justify-between gap-2 rounded-md border border-ink/5 px-3 py-2">
+            <span className="min-w-0 flex-1">
               <span className="block truncate text-[0.8125rem] font-medium">{pairName(snapshot, pair.id)}</span>
               <span className="block truncate text-[0.6875rem] text-muted-ink">{pairPlayers(snapshot, pair.id)}</span>
             </span>
             <Button
               variant="outline"
               size="sm"
+              className="shrink-0"
               disabled={previewMutation.isPending && selectedPairId === pair.id}
               onClick={() => review(pair.id)}
             >
