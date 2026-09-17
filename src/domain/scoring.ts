@@ -68,3 +68,30 @@ export function matchWinnerSide(
   }
   return null
 }
+
+/**
+ * The winner of a result entered game by game, or null when the games are not
+ * a finished best-of-three: every game won under the stage rules, and none
+ * played after a side reached two wins.
+ */
+export function correctedMatchWinner(
+  games: readonly Score[],
+  stage: FixtureStage,
+): Side | null {
+  const wins = { a: 0, b: 0 }
+
+  for (const game of games) {
+    if (wins.a === 2 || wins.b === 2 || !isGameWon(game, stage)) {
+      return null
+    }
+    wins[game.a > game.b ? 'a' : 'b'] += 1
+  }
+
+  if (wins.a === 2) {
+    return 'a'
+  }
+  if (wins.b === 2) {
+    return 'b'
+  }
+  return null
+}

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 
 import {
+  correctedMatchWinner,
   gameRules,
   isGameWon,
   matchGameTally,
@@ -69,5 +70,19 @@ describe('team tournament game rules', () => {
         'final',
       ),
     ).toBe('a')
+  })
+})
+
+describe('correctedMatchWinner', () => {
+  it('returns the side that won two valid games', () => {
+    expect(correctedMatchWinner([{ a: 15, b: 10 }, { a: 15, b: 13 }], 'group')).toBe('a')
+    expect(correctedMatchWinner([{ a: 15, b: 10 }, { a: 12, b: 15 }, { a: 19, b: 21 }], 'third-place')).toBe('b')
+  })
+
+  it('rejects an invalid game, an unfinished match, and a game after the match was decided', () => {
+    expect(correctedMatchWinner([{ a: 15, b: 14 }, { a: 15, b: 10 }], 'group')).toBeNull()
+    expect(correctedMatchWinner([{ a: 15, b: 10 }, { a: 10, b: 15 }], 'group')).toBeNull()
+    expect(correctedMatchWinner([{ a: 15, b: 10 }, { a: 15, b: 10 }, { a: 10, b: 15 }], 'group')).toBeNull()
+    expect(correctedMatchWinner([{ a: 15, b: 10 }, { a: 15, b: 10 }], 'final')).toBeNull()
   })
 })

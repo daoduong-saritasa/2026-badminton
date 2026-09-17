@@ -3,9 +3,9 @@ import { useMutation } from '@tanstack/react-query'
 
 import { previewResultCorrection } from '@/data/impacts'
 import { mutateTournament } from '@/data/tournament'
-import { isWinningScore } from '@/domain/scoring'
+import { correctedMatchWinner, gameRules } from '@/domain/scoring'
 import type { MutationImpact } from '@/domain/impacts'
-import type { Score, TournamentSnapshot, UUID } from '@/domain/types'
+import type { Score, Side, TournamentSnapshot, UUID } from '@/domain/types'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,7 +21,15 @@ import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/co
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { matchRoundLabel, pairName } from '@/features/tournament/MatchTicket'
+import {
+  confirmedGames,
+  fixtureOf,
+  matchLabel,
+  matchPair,
+  pairPlayers,
+  sideTeamId,
+  teamName,
+} from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
 import { messages } from '@/i18n/vi'
 import { ImpactPreview } from './ImpactPreview'
@@ -33,144 +41,168 @@ export interface ResultEditorProps {
   onClose: () => void
 }
 
-type SaveAction =
-  | { kind: 'score'; score: Score; previewTournamentVersion: number }
-  | { kind: 'walkover'; winnerId: UUID }
+interface GameDraft {
+  a: string
+  b: string
+}
 
-// A preview describes one exact tournament version, so it must not outlive it.
-// It is stored with the version it was built from and goes stale during render,
-// rather than being destroyed by a remount: the tournament version also bumps
-// for every point scored on any court, which would otherwise wipe the selected
-// match and the typed score mid-review.
-export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: ResultEditorProps) {
+function WalkoverForm({ snapshot, resetGeneration, matchId, onClose }: ResultEditorProps) {
   const match = snapshot.matches.find((candidate) => candidate.id === matchId)
-  const [scoreA, setScoreA] = useState(String(match?.score?.a ?? 21))
-  const [scoreB, setScoreB] = useState(String(match?.score?.b ?? 0))
-  const [walkoverWinner, setWalkoverWinner] = useState<UUID>(match?.winnerId ?? match?.pairAId ?? '')
+  const fixture = match ? fixtureOf(snapshot, match) : undefined
+  const [winnerSide, setWinnerSide] = useState<Side>('a')
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const mutation = useMutation({
+    mutationFn: () => {
+      if (!match) throw new Error(messages.results.matchGone)
+      return mutateTournament('mark_walkover', {
+        requestId: crypto.randomUUID(),
+        resetGeneration,
+        expectedVersion: match.version,
+        payload: { matchId, winnerSide },
+      })
+    },
+    onSuccess: () => {
+      setConfirmOpen(false)
+      onClose()
+    },
+  })
+  const winnerName = teamName(snapshot, sideTeamId(fixture, winnerSide))
+
+  return (
+    <>
+      <div className="space-y-2">
+        <Label htmlFor="walkover-winner">{messages.results.walkoverWinner}</Label>
+        <Select value={winnerSide} onValueChange={(value) => setWinnerSide(value as Side)}>
+          <SelectTrigger id="walkover-winner" className="w-full"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {(['a', 'b'] as const).map((side) => (
+              <SelectItem value={side} key={side}>{teamName(snapshot, sideTeamId(fixture, side))}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      {mutation.isError ? <p className="text-sm text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>{messages.common.cancel}</Button>
+        <Button disabled={mutation.isPending} onClick={() => setConfirmOpen(true)}>{messages.results.walkover}</Button>
+      </DialogFooter>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{messages.results.confirmWalkoverTitle}</AlertDialogTitle>
+            <AlertDialogDescription>{messages.results.walkoverConsequence(winnerName)}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+              {mutation.isPending ? messages.common.saving : messages.results.confirmWalkover}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}
+
+// A preview describes one exact result revision, so it must not outlive it. It
+// is stored with the revision it was built from and goes stale during render,
+// rather than being destroyed by a remount: a remount on every scored point
+// would wipe the typed games mid-review.
+function CorrectionForm({ snapshot, resetGeneration, matchId, onClose }: ResultEditorProps) {
+  const match = snapshot.matches.find((candidate) => candidate.id === matchId)
+  const stage = (match ? fixtureOf(snapshot, match)?.stage : undefined) ?? 'group'
+  const [games, setGames] = useState<GameDraft[]>(() => {
+    const recorded = match ? confirmedGames(match) : []
+    const drafts = recorded.map((game) => ({ a: String(game.score.a), b: String(game.score.b) }))
+    return drafts.length >= 2 ? drafts : [{ a: '', b: '' }, { a: '', b: '' }]
+  })
   const [reviewed, setReviewed] = useState<{ impact: MutationImpact; revision: number } | null>(null)
-  const [pendingWalkover, setPendingWalkover] = useState<UUID | null>(null)
+
+  const scores: Score[] = games.map((game) => ({ a: Number(game.a), b: Number(game.b) }))
+  const complete = games.every((game) => game.a.trim() !== '' && game.b.trim() !== '')
+  const winnerSide = complete ? correctedMatchWinner(scores, stage) : null
+  const { target, cap } = gameRules(stage)
 
   const previewMutation = useMutation({
-    mutationFn: (score: Score) => previewResultCorrection(matchId, score, resetGeneration),
+    mutationFn: (side: Side) => {
+      if (!match) throw new Error(messages.results.matchGone)
+      return previewResultCorrection({ matchId, matchVersion: match.version, winnerSide: side, games: scores }, resetGeneration)
+    },
     onSuccess: (result) => setReviewed({ impact: result, revision: result.tournamentVersion }),
   })
 
   const saveMutation = useMutation({
-    mutationFn: async (action: SaveAction) => {
+    mutationFn: ({ side, previewTournamentVersion }: { side: Side; previewTournamentVersion: number }) => {
       if (!match) throw new Error(messages.results.matchGone)
-      if (action.kind === 'walkover') {
-        return mutateTournament('mark_walkover', {
-          requestId: crypto.randomUUID(),
-          resetGeneration,
-          expectedVersion: match.version,
-          payload: { matchId, winnerId: action.winnerId },
-        })
-      }
-      if (match.state === 'completed') {
-        return mutateTournament('correct_result', {
-          requestId: crypto.randomUUID(),
-          resetGeneration,
-          expectedVersion: match.version,
-          payload: { matchId, score: action.score, previewTournamentVersion: action.previewTournamentVersion },
-        })
-      }
-      return mutateTournament('enter_result', {
+      return mutateTournament('correct_result', {
         requestId: crypto.randomUUID(),
         resetGeneration,
         expectedVersion: match.version,
-        payload: { matchId, score: action.score },
+        payload: { matchId, winnerSide: side, games: scores, previewTournamentVersion },
       })
     },
     onSuccess: () => {
       setReviewed(null)
-      setPendingWalkover(null)
       onClose()
     },
   })
 
-  if (!match) {
-    return (
-      <DialogHeader>
-        <DialogTitle>{messages.results.enterResult}</DialogTitle>
-        <DialogDescription>{messages.results.matchGone}</DialogDescription>
-      </DialogHeader>
-    )
-  }
+  if (!match) return null
 
-  const score = { a: Number(scoreA), b: Number(scoreB) }
-  const scoreValid = Number.isInteger(score.a) && Number.isInteger(score.b) && isWinningScore(score)
-  const isCorrection = match.state === 'completed'
-  // Anything that moved the tournament since the review invalidates the
-  // projection on screen, so the dialog closes and the staff member reviews again.
+  // Anything that moved a result since the review invalidates the projection
+  // on screen, so the dialog closes and the organizer reviews again.
   const impact = reviewed && reviewed.revision === snapshot.tournament.resultRevision ? reviewed.impact : null
+  const updateGame = (index: number, side: Side, value: string) => {
+    setGames((current) => current.map((game, gameIndex) => gameIndex === index ? { ...game, [side]: value } : game))
+  }
 
   return (
     <>
-      <DialogHeader className="pr-6">
-        <DialogTitle>{isCorrection ? messages.results.correctTitle : messages.results.enterResult}</DialogTitle>
-        <DialogDescription>
-          {isCorrection ? messages.results.correctionIntro : messages.results.entryIntro}
-        </DialogDescription>
-      </DialogHeader>
-
-      <div className="min-w-0 rounded-field bg-well px-3.5 py-2.5">
-        <p className="truncate text-[0.8125rem] font-medium">
-          {messages.common.versus(pairName(snapshot, match.pairAId), pairName(snapshot, match.pairBId))}
-        </p>
-        <p className="mt-0.5 text-[0.6875rem] text-muted-ink">{matchRoundLabel(match)}</p>
+      <div className="space-y-3">
+        {games.map((game, index) => (
+          <div className="grid grid-cols-[3rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3" key={index}>
+            <span className="text-[0.6875rem] text-muted-ink">{messages.common.gameNumber(index + 1)}</span>
+            {(['a', 'b'] as const).map((side) => (
+              <Input
+                key={side}
+                className="numeric"
+                type="number"
+                inputMode="numeric"
+                min="0"
+                max={cap}
+                aria-label={messages.results.gameScore(index + 1, pairPlayers(snapshot, matchPair(snapshot, match, side)))}
+                value={game[side]}
+                onChange={(event) => updateGame(index, side, event.target.value)}
+              />
+            ))}
+          </div>
+        ))}
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <p className={winnerSide ? 'text-[0.6875rem] text-muted-ink' : 'text-[0.6875rem] text-destructive'}>
+            {messages.results.scoreHint(target, cap)}
+          </p>
+          {games.length === 2 ? (
+            <Button size="sm" variant="ghost" onClick={() => setGames((current) => [...current, { a: '', b: '' }])}>{messages.results.addGame}</Button>
+          ) : (
+            <Button size="sm" variant="ghost" onClick={() => setGames((current) => current.slice(0, 2))}>{messages.results.removeGame}</Button>
+          )}
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <div className="grid grid-cols-2 gap-3">
-          <div className="min-w-0 space-y-2">
-            <Label htmlFor="score-a" className="block truncate">{pairName(snapshot, match.pairAId)}</Label>
-            <Input id="score-a" className="numeric" type="number" inputMode="numeric" min="0" max="30" value={scoreA} onChange={(event) => setScoreA(event.target.value)} />
-          </div>
-          <div className="min-w-0 space-y-2">
-            <Label htmlFor="score-b" className="block truncate">{pairName(snapshot, match.pairBId)}</Label>
-            <Input id="score-b" className="numeric" type="number" inputMode="numeric" min="0" max="30" value={scoreB} onChange={(event) => setScoreB(event.target.value)} />
-          </div>
-        </div>
-        <p className={scoreValid ? 'text-[0.6875rem] text-muted-ink' : 'text-[0.6875rem] text-destructive'}>
-          {messages.results.scoreHint}
-        </p>
-      </div>
-
-      {match.state === 'unstarted' ? (
-        <div className="flex flex-wrap items-center gap-2 border-t border-hairline pt-4">
-          <Select value={walkoverWinner} onValueChange={setWalkoverWinner}>
-            <SelectTrigger className="w-full sm:w-48"><SelectValue placeholder={messages.results.walkoverWinner} /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value={match.pairAId as UUID}>{pairName(snapshot, match.pairAId)}</SelectItem>
-              <SelectItem value={match.pairBId as UUID}>{pairName(snapshot, match.pairBId)}</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" disabled={!walkoverWinner} onClick={() => setPendingWalkover(walkoverWinner)}>
-            {messages.results.recordWalkover}
-          </Button>
-        </div>
-      ) : null}
-
-      {previewMutation.isError ? (
-        <p className="text-sm text-destructive" role="alert">{errorMessage(previewMutation.error)}</p>
-      ) : null}
-      {saveMutation.isError ? (
-        <p className="text-sm text-destructive" role="alert">{errorMessage(saveMutation.error)}</p>
-      ) : null}
+      {previewMutation.isError ? <p className="text-sm text-destructive" role="alert">{errorMessage(previewMutation.error)}</p> : null}
+      {saveMutation.isError ? <p className="text-sm text-destructive" role="alert">{errorMessage(saveMutation.error)}</p> : null}
 
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>{messages.common.cancel}</Button>
-        <Button disabled={!scoreValid || previewMutation.isPending} onClick={() => previewMutation.mutate(score)}>
-          {previewMutation.isPending
-            ? messages.common.checking
-            : isCorrection ? messages.results.reviewCorrection : messages.results.reviewResult}
+        <Button disabled={winnerSide === null || previewMutation.isPending} onClick={() => { if (winnerSide) previewMutation.mutate(winnerSide) }}>
+          {previewMutation.isPending ? messages.common.checking : messages.results.reviewCorrection}
         </Button>
       </DialogFooter>
 
       <AlertDialog open={impact !== null} onOpenChange={(open) => { if (!open) setReviewed(null) }}>
         <AlertDialogContent size="wide">
           <AlertDialogHeader>
-            <AlertDialogTitle>{isCorrection ? messages.results.confirmCorrectionTitle : messages.results.confirmResultTitle}</AlertDialogTitle>
+            <AlertDialogTitle>{messages.results.confirmCorrectionTitle}</AlertDialogTitle>
             <AlertDialogDescription>
               {impact?.blockedReason === null ? messages.results.reviewBeforeConfirm : messages.results.cannotApply}
             </AlertDialogDescription>
@@ -179,10 +211,10 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
           <AlertDialogFooter>
             <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
             <AlertDialogAction
-              disabled={impact === null || impact.blockedReason !== null || saveMutation.isPending}
+              disabled={impact === null || impact.blockedReason !== null || winnerSide === null || saveMutation.isPending}
               onClick={() => {
-                if (impact && impact.blockedReason === null) {
-                  saveMutation.mutate({ kind: 'score', score, previewTournamentVersion: impact.tournamentVersion })
+                if (impact && impact.blockedReason === null && winnerSide) {
+                  saveMutation.mutate({ side: winnerSide, previewTournamentVersion: impact.tournamentVersion })
                 }
               }}
             >
@@ -191,26 +223,42 @@ export function ResultEditor({ snapshot, resetGeneration, matchId, onClose }: Re
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </>
+  )
+}
 
-      <AlertDialog open={pendingWalkover !== null} onOpenChange={(open) => { if (!open) setPendingWalkover(null) }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{messages.results.confirmWalkoverTitle}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingWalkover ? messages.results.walkoverConsequence(pairName(snapshot, pendingWalkover)) : ''}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction
-              disabled={pendingWalkover === null || saveMutation.isPending}
-              onClick={() => { if (pendingWalkover) saveMutation.mutate({ kind: 'walkover', winnerId: pendingWalkover }) }}
-            >
-              {saveMutation.isPending ? messages.common.saving : messages.results.confirmWalkover}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+export function ResultEditor(props: ResultEditorProps) {
+  const { snapshot, matchId } = props
+  const match = snapshot.matches.find((candidate) => candidate.id === matchId)
+
+  if (!match) {
+    return (
+      <DialogHeader>
+        <DialogTitle>{messages.results.correctTitle}</DialogTitle>
+        <DialogDescription>{messages.results.matchGone}</DialogDescription>
+      </DialogHeader>
+    )
+  }
+
+  const isCorrection = match.state === 'completed'
+  const fixture = fixtureOf(snapshot, match)
+  return (
+    <>
+      <DialogHeader className="pr-6">
+        <DialogTitle>{isCorrection ? messages.results.correctTitle : messages.results.walkoverTitle}</DialogTitle>
+        <DialogDescription>
+          {isCorrection ? messages.results.correctionIntro : messages.results.walkoverIntro}
+        </DialogDescription>
+      </DialogHeader>
+
+      <div className="min-w-0 rounded-field bg-well px-3.5 py-2.5">
+        <p className="truncate text-[0.8125rem] font-medium">
+          {messages.common.versus(teamName(snapshot, sideTeamId(fixture, 'a')), teamName(snapshot, sideTeamId(fixture, 'b')))}
+        </p>
+        <p className="mt-0.5 text-[0.6875rem] text-muted-ink">{matchLabel(snapshot, match)}</p>
+      </div>
+
+      {isCorrection ? <CorrectionForm {...props} /> : <WalkoverForm {...props} />}
     </>
   )
 }
