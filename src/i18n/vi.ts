@@ -58,7 +58,6 @@ export const messages = {
 
   organizer: {
     heading: 'Điều hành giải',
-    subheading: 'Giữ nhịp thi đấu.',
     stageBadge: (stage: string) => `Giai đoạn: ${stage}`,
     progress: (inGroups: boolean) =>
       inGroups ? 'trận vòng bảng đã đấu' : 'trận vòng loại trực tiếp đã đấu',
@@ -117,7 +116,6 @@ export const messages = {
 
     fixtures: {
       heading: 'Tạo lịch thi đấu',
-      description: 'Tạo lịch sau khi thiết lập có 4 đến 10 cặp chia đều và đã chọn số sân.',
       review: 'Tạo lịch thi đấu',
     },
 

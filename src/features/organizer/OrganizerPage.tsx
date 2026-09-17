@@ -466,7 +466,6 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
         <div>
           <h2 className="text-[1.375rem] font-semibold tracking-[-0.036em]">{messages.organizer.heading}</h2>
-          <p className="mt-2 text-xs text-muted-ink">{messages.organizer.subheading}</p>
         </div>
         <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
           {progress ? <StageProgressMeter progress={progress} /> : null}
@@ -479,8 +478,7 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
       {!hasFixtures ? (
         <section className="rounded-card bg-navy p-6 text-white shadow-final">
           <h3 className="text-sm font-semibold">{messages.organizer.fixtures.heading}</h3>
-          <p className="mt-1.5 text-[0.6875rem] text-navy-soft">{messages.organizer.fixtures.description}</p>
-          <Button className="mt-5 bg-white text-navy hover:bg-navy-soft" disabled={snapshot.tournament.courtCount === null} onClick={() => setPendingAction('fixtures')}>
+          <Button className="mt-4 bg-white text-navy hover:bg-navy-soft" disabled={snapshot.tournament.courtCount === null} onClick={() => setPendingAction('fixtures')}>
             <CalendarRange /> {messages.organizer.fixtures.review}
           </Button>
         </section>
