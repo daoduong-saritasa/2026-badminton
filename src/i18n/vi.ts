@@ -118,7 +118,7 @@ export const messages = {
     fixtures: {
       heading: 'Tạo lịch thi đấu',
       description: 'Tạo lịch sau khi thiết lập có 4 đến 10 cặp chia đều và đã chọn số sân.',
-      review: 'Xem trước lịch thi đấu',
+      review: 'Tạo lịch thi đấu',
     },
 
     confirmGroups: {
