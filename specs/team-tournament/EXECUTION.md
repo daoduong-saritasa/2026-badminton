@@ -10,9 +10,9 @@ court-count setting removed.
 
 ## STATUS
 
-- Current phase: 1 — done
+- Current phase: 2 — in-progress
 - Phase 1 — Domain rules: done
-- Phase 2 — Staff roles: pending
+- Phase 2 — Staff roles: in-progress
 - Phase 3 — Team tournament schema: pending
 - Phase 4 — Client replacement: pending
 - Verification debt: none
@@ -53,9 +53,9 @@ Produces: `StaffRole = 'organizer' | 'referee'` and `StaffAccess.role: StaffRole
 
 Fresh review: required — authentication/authorization and a persistent-data migration
 
-- [ ] `supabase/migrations/202609170001_staff_roles.sql`: re-key `private.staff_config` by `role text check (role in ('organizer','referee'))` (drop `singleton`), add `role` to `private.staff_grants`, revoke every existing grant (`revoked_at = clock_timestamp()`) so no pre-role grant survives
-- [ ] Same migration: `exchange_staff_pin` matches the PIN against both hashes and issues a grant carrying the matched role, keeping `consume_pin_attempt` rate limiting and expiry; `rotate_staff_pin_for_session(p_session_id, p_user_id, p_role, p_pin)` requires an organizer grant, rejects a PIN equal to the other role's PIN (judgment call: identical PINs would make the role ambiguous), bumps that role's generation and revokes that role's grants
-- [ ] Same migration: add `private.require_organizer()` / `private.require_scorer()`; `has_staff_access` validates `pin_generation` against the grant's role row; replace `private.require_staff_access()` call sites in `private.invoke_legacy_mutation` so `start_scoring`, `take_over`, `add_point`, `undo_point`, `confirm_result` require scorer and every other command, `preview_result_correction` and `preview_withdrawal` require organizer
+- [x] `supabase/migrations/202609170001_staff_roles.sql`: re-key `private.staff_config` by `role text check (role in ('organizer','referee'))` (drop `singleton`), add `role` to `private.staff_grants`, revoke every existing grant (`revoked_at = clock_timestamp()`) so no pre-role grant survives
+- [x] Same migration: `exchange_staff_pin` matches the PIN against both hashes and issues a grant carrying the matched role, keeping `consume_pin_attempt` rate limiting and expiry; `rotate_staff_pin_for_session(p_session_id, p_user_id, p_role, p_pin)` requires an organizer grant, rejects a PIN equal to the other role's PIN (judgment call: identical PINs would make the role ambiguous), bumps that role's generation and revokes that role's grants
+- [x] Same migration: add `private.require_organizer()` / `private.require_scorer()`; `has_staff_access` validates `pin_generation` against the grant's role row; replace `private.require_staff_access()` call sites in `private.invoke_legacy_mutation` so `start_scoring`, `take_over`, `add_point`, `undo_point`, `confirm_result` require scorer and every other command, `preview_result_correction` and `preview_withdrawal` require organizer
 - [ ] `supabase/functions/staff-pin/index.ts` passes through the role in the access body; `supabase/functions/rotate-pin/index.ts` parses and forwards `role`, returning 400 on an unknown role
 - [ ] `src/data/staff.ts`: `staffAccessSchema` gains `role: z.enum(['organizer','referee'])`; `rotateStaffPin(role, pin)`
 - [ ] `src/features/staff/StaffMenu.tsx`, `src/App.tsx`: show organizer navigation and PIN rotation only when `role === 'organizer'` (server enforces regardless)
