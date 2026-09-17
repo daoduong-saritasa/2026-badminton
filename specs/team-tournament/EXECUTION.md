@@ -62,6 +62,9 @@ Fresh review: required — authentication/authorization and a persistent-data mi
 - [x] `src/lib/database.types.ts`: hand-edit `rotate_staff_pin_for_session` args and `get_staff_access` return to match the SQL
 - [x] `tests/integration/auth.test.ts`: referee PIN yields a referee grant; referee cannot call an organizer command or preview; organizer can score; rotation by a referee is rejected; rotating one role revokes only that role's grants; pre-migration grants are revoked (Acceptance review 11)
 - [x] `docs/deployment.md`, `README.md`: provision both role PINs in the `psql` procedure
+- [x] `(amended 2026-09-17)` Validate that provisioned role PINs are distinct 4–12 digit values before either hash is written
+- [x] `(amended 2026-09-17)` Exercise the forward role migration from a legacy active grant and assert that it is revoked
+- [x] `(amended 2026-09-17)` Document the maintenance-window rollout boundary for the migration, both Edge Functions, the frontend, PIN provisioning, and tab refresh
 
 **Phase gate (hard):**
 - [ ] `npm run typecheck`

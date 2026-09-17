@@ -88,6 +88,12 @@ At the `psql` prompt, provision or replace both local role PINs:
 ~~~sql
 \prompt 'Initial organizer PIN: ' initial_organizer_pin
 \prompt 'Initial referee PIN: ' initial_referee_pin
+select (
+  :'initial_organizer_pin' ~ '^[0-9]{4,12}$'
+  and :'initial_referee_pin' ~ '^[0-9]{4,12}$'
+  and :'initial_organizer_pin' <> :'initial_referee_pin'
+) as valid_staff_pins \gset
+\if :valid_staff_pins
 insert into private.staff_config (role, pin_hash, generation)
 values
   (
@@ -107,6 +113,9 @@ set pin_hash = excluded.pin_hash,
 update private.staff_grants
 set revoked_at = clock_timestamp()
 where revoked_at is null;
+\else
+\echo 'PINs must be distinct and contain 4 to 12 digits. Nothing was changed.'
+\endif
 \unset initial_organizer_pin
 \unset initial_referee_pin
 ~~~
@@ -180,6 +189,24 @@ mutation.
 If the migration fails, keep the existing frontend. If the frontend publish fails after the
 migration succeeds, restore service by fixing or republishing the matching frontend; do not point
 integration tests at production.
+
+## Roll out staff roles
+
+Migration `202609170001_staff_roles.sql`, both staff Edge Functions, and the role-aware frontend
+form one incompatible release boundary. The migration changes the PIN-rotation RPC signature,
+and older browser tabs do not understand role-bearing access.
+
+1. Announce a maintenance window and stop organizer and referee writes.
+2. Apply the database migration.
+3. Immediately deploy both `staff-pin` and `rotate-pin` Edge Functions.
+4. Provision distinct organizer and referee PINs with the validated interactive procedure above.
+5. Publish the role-aware frontend.
+6. Require every organizer and referee to refresh existing tabs before writes resume.
+7. Verify that the referee PIN exposes scoring but no organizer controls, and that the organizer
+   PIN exposes organizer controls and rotation for both roles.
+
+If any step after the migration fails, keep writes paused until the matching Edge Functions and
+frontend are published. Do not distribute either PIN or resume writes with a mixed-version stack.
 
 ## Run a maintenance reset
 

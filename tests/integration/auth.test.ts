@@ -1,3 +1,5 @@
+import { readFileSync } from 'node:fs'
+
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 
 import {
@@ -190,18 +192,43 @@ describe('staff authorization', () => {
     expect(response.status).toBe(503)
   })
 
-  it('revokes every active grant during the role migration transition', async () => {
+  it('revokes a legacy active grant when the role migration is applied', async () => {
     const organizer = await signInAnonymously()
-    const referee = await signInAnonymously()
     await elevate(organizer)
-    await elevate(referee, '1357')
-
-    runSql(
-      'update private.staff_grants set revoked_at = clock_timestamp() where revoked_at is null;',
+    const migration = readFileSync(
+      new URL('../../supabase/migrations/202609170001_staff_roles.sql', import.meta.url),
+      'utf8',
     )
 
-    expect(await (await rpc('get_staff_access', {}, organizer)).json()).toBeNull()
-    expect(await (await rpc('get_staff_access', {}, referee)).json()).toBeNull()
+    const revoked = runSql(`
+      begin;
+      drop function public.rotate_staff_pin_for_session(uuid, uuid, text, text);
+      create function public.rotate_staff_pin_for_session(uuid, uuid, text)
+      returns jsonb language sql security definer set search_path = ''
+      as $$ select '{}'::jsonb; $$;
+      drop function private.require_organizer();
+      drop function private.require_scorer();
+      drop function private.staff_role();
+      drop function private.has_staff_access(uuid, uuid);
+      delete from private.staff_config where role = 'referee';
+      alter table private.staff_config
+        add column singleton boolean not null default true check (singleton);
+      alter table private.staff_config drop constraint staff_config_pkey;
+      alter table private.staff_config drop constraint staff_config_role_check;
+      alter table private.staff_config drop column role;
+      alter table private.staff_config add primary key (singleton);
+      alter table private.staff_grants drop constraint staff_grants_role_check;
+      alter table private.staff_grants drop column role;
+
+      ${migration}
+
+      select revoked_at is not null
+      from private.staff_grants
+      where session_id = '${organizer.sessionId}'::uuid;
+      rollback;
+    `)
+
+    expect(revoked).toBe('t')
   })
 
   it('rate limits the fifth failed PIN attempt for one verified user', async () => {
