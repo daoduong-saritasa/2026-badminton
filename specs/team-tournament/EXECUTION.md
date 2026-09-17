@@ -10,10 +10,10 @@ court-count setting removed.
 
 ## STATUS
 
-- Current phase: 2 — done-with-debt
+- Current phase: 3 — in-progress
 - Phase 1 — Domain rules: done
 - Phase 2 — Staff roles: done-with-debt
-- Phase 3 — Team tournament schema: pending
+- Phase 3 — Team tournament schema: in-progress
 - Phase 4 — Client replacement: pending
 - Verification debt: Phase 2 integration gate is environment-blocked because the OrbStack Docker socket is absent; 3 non-database tests passed, 4 integration suites failed in setup, and 51 scenarios were skipped on 2026-09-17.
 
@@ -89,15 +89,15 @@ Produces: tables `public.teams`, `public.players.team_id`, `public.team_fixtures
 
 Fresh review: required — persistent-data migration and authorization on every command
 
-- [ ] `supabase/migrations/202609170002_team_tournament.sql`: raise if any `public.pairs` or `public.matches` rows exist (Reset all must precede), then drop `public.pairs`, `public.tie_resolutions`, pair columns and `void` state, and every legacy wrapper/`private.legacy_*` function, including `withdraw_pair`, `resolve_tie`, `confirm_groups`, `preview_withdrawal`, `generate_fixtures`, `enter_result`, `set_court_count`; drop `public.tournament.court_count` (courts are always 1 and 2, enforced by `matches.court in (1, 2)`)
-- [ ] Same migration: create the Produces tables with constraints (seed per player, `match_number in (1,2,3)`, unique `(match_id, game_number)`), `public` read policies for teams/players/fixtures/matches/match_games, no grants on `private.lineups`; add the new public tables to the `supabase_realtime` publication set up in `202609080004_realtime.sql`
-- [ ] `private.snapshot_body()` / `get_tournament_snapshot()`: include a fixture's lineups only when both teams confirmed, or when `private.staff_role() = 'organizer'` (Acceptance review 3)
-- [ ] Roster and lineup commands (organizer): `save_roster` blocked once group play started; `save_lineup` validates three legal pairs; `confirm_lineup` locks when both confirmed; `reopen_lineups` clears both confirmations only before any fixture match starts; `start_group_play` requires valid rosters, 2 teams per group, all four group lineups confirmed, then creates both group fixtures and their three matches (Acceptance review 1, 2, 4)
-- [ ] Scoring commands (scorer): `start_match` requires confirmed lineups, assigned free court, no participating player in another `playing` match, and for match 3 both openers confirmed at 1–1; `add_point`/`undo_point` on the open game only; `confirm_game` applies stage target/cap, completes the match at two game wins, marks match 3 unnecessary at 2–0, completes the fixture (Acceptance review 5, 6, 8)
-- [ ] Progression: completing both group fixtures populates third place and final teams; completing both placement fixtures sets tournament `completed` (Acceptance review 7)
-- [ ] `mark_walkover` (organizer) per match without score; no double walkover; `correct_result` + `preview_result_correction` (organizer) block `decider-started` / `placement-started` / `tournament-completed`, recompute placement participants and clear placement lineup confirmations when advancement changes before placement starts (Acceptance review 9, 10)
-- [ ] `take_over` (scorer): atomically reassign `private.match_ownership`, insert `private.scoring_handovers (match_id, from_session_id, to_session_id, created_at)`; ownership checks reject the former owner's writes (Acceptance review 11)
-- [ ] `public.reset_tournament` clears the new tables and handovers and no longer reads `court_count`; `scripts/reset-tournament.ts` unchanged unless its table list diverges
+- [x] `supabase/migrations/202609170002_team_tournament.sql`: raise if any `public.pairs` or `public.matches` rows exist (Reset all must precede), then drop `public.pairs`, `public.tie_resolutions`, pair columns and `void` state, and every legacy wrapper/`private.legacy_*` function, including `withdraw_pair`, `resolve_tie`, `confirm_groups`, `preview_withdrawal`, `generate_fixtures`, `enter_result`, `set_court_count`; drop `public.tournament.court_count` (courts are always 1 and 2, enforced by `matches.court in (1, 2)`)
+- [x] Same migration: create the Produces tables with constraints (seed per player, `match_number in (1,2,3)`, unique `(match_id, game_number)`), `public` read policies for teams/players/fixtures/matches/match_games, no grants on `private.lineups`; add the new public tables to the `supabase_realtime` publication set up in `202609080004_realtime.sql`
+- [x] `private.snapshot_body()` / `get_tournament_snapshot()`: include a fixture's lineups only when both teams confirmed, or when `private.staff_role() = 'organizer'` (Acceptance review 3)
+- [x] Roster and lineup commands (organizer): `save_roster` blocked once group play started; `save_lineup` validates three legal pairs; `confirm_lineup` locks when both confirmed; `reopen_lineups` clears both confirmations only before any fixture match starts; `start_group_play` requires valid rosters, 2 teams per group, all four group lineups confirmed, then creates both group fixtures and their three matches (Acceptance review 1, 2, 4)
+- [x] Scoring commands (scorer): `start_match` requires confirmed lineups, assigned free court, no participating player in another `playing` match, and for match 3 both openers confirmed at 1–1; `add_point`/`undo_point` on the open game only; `confirm_game` applies stage target/cap, completes the match at two game wins, marks match 3 unnecessary at 2–0, completes the fixture (Acceptance review 5, 6, 8)
+- [x] Progression: completing both group fixtures populates third place and final teams; completing both placement fixtures sets tournament `completed` (Acceptance review 7)
+- [x] `mark_walkover` (organizer) per match without score; no double walkover; `correct_result` + `preview_result_correction` (organizer) block `decider-started` / `placement-started` / `tournament-completed`, recompute placement participants and clear placement lineup confirmations when advancement changes before placement starts (Acceptance review 9, 10)
+- [x] `take_over` (scorer): atomically reassign `private.match_ownership`, insert `private.scoring_handovers (match_id, from_session_id, to_session_id, created_at)`; ownership checks reject the former owner's writes (Acceptance review 11)
+- [x] `public.reset_tournament` clears the new tables and handovers and no longer reads `court_count`; `scripts/reset-tournament.ts` unchanged unless its table list diverges
 - [ ] Rewrite `tests/integration/tournament.test.ts`, `impacts.test.ts`, `reset.test.ts` for the team format, covering Acceptance review 1–12 server-side; removed pair/withdrawal/tie scenarios are replaced, not skipped — list removed scenario names in the PR description
 
 **Phase gate (hard):**
