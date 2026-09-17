@@ -10,8 +10,8 @@ court-count setting removed.
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — Domain rules: pending
+- Current phase: 1 — in-progress
+- Phase 1 — Domain rules: in-progress
 - Phase 2 — Staff roles: pending
 - Phase 3 — Team tournament schema: pending
 - Phase 4 — Client replacement: pending
@@ -27,8 +27,8 @@ Produces: `Team`, `TeamPlayer`, `LineupPair { seed1PlayerId; seed2PlayerId }`, `
 
 Fresh review: not required
 
-- [ ] Add the Produces types to `src/domain/types.ts` beside the old `Pair`/`Match` types (new names avoid collisions; Phase 4 deletes the old ones)
-- [ ] `src/domain/roster.ts` + `roster.test.ts`: 4 teams × 16 distinct players, 2 seed 1 + 2 seed 2 per team, 2 teams per group; lineup pairs are seed 1 + seed 2 of that team, matches 1–2 disjoint and covering all four, match 3 recombined and not repeating an opening pair (PLAN.md → Acceptance review 1–2)
+- [x] Add the Produces types to `src/domain/types.ts` beside the old `Pair`/`Match` types (new names avoid collisions; Phase 4 deletes the old ones)
+- [x] `src/domain/roster.ts` + `roster.test.ts`: 4 teams × 16 distinct players, 2 seed 1 + 2 seed 2 per team, 2 teams per group; lineup pairs are seed 1 + seed 2 of that team, matches 1–2 disjoint and covering all four, match 3 recombined and not repeating an opening pair (PLAN.md → Acceptance review 1–2)
 - [ ] `src/domain/scoring.ts` + `scoring.test.ts`: `gameRules` 15/21 for group and third place, 21/30 for final; win by two, one-point margin at cap; two game wins end the match (Acceptance review 5). Keep `isWinningScore`/`addPointToScore` until Phase 4
 - [ ] `src/domain/team-fixtures.ts` + `team-fixtures.test.ts`: first to two match wins, walkovers count as wins, decider `eligible` only with both openers confirmed at 1–1, `unnecessary` at 2–0, no winner when a match is unresolved (Acceptance review 6, 10)
 - [ ] `src/domain/progression.ts` + `progression.test.ts`: group winners → final, losers → third place; completion needs both placement outcomes; `correctionBlockCode` returns `'decider-started'` when a correction flips 1–1 with a started decider, `'placement-started'` when it changes advancement after either placement fixture starts (Acceptance review 7, 9)

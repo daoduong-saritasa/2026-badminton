@@ -34,6 +34,61 @@ export interface Player {
   seed: Seed
 }
 
+export interface Team {
+  id: UUID
+  name: string
+  group: Group
+}
+
+export interface TeamPlayer extends Player {
+  teamId: UUID
+}
+
+export interface LineupPair {
+  seed1PlayerId: UUID
+  seed2PlayerId: UUID
+}
+
+export interface Lineup {
+  fixtureId: UUID
+  teamId: UUID
+  pairs: [LineupPair, LineupPair, LineupPair]
+  confirmedAt: string | null
+}
+
+export type FixtureStage = 'group' | 'third-place' | 'final'
+
+export interface TeamFixture {
+  id: UUID
+  stage: FixtureStage
+  group: Group | null
+  teamAId: UUID | null
+  teamBId: UUID | null
+  version: number
+}
+
+export type FixtureMatchState =
+  | 'unstarted'
+  | 'playing'
+  | 'completed'
+  | 'unnecessary'
+
+export interface Game {
+  gameNumber: number
+  score: Score
+  confirmedAt: string | null
+}
+
+export interface FixtureMatch {
+  id: UUID
+  fixtureId: UUID
+  matchNumber: 1 | 2 | 3
+  state: FixtureMatchState
+  resultKind: MatchResultKind | null
+  winnerSide: Side | null
+  games: Game[]
+}
+
 export interface Pair {
   id: UUID
   teamName: string | null
