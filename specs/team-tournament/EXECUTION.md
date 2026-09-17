@@ -129,13 +129,14 @@ Fresh review: not required
 - [x] `src/lib/database.types.ts`: hand-edit tables and `Functions` to the Phase 3 SQL; remove legacy entries
 - [x] `src/domain/commands.ts`: `CommandPayloads` keys and payloads = Phase 3 RPCs; `src/domain/types.ts`: `TournamentSnapshot { tournament, teams, players, fixtures, matches, lineups }`, delete `Pair`, old `Match` union, `TieResolution`, `Standing`, `Fixture`/`GroupFixture`/`KnockoutFixture`, `SetupPairInput`
 - [x] Delete `src/domain/standings.ts`, `src/domain/fixtures.ts`, `src/domain/setup.ts` (including `availableCourts`) and their tests (replaced by Phase 1 modules and tests); drop old codes from `impactBlockCodes`
-- [ ] Remove the court-count setting: `CourtCount`, `Tournament.courtCount`, `SetupInput.courtCount`, the `set_court_count` command, and its controls and reads in `SetupForm.tsx`, `OrganizerPage.tsx`, `TournamentPage.tsx`, `ScoreTracker.tsx`; `Court = 1 | 2` stays
+- [x] Remove the court-count setting: `CourtCount`, `Tournament.courtCount`, `SetupInput.courtCount`, the `set_court_count` command, and its controls and reads in `SetupForm.tsx`, `OrganizerPage.tsx`, `TournamentPage.tsx`, `ScoreTracker.tsx`; `Court = 1 | 2` stays
 - [x] `src/data/tournament.ts` (`parseSnapshot` zod schemas, `mutateTournament`), `src/data/tournament.test.ts`; `src/data/impacts.ts` (remove `previewWithdrawal`), `src/data/impacts.test.ts`
-- [ ] `src/features/scoring/scoring-state.ts` + `scoring-state.test.ts`: per-game score, `confirm_game` event, stage target/cap; `ScoreTracker.tsx`: game tally, confirm game, take over with explicit confirmation
-- [ ] `(amended 2026-09-17)` Extend `FixtureMatch` with `pairA`, `pairB`, `court`, and `version`, and take the preview's reset generation from the request because `preview_result_correction` does not return one
-- [ ] Organizer UI: `SetupForm.tsx` → team roster entry; new `src/features/organizer/LineupEditor.tsx` (enter, confirm, reopen); `ResultSchedule.tsx`, `ResultEditor.tsx`, `ImpactPreview.tsx` on fixtures/matches/games; delete `WithdrawalPanel.tsx`; `OrganizerPage.tsx` wiring
-- [ ] Public UI: `StandingsTable.tsx` → group fixture results and final positions; `KnockoutBracket.tsx` → third place + final; `MatchTicket.tsx` pairs and game scores; `TournamentPage.tsx` wiring; lineups shown only when present in the snapshot
-- [ ] `src/i18n/vi.ts`, `src/i18n/errors.ts` (+ `errors.test.ts`): Đội, Cặp, Cuộc đối đầu, Trận, Ván, Trọng tài copy and new block/error codes per `CONTEXT.md`
+- [x] `src/features/scoring/scoring-state.ts` + `scoring-state.test.ts`: per-game score, `confirm_game` event, stage target/cap; `ScoreTracker.tsx`: game tally, confirm game, take over with explicit confirmation
+- [x] `(amended 2026-09-17)` Extend `FixtureMatch` with `pairA`, `pairB`, `court`, and `version`, and take the preview's reset generation from the request because `preview_result_correction` does not return one
+- [x] Organizer UI: `SetupForm.tsx` → team roster entry; new `src/features/organizer/LineupEditor.tsx` (enter, confirm, reopen); `ResultSchedule.tsx`, `ResultEditor.tsx`, `ImpactPreview.tsx` on fixtures/matches/games; delete `WithdrawalPanel.tsx`; `OrganizerPage.tsx` wiring
+- [x] Public UI: `StandingsTable.tsx` → group fixture results and final positions; `KnockoutBracket.tsx` → third place + final; `MatchTicket.tsx` pairs and game scores; `TournamentPage.tsx` wiring; lineups shown only when present in the snapshot
+- [x] `src/i18n/vi.ts`, `src/i18n/errors.ts` (+ `errors.test.ts`): Đội, Cặp, Cuộc đối đầu, Trận, Ván, Trọng tài copy and new block/error codes per `CONTEXT.md`
+- [x] `(amended 2026-09-17)` Move `correctedMatchWinner` into `src/domain/scoring.ts` (+ tests) and shared display helpers into `src/features/tournament/labels.ts`; referees start eligible matches from a match picker in `ScoreTracker.tsx`, because the old tracker only listed playing matches
 
 **Phase gate (hard):**
 - [ ] `npm run typecheck`

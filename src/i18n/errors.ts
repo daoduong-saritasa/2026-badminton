@@ -10,75 +10,75 @@
 const serverMessages: Record<string, string> = {
   // Concurrency and staleness
   'Tournament version conflict': 'Giải đấu vừa thay đổi. Hãy tải lại và thử lại.',
+  'Fixture version conflict': 'Cuộc đối đầu vừa thay đổi. Hãy tải lại và thử lại.',
   'Match version conflict': 'Trận đấu vừa thay đổi. Hãy tải lại và thử lại.',
   'Tournament reset generation conflict': 'Giải đấu đã được đặt lại. Hãy tải lại trang.',
-  'Completed match changed after this request': 'Trận đấu đã thay đổi sau yêu cầu này. Hãy xem lại kết quả mới.',
-  'Tournament changed since the preview': 'Giải đấu đã thay đổi sau khi xem trước. Hãy xem lại rồi xác nhận.',
-  'A reviewed preview is required for this change': 'Cần xem trước thay đổi này trước khi xác nhận.',
+  'Reviewed result impact is stale': 'Kết quả đã thay đổi sau khi xem trước. Hãy xem lại rồi xác nhận.',
   'Request ID was already used with different input': 'Yêu cầu này đã được gửi với nội dung khác. Hãy tải lại và thử lại.',
 
-  // Setup
+  // Roster
   'Tournament is not configured': 'Chưa có giải đấu nào được thiết lập.',
-  'Invalid setup payload': 'Thông tin thiết lập không hợp lệ.',
-  'Invalid pair in setup': 'Có đội không hợp lệ trong thiết lập.',
-  'Setup requires 4 to 10 pairs split evenly between groups':
-    'Cần 4 đến 10 đội, chia đều cho hai bảng.',
-  'Setup requires groups sized 3+3, 4+3, or 4+4': 'Hai bảng phải có 3+3, 4+3 hoặc 4+4 đội.',
-  'Setup is locked after play starts': 'Không thể sửa thiết lập sau khi giải đã bắt đầu.',
-  'A player can belong to only one pair': 'Mỗi người chỉ thuộc một đội.',
-  'Court count must be one or two': 'Chỉ có thể chọn một hoặc hai sân.',
-  'Select one or two courts before generating fixtures': 'Hãy chọn số sân trước khi tạo lịch thi đấu.',
+  'Invalid roster payload': 'Thông tin danh sách đội không hợp lệ.',
+  'Roster requires four teams, two per group, and sixteen players':
+    'Cần bốn đội, mỗi bảng hai đội, tổng cộng mười sáu người chơi.',
+  'Each team requires two seed 1 and two seed 2 players': 'Mỗi đội cần hai hạt giống 1 và hai hạt giống 2.',
+  'Invalid player': 'Có người chơi không hợp lệ.',
+  'Roster is locked after group play starts': 'Không thể sửa danh sách đội sau khi vòng bảng bắt đầu.',
 
-  // Fixtures and courts
-  'Fixtures already exist or setup is locked': 'Lịch thi đấu đã được tạo.',
-  'Assignments must be an array': 'Phân sân không hợp lệ.',
-  'Invalid court assignment': 'Phân sân không hợp lệ.',
+  // Lineups and group play
+  'Lineup cannot be changed': 'Không thể sửa đội hình này. Cuộc đối đầu đã bắt đầu hoặc cả hai đội đã xác nhận.',
+  'Lineup players must belong to the team and match their seeds':
+    'Người chơi phải thuộc đội này và đúng hạt giống của vị trí.',
+  'Decider pair must differ from both opening pairs': 'Cặp trận 3 phải khác cặp trận 1 và trận 2.',
+  'Opening pairs must use all four players exactly once': 'Trận 1 và trận 2 phải dùng đủ bốn người chơi, mỗi người một lần.',
+  'A complete lineup is required': 'Cần lưu đủ đội hình ba trận trước khi xác nhận.',
+  'Lineups are locked after a fixture starts': 'Không thể mở lại đội hình sau khi cuộc đối đầu đã bắt đầu.',
+  'Both lineups must be confirmed': 'Cả hai đội cần xác nhận đội hình.',
+  'Fixture participants are not assigned': 'Cuộc đối đầu chưa xác định đủ hai đội.',
+  'Valid rosters and four confirmed lineups are required':
+    'Cần đủ bốn đội hợp lệ và bốn đội hình vòng bảng đã xác nhận.',
+
+  // Courts and match start
+  'Invalid court assignments': 'Xếp sân không hợp lệ.',
+  'Court must be 1 or 2': 'Chỉ có sân 1 và sân 2.',
   'Only unstarted matches can be assigned': 'Chỉ xếp được sân cho trận chưa bắt đầu.',
-  'Court 2 has an active match': 'Sân 2 đang có trận. Hãy kết thúc trận đó trước khi bỏ sân.',
-  'Court or pair is already playing': 'Sân hoặc đội này đang thi đấu.',
+  'Match is not ready to start': 'Trận đấu chưa sẵn sàng: cần xếp sân và hai đội hình đã xác nhận.',
+  'Court is occupied': 'Sân này đang có trận khác thi đấu.',
+  'A player is already playing': 'Có người chơi đang thi đấu ở trận khác.',
+  'Decider is not eligible': 'Trận 3 chỉ diễn ra khi hai trận đầu đã có kết quả 1–1.',
 
   // Scoring
-  'Match is not ready to start': 'Trận đấu chưa sẵn sàng để bắt đầu.',
   'Only a playing match can be taken over': 'Chỉ nhận quyền ghi điểm được với trận đang diễn ra.',
-  'Only a playing match can be undone': 'Chỉ hoàn tác được với trận đang diễn ra.',
-  'Current session does not own this match': 'Thiết bị khác đang ghi điểm trận này.',
+  'Session already owns this match': 'Thiết bị này đang giữ quyền ghi điểm trận này.',
+  'This session does not own the match': 'Thiết bị khác đang ghi điểm trận này.',
   'Point cannot be added': 'Không thể ghi thêm điểm cho trận này.',
-  'No point is available to undo': 'Không còn điểm nào để hoàn tác.',
-  'Score history is inconsistent': 'Lịch sử điểm không khớp. Hãy tải lại trang.',
-  'Match has no winning score to confirm': 'Tỉ số chưa đủ để kết thúc trận.',
+  'Point cannot be undone': 'Không thể hoàn tác điểm của trận này.',
+  'Game is already won': 'Ván đã đủ điểm thắng. Hãy kết thúc ván hoặc hoàn tác.',
+  'No point is available to undo': 'Không còn điểm nào để hoàn tác trong ván này.',
+  'Point history does not match the open game': 'Lịch sử điểm không khớp với ván đang đấu. Hãy tải lại trang.',
+  'Game cannot be confirmed': 'Không thể kết thúc ván của trận này.',
+  'Game does not have a valid winning score': 'Tỉ số chưa đủ để kết thúc ván.',
 
   // Results
-  'Match not found': 'Không tìm thấy trận đấu.',
-  'Match state does not allow this result': 'Trạng thái trận đấu không cho phép ghi kết quả này.',
-  'Invalid completed score': 'Tỉ số không hợp lệ. Thắng cách 2 điểm từ 21, tối đa 30.',
-  'Walkover winner must be a participant': 'Đội được xử thắng phải là một trong hai đội thi đấu.',
-  'Knockout play already depends on group participants':
-    'Vòng loại trực tiếp đã bắt đầu nên không sửa được kết quả vòng bảng, kể cả khi đội thắng không đổi.',
-  'Final play already depends on this semifinal':
-    'Trận chung kết đã phụ thuộc vào trận bán kết này nên không đổi được đội thắng.',
-
-  // Withdrawals and ties
-  'Active pair not found': 'Không tìm thấy đội đang thi đấu.',
-  'Pair cannot withdraw after knockout play starts':
-    'Không thể rút lui sau khi vòng loại trực tiếp bắt đầu. Hãy xử thắng cho trận đội này không thi đấu được.',
-  'Each group must retain at least two active pairs':
-    'Mỗi bảng phải còn ít nhất hai đội thi đấu.',
-  'All active group matches must be completed': 'Cần hoàn tất các trận vòng bảng trước.',
-  'All active group matches must be completed before resolving a tie':
-    'Cần hoàn tất các trận vòng bảng trước khi xử lý đồng hạng.',
-  'Ties can only be resolved during the group stage': 'Chỉ xử lý đồng hạng trong vòng bảng.',
-  'Invalid tie resolution': 'Thứ tự xử lý đồng hạng không hợp lệ.',
-  'Tie order must contain exactly the unresolved group pairs':
-    'Thứ tự phải gồm đúng các đội đang đồng hạng.',
-  'Residual ties require an exact recorded order': 'Cần ghi rõ thứ tự cho các đội còn đồng hạng.',
-  'Only a completed tournament can be reopened': 'Chỉ mở lại được giải đã kết thúc.',
+  'Walkover requires an unscored match and one winner': 'Chỉ xử thắng được trận chưa ghi điểm nào.',
+  'A corrected result requires two or three games and one winner': 'Kết quả sửa cần hai hoặc ba ván và một cặp thắng.',
+  'Corrected games contain an invalid score or an extra game': 'Có ván không hợp lệ hoặc ván thừa sau khi trận đã phân định.',
+  'Corrected winner does not match the games': 'Cặp thắng không khớp với tỉ số các ván.',
+  'decider-started': 'Trận quyết định đã bắt đầu nên không thể sửa kết quả làm cho trận này không còn cần thiết.',
+  'placement-started': 'Trận tranh hạng đã bắt đầu nên không thể sửa kết quả làm thay đổi đội đi tiếp.',
+  'tournament-completed': 'Giải đấu đã kết thúc nên không sửa được kết quả.',
+  'invalid-match-state': 'Chỉ sửa được kết quả của trận đã kết thúc.',
 
   // Staff access
   'Authenticated session required': 'Phiên đăng nhập đã hết hạn. Hãy tải lại trang.',
   'Verified session identity required': 'Phiên đăng nhập đã hết hạn. Hãy tải lại trang.',
-  'Staff authentication required': 'Cần quyền điều hành.',
-  'Staff access expired or revoked': 'Quyền điều hành đã hết hạn. Hãy nhập lại mã PIN.',
+  'Staff authentication required': 'Cần quyền điều hành hoặc trọng tài.',
+  'Organizer access required': 'Cần quyền điều hành.',
+  'Scoring access required': 'Cần quyền trọng tài hoặc điều hành.',
+  'Staff access expired or revoked': 'Quyền truy cập đã hết hạn. Hãy nhập lại mã PIN.',
   'PIN must contain 4 to 12 digits': 'Mã PIN phải có 4 đến 12 chữ số.',
+  'Staff role PINs must differ': 'Mã PIN điều hành và trọng tài phải khác nhau.',
+  'Unknown staff role': 'Vai trò không hợp lệ.',
   'Invalid rate-limit bucket': 'Yêu cầu không hợp lệ.',
   'Service role required': 'Thao tác này chỉ chạy được từ công cụ quản trị.',
   'Unknown tournament mutation': 'Thao tác không được hỗ trợ.',
