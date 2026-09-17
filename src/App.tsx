@@ -32,9 +32,11 @@ const staffQueryKey = ['staff-access'] as const
 /*
  * Underlined tabs: a hairline rule with a 3px orange bar under the active tab.
  * The `line` variant already renders the bar; these override its colour, weight
- * and offset so it sits on the rule rather than 5px below it.
+ * and offset so it overlaps the rule rather than sitting 5px below it. The list
+ * never scrolls: on narrow screens the tabs share the row equally and long labels
+ * wrap inside their tab, so the rule and the active bar always stay in view.
  */
-const tabTriggerClass = 'min-h-11 min-w-[4.375rem] flex-none rounded-none px-0 pb-3 text-[0.8125rem] text-muted-ink data-active:font-semibold data-active:text-ink after:inset-x-0 after:-bottom-px after:h-[3px] after:rounded-[3px] after:bg-orange'
+const tabTriggerClass = 'h-auto min-h-11 min-w-0 flex-1 whitespace-normal rounded-none px-0 pb-3 text-center text-[0.8125rem] leading-tight text-muted-ink sm:min-w-[4.375rem] sm:flex-none data-active:font-semibold data-active:text-ink after:inset-x-0 after:-bottom-px after:h-[3px] after:rounded-[3px] after:bg-orange'
 
 function defaultView(stage: TournamentStage): PublicView {
   if (stage === 'knockouts' || stage === 'completed') return 'knockouts'
@@ -234,7 +236,7 @@ export default function App() {
       </header>
 
       <Tabs value={view} onValueChange={handleViewChange} className="gap-8">
-        <TabsList variant="line" className="h-auto w-full justify-start gap-[1.375rem] overflow-x-auto rounded-none border-b border-line p-0">
+        <TabsList variant="line" className="w-full items-stretch justify-start gap-3 rounded-none p-0 group-data-horizontal/tabs:h-auto sm:gap-[1.375rem]">
           {tabs.map((tab) => (
             <TabsTrigger className={tabTriggerClass} key={tab.value} value={tab.value}>
               {tab.label}
