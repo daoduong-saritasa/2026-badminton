@@ -357,6 +357,7 @@ export const messages = {
   impact: {
     blockedHeading: 'Không thể thực hiện thay đổi này',
     score: 'Tỉ số',
+    becomes: 'thành',
     affectedMatches: (count: number) => `Trận bị ảnh hưởng (${formatNumber(count)})`,
     confirmationsLost: (groups: string) => `${groups} cần được xác nhận lại.`,
     blocked: {

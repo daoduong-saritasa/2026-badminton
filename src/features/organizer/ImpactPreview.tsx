@@ -1,3 +1,5 @@
+import { ArrowRight } from 'lucide-react'
+
 import { calculateStandings } from '@/domain/standings'
 import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
@@ -18,8 +20,13 @@ function rankText(rank: number | null): string {
   return rank === null ? '—' : `#${formatNumber(rank)}`
 }
 
-function stateText(match: Match | undefined): string {
-  return match ? messages.matchState[match.state] : '—'
+// A match without a score is fully described by its state; appending the
+// "not played" score placeholder would only repeat it.
+function outcomeText(match: Match | undefined): string {
+  if (!match) return '—'
+  if (match.state === 'completed' && match.resultKind === 'walkover') return messages.matchState.walkover
+  const state = messages.matchState[match.state]
+  return match.score ? `${state} · ${scoreText(match)}` : state
 }
 
 function matchById(snapshot: TournamentSnapshot | null, id: UUID): Match | undefined {
@@ -29,10 +36,18 @@ function matchById(snapshot: TournamentSnapshot | null, id: UUID): Match | undef
 function Row({ label, before, after }: { label: string; before: string; after: string }) {
   const changed = before !== after
   return (
-    <div className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-baseline gap-2 py-1">
-      <span className="min-w-0 truncate text-[0.6875rem] text-muted-ink">{label}</span>
-      <span className={changed ? 'text-[0.8125rem] line-through opacity-60' : 'text-[0.8125rem]'}>{before}</span>
-      <span className={changed ? 'text-[0.8125rem] font-semibold' : 'text-[0.8125rem] text-muted-ink'}>{after}</span>
+    <div className="grid grid-cols-[auto_auto_minmax(0,1fr)] items-center gap-x-2 gap-y-1 border-t border-hairline py-2 first-of-type:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]">
+      <span className="col-span-full min-w-0 truncate text-[0.75rem] font-medium sm:col-span-1" title={label}>{label}</span>
+      <span className="text-[0.75rem] text-muted-ink">{before}</span>
+      <ArrowRight className="size-3.5 text-dim-ink" aria-hidden="true" />
+      <span className="sr-only">{messages.impact.becomes}</span>
+      <span
+        className={changed
+          ? 'justify-self-start rounded-chip bg-peach px-2 py-0.5 text-[0.75rem] font-semibold text-ink'
+          : 'justify-self-start text-[0.75rem] text-muted-ink'}
+      >
+        {after}
+      </span>
     </div>
   )
 }
@@ -86,8 +101,8 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
             <Row
               key={match.id}
               label={messages.common.versus(pairName(after, match.pairAId), pairName(after, match.pairBId))}
-              before={`${stateText(matchById(before, match.id))} ${scoreText(matchById(before, match.id))}`}
-              after={`${stateText(match)} ${scoreText(match)}`}
+              before={outcomeText(matchById(before, match.id))}
+              after={outcomeText(match)}
             />
           ))}
         </section>
