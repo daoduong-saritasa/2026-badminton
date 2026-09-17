@@ -39,7 +39,7 @@ function GroupTable({ group, snapshot }: { group: Group; snapshot: TournamentSna
               <TableRow
                 className={cn(
                   standing.rank !== null && standing.rank <= 2
-                    && 'bg-navy/5 [&>td:first-child]:rounded-l-chip [&>td:last-child]:rounded-r-chip',
+                    && 'bg-navy/5',
                 )}
                 key={standing.pairId}
               >
