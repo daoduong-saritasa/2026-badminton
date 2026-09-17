@@ -2,17 +2,27 @@ import { z } from 'zod'
 
 import { impactBlockCodes } from '../domain/impacts'
 import type { ImpactBlockCode, MutationImpact } from '../domain/impacts'
-import type { Score, UUID } from '../domain/types'
+import type { Score, Side, UUID } from '../domain/types'
 import { getSupabaseClient } from '../lib/supabase'
 import { InvalidTournamentDataError, parseSnapshot } from './tournament'
 
+/**
+ * The preview RPC does not echo the reset generation; the one the request was
+ * checked against is the one the projection describes.
+ */
 const impactEnvelopeSchema = z.object({
-  resetGeneration: z.int().nonnegative(),
   tournamentVersion: z.int().nonnegative(),
   blockedReason: z.enum(impactBlockCodes).nullable(),
   before: z.unknown(),
   after: z.unknown(),
 })
+
+export interface ResultCorrectionProposal {
+  matchId: UUID
+  matchVersion: number
+  winnerSide: Side
+  games: Score[]
+}
 
 /**
  * A preview the client cannot fully understand must not be confirmable, so an
@@ -20,14 +30,14 @@ const impactEnvelopeSchema = z.object({
  * carries an `after` is rejected rather than shown with the unreadable parts
  * dropped.
  */
-function mapImpact(value: unknown, label: string): MutationImpact {
+function mapImpact(value: unknown, resetGeneration: number, label: string): MutationImpact {
   const parsed = impactEnvelopeSchema.safeParse(value)
   if (!parsed.success) {
     console.error(`${label} validation failed`, { issues: parsed.error.issues })
     throw new InvalidTournamentDataError(`The server returned an invalid ${label}`, parsed.error.issues)
   }
 
-  const { resetGeneration, tournamentVersion, blockedReason, before, after } = parsed.data
+  const { tournamentVersion, blockedReason, before, after } = parsed.data
   const blocked: ImpactBlockCode | null = blockedReason
 
   if (blocked === null && (after === null || after === undefined)) {
@@ -47,27 +57,19 @@ function mapImpact(value: unknown, label: string): MutationImpact {
 }
 
 export async function previewResultCorrection(
-  matchId: UUID,
-  score: Score,
+  proposal: ResultCorrectionProposal,
   resetGeneration: number,
 ): Promise<MutationImpact> {
   const { data, error } = await getSupabaseClient().rpc('preview_result_correction', {
-    p_match_id: matchId,
-    p_score: { a: score.a, b: score.b },
+    p_request_id: crypto.randomUUID(),
     p_reset_generation: resetGeneration,
+    p_expected_version: proposal.matchVersion,
+    p_payload: {
+      matchId: proposal.matchId,
+      winnerSide: proposal.winnerSide,
+      games: proposal.games.map((game) => ({ a: game.a, b: game.b })),
+    },
   })
   if (error) throw error
-  return mapImpact(data, 'result correction preview')
-}
-
-export async function previewWithdrawal(
-  pairId: UUID,
-  resetGeneration: number,
-): Promise<MutationImpact> {
-  const { data, error } = await getSupabaseClient().rpc('preview_withdrawal', {
-    p_pair_id: pairId,
-    p_reset_generation: resetGeneration,
-  })
-  if (error) throw error
-  return mapImpact(data, 'withdrawal preview')
+  return mapImpact(data, resetGeneration, 'result correction preview')
 }

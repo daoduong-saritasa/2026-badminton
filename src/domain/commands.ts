@@ -1,38 +1,35 @@
 import type {
   CourtAssignment,
-  CourtCount,
-  Group,
+  LineupPair,
+  RosterInput,
   Score,
-  SetupInput,
   Side,
   UUID,
 } from './types'
 
 export interface CommandPayloads {
-  save_setup: { setup: SetupInput }
-  set_court_count: { courtCount: CourtCount }
-  generate_fixtures: Record<string, never>
+  save_roster: RosterInput
+  save_lineup: {
+    fixtureId: UUID
+    teamId: UUID
+    pairs: [LineupPair, LineupPair, LineupPair]
+  }
+  confirm_lineup: { fixtureId: UUID; teamId: UUID }
+  reopen_lineups: { fixtureId: UUID }
+  start_group_play: Record<string, never>
   assign_courts: { assignments: CourtAssignment[] }
-  start_scoring: { matchId: UUID }
+  start_match: { matchId: UUID }
   take_over: { matchId: UUID }
   add_point: { matchId: UUID; side: Side }
   undo_point: { matchId: UUID }
-  confirm_result: { matchId: UUID }
-  enter_result: { matchId: UUID; score: Score }
+  confirm_game: { matchId: UUID }
+  mark_walkover: { matchId: UUID; winnerSide: Side }
   correct_result: {
     matchId: UUID
-    score: Score
+    winnerSide: Side
+    games: Score[]
     previewTournamentVersion: number
   }
-  mark_walkover: { matchId: UUID; winnerId: UUID }
-  withdraw_pair: { pairId: UUID; previewTournamentVersion: number }
-  resolve_tie: {
-    group: Group
-    orderedPairIds: UUID[]
-    explanation: string
-  }
-  confirm_groups: Record<string, never>
-  reopen_tournament: Record<string, never>
 }
 
 export type MutationInput<K extends keyof CommandPayloads> = {

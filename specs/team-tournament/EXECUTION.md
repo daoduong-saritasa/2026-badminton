@@ -10,11 +10,11 @@ court-count setting removed.
 
 ## STATUS
 
-- Current phase: 3 — done-with-debt
+- Current phase: 4 — in-progress
 - Phase 1 — Domain rules: done
 - Phase 2 — Staff roles: done-with-debt
 - Phase 3 — Team tournament schema: done-with-debt
-- Phase 4 — Client replacement: pending
+- Phase 4 — Client replacement: in-progress
 - Verification debt: Phase 2 integration gate is environment-blocked because the OrbStack Docker socket is absent; 3 non-database tests passed, 4 integration suites failed in setup, and 51 scenarios were skipped on 2026-09-17. Phase 3 has the same environment block; 48 non-database tests passed, 4 integration suites failed in setup, and 27 scenarios were skipped on 2026-09-17.
 
 ## Phase 1 — Domain rules
@@ -126,12 +126,13 @@ Produces: none.
 
 Fresh review: not required
 
-- [ ] `src/lib/database.types.ts`: hand-edit tables and `Functions` to the Phase 3 SQL; remove legacy entries
-- [ ] `src/domain/commands.ts`: `CommandPayloads` keys and payloads = Phase 3 RPCs; `src/domain/types.ts`: `TournamentSnapshot { tournament, teams, players, fixtures, matches, lineups }`, delete `Pair`, old `Match` union, `TieResolution`, `Standing`, `Fixture`/`GroupFixture`/`KnockoutFixture`, `SetupPairInput`
-- [ ] Delete `src/domain/standings.ts`, `src/domain/fixtures.ts`, `src/domain/setup.ts` (including `availableCourts`) and their tests (replaced by Phase 1 modules and tests); drop old codes from `impactBlockCodes`
+- [x] `src/lib/database.types.ts`: hand-edit tables and `Functions` to the Phase 3 SQL; remove legacy entries
+- [x] `src/domain/commands.ts`: `CommandPayloads` keys and payloads = Phase 3 RPCs; `src/domain/types.ts`: `TournamentSnapshot { tournament, teams, players, fixtures, matches, lineups }`, delete `Pair`, old `Match` union, `TieResolution`, `Standing`, `Fixture`/`GroupFixture`/`KnockoutFixture`, `SetupPairInput`
+- [x] Delete `src/domain/standings.ts`, `src/domain/fixtures.ts`, `src/domain/setup.ts` (including `availableCourts`) and their tests (replaced by Phase 1 modules and tests); drop old codes from `impactBlockCodes`
 - [ ] Remove the court-count setting: `CourtCount`, `Tournament.courtCount`, `SetupInput.courtCount`, the `set_court_count` command, and its controls and reads in `SetupForm.tsx`, `OrganizerPage.tsx`, `TournamentPage.tsx`, `ScoreTracker.tsx`; `Court = 1 | 2` stays
-- [ ] `src/data/tournament.ts` (`parseSnapshot` zod schemas, `mutateTournament`), `src/data/tournament.test.ts`; `src/data/impacts.ts` (remove `previewWithdrawal`), `src/data/impacts.test.ts`
+- [x] `src/data/tournament.ts` (`parseSnapshot` zod schemas, `mutateTournament`), `src/data/tournament.test.ts`; `src/data/impacts.ts` (remove `previewWithdrawal`), `src/data/impacts.test.ts`
 - [ ] `src/features/scoring/scoring-state.ts` + `scoring-state.test.ts`: per-game score, `confirm_game` event, stage target/cap; `ScoreTracker.tsx`: game tally, confirm game, take over with explicit confirmation
+- [ ] `(amended 2026-09-17)` Extend `FixtureMatch` with `pairA`, `pairB`, `court`, and `version`, and take the preview's reset generation from the request because `preview_result_correction` does not return one
 - [ ] Organizer UI: `SetupForm.tsx` → team roster entry; new `src/features/organizer/LineupEditor.tsx` (enter, confirm, reopen); `ResultSchedule.tsx`, `ResultEditor.tsx`, `ImpactPreview.tsx` on fixtures/matches/games; delete `WithdrawalPanel.tsx`; `OrganizerPage.tsx` wiring
 - [ ] Public UI: `StandingsTable.tsx` → group fixture results and final positions; `KnockoutBracket.tsx` → third place + final; `MatchTicket.tsx` pairs and game scores; `TournamentPage.tsx` wiring; lineups shown only when present in the snapshot
 - [ ] `src/i18n/vi.ts`, `src/i18n/errors.ts` (+ `errors.test.ts`): Đội, Cặp, Cuộc đối đầu, Trận, Ván, Trọng tài copy and new block/error codes per `CONTEXT.md`

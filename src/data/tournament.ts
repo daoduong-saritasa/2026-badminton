@@ -3,13 +3,13 @@ import { z } from 'zod'
 import type { CommandPayloads, MutationInput, MutationReceipt } from '../domain/commands'
 import type {
   Court,
-  CourtCount,
-  Group,
-  Match,
-  Pair,
-  Player,
-  Seed,
-  TieResolution,
+  FixtureMatch,
+  Game,
+  Lineup,
+  LineupPair,
+  TeamFixture,
+  TeamPlayer,
+  Team,
   Tournament,
   TournamentSnapshot,
   TournamentState,
@@ -20,65 +20,84 @@ import { getSupabaseClient } from '../lib/supabase'
 const uuidSchema = z.uuid()
 const groupSchema = z.enum(['A', 'B'])
 const courtSchema = z.union([z.literal(1), z.literal(2)])
+const seedSchema = z.union([z.literal(1), z.literal(2)])
+const sideSchema = z.enum(['a', 'b'])
+const matchNumberSchema = z.union([z.literal(1), z.literal(2), z.literal(3)])
 
 const tournamentDtoSchema = z.object({
   id: uuidSchema,
   name: z.string(),
   stage: z.enum(['setup', 'groups', 'knockouts', 'completed']),
   setup_locked_at: z.string().nullable(),
-  court_count: courtSchema.nullable(),
   version: z.int().nonnegative(),
   result_revision: z.int().nonnegative(),
 })
 
-const playerDtoSchema = z.object({
+const teamDtoSchema = z.object({
   id: uuidSchema,
   name: z.string(),
-  seed: z.union([z.literal(1), z.literal(2)]),
+  group_code: groupSchema,
 })
 
-const pairDtoSchema = z.object({
+const playerDtoSchema = z.object({
   id: uuidSchema,
-  team_name: z.string().nullable(),
-  player_a_id: uuidSchema,
-  player_b_id: uuidSchema,
-  group_code: groupSchema,
-  withdrawn: z.boolean(),
+  team_id: uuidSchema,
+  name: z.string(),
+  seed: seedSchema,
+})
+
+const fixtureDtoSchema = z.object({
+  id: uuidSchema,
+  stage: z.enum(['group', 'third-place', 'final']),
+  group_code: groupSchema.nullable(),
+  team_a_id: uuidSchema.nullable(),
+  team_b_id: uuidSchema.nullable(),
+  version: z.int().nonnegative(),
 })
 
 const matchDtoSchema = z.object({
   id: uuidSchema,
-  round: z.enum(['group', 'semifinal', 'final']),
-  group_code: groupSchema.nullable(),
-  pair_a_id: uuidSchema.nullable(),
-  pair_b_id: uuidSchema.nullable(),
-  source_a_label: z.string().nullable(),
-  source_b_label: z.string().nullable(),
-  source_a_match_id: uuidSchema.nullable(),
-  source_b_match_id: uuidSchema.nullable(),
+  fixture_id: uuidSchema,
+  match_number: matchNumberSchema,
+  pair_a_seed1_player_id: uuidSchema.nullable(),
+  pair_a_seed2_player_id: uuidSchema.nullable(),
+  pair_b_seed1_player_id: uuidSchema.nullable(),
+  pair_b_seed2_player_id: uuidSchema.nullable(),
   court: courtSchema.nullable(),
-  playing_order: z.int().nonnegative(),
-  version: z.int().nonnegative(),
-  state: z.enum(['unstarted', 'playing', 'completed', 'void']),
-  score_a: z.int().nonnegative().nullable(),
-  score_b: z.int().nonnegative().nullable(),
+  state: z.enum(['unstarted', 'playing', 'completed', 'unnecessary']),
   result_kind: z.enum(['played', 'walkover']).nullable(),
-  winner_id: uuidSchema.nullable(),
+  winner_side: sideSchema.nullable(),
+  version: z.int().nonnegative(),
 })
 
-const tieResolutionDtoSchema = z.object({
-  group_code: groupSchema,
-  ordered_pair_ids: z.array(uuidSchema),
-  explanation: z.string(),
-  standings_revision: z.int().nonnegative(),
+const gameDtoSchema = z.object({
+  match_id: uuidSchema,
+  game_number: z.int().min(1).max(3),
+  score_a: z.int().nonnegative(),
+  score_b: z.int().nonnegative(),
+  confirmed_at: z.string().nullable(),
+})
+
+const lineupPairDtoSchema = z.object({
+  seed1PlayerId: uuidSchema,
+  seed2PlayerId: uuidSchema,
+})
+
+const lineupDtoSchema = z.object({
+  fixtureId: uuidSchema,
+  teamId: uuidSchema,
+  pairs: z.tuple([lineupPairDtoSchema, lineupPairDtoSchema, lineupPairDtoSchema]),
+  confirmedAt: z.string().nullable(),
 })
 
 const snapshotDtoSchema = z.object({
   tournament: tournamentDtoSchema,
+  teams: z.array(teamDtoSchema),
   players: z.array(playerDtoSchema),
-  pairs: z.array(pairDtoSchema),
+  fixtures: z.array(fixtureDtoSchema),
   matches: z.array(matchDtoSchema),
-  tieResolutions: z.array(tieResolutionDtoSchema),
+  games: z.array(gameDtoSchema),
+  lineups: z.array(lineupDtoSchema),
 })
 
 const tournamentStateDtoSchema = z.object({
@@ -95,6 +114,7 @@ const receiptSchema = z.object({
 })
 
 type MatchDto = z.infer<typeof matchDtoSchema>
+type GameDto = z.infer<typeof gameDtoSchema>
 
 let newestResetGeneration = -1
 let newestTournamentId: string | null = null
@@ -149,80 +169,90 @@ function mapTournament(dto: z.infer<typeof tournamentDtoSchema>): Tournament {
     name: dto.name,
     stage: dto.stage,
     setupLockedAt: dto.setup_locked_at,
-    courtCount: dto.court_count as CourtCount | null,
     version: dto.version,
     resultRevision: dto.result_revision,
   }
 }
 
-function mapPlayer(dto: z.infer<typeof playerDtoSchema>): Player {
-  return { id: dto.id, name: dto.name, seed: dto.seed as Seed }
+function mapTeam(dto: z.infer<typeof teamDtoSchema>): Team {
+  return { id: dto.id, name: dto.name, group: dto.group_code }
 }
 
-function mapPair(dto: z.infer<typeof pairDtoSchema>): Pair {
-  return {
-    id: dto.id,
-    teamName: dto.team_name,
-    playerAId: dto.player_a_id,
-    playerBId: dto.player_b_id,
-    group: dto.group_code as Group,
-    withdrawn: dto.withdrawn,
+function mapPlayer(dto: z.infer<typeof playerDtoSchema>): TeamPlayer {
+  return { id: dto.id, teamId: dto.team_id, name: dto.name, seed: dto.seed }
+}
+
+function mapFixture(dto: z.infer<typeof fixtureDtoSchema>): TeamFixture {
+  if ((dto.stage === 'group') !== (dto.group_code !== null)) {
+    throw new InvalidTournamentDataError(`Fixture ${dto.id} has an inconsistent stage and group`)
   }
-}
-
-function matchBase(dto: MatchDto) {
   return {
     id: dto.id,
-    round: dto.round,
+    stage: dto.stage,
     group: dto.group_code,
-    pairAId: dto.pair_a_id,
-    pairBId: dto.pair_b_id,
-    sourceALabel: dto.source_a_label,
-    sourceBLabel: dto.source_b_label,
-    sourceAMatchId: dto.source_a_match_id,
-    sourceBMatchId: dto.source_b_match_id,
-    court: dto.court as Court | null,
-    playingOrder: dto.playing_order,
+    teamAId: dto.team_a_id,
+    teamBId: dto.team_b_id,
     version: dto.version,
   }
 }
 
-function mapMatch(dto: MatchDto): Match {
-  const base = matchBase(dto)
-  if (dto.state === 'unstarted' && dto.score_a === null && dto.score_b === null && dto.result_kind === null && dto.winner_id === null) {
-    return { ...base, state: 'unstarted', score: null, resultKind: null, winnerId: null }
-  }
-  if (dto.state === 'playing' && dto.score_a !== null && dto.score_b !== null && dto.result_kind === null && dto.winner_id === null) {
-    return { ...base, state: 'playing', score: { a: dto.score_a, b: dto.score_b }, resultKind: null, winnerId: null }
-  }
-  if (dto.state === 'completed' && dto.result_kind === 'played' && dto.score_a !== null && dto.score_b !== null && dto.winner_id !== null) {
-    return { ...base, state: 'completed', score: { a: dto.score_a, b: dto.score_b }, resultKind: 'played', winnerId: dto.winner_id }
-  }
-  if (dto.state === 'completed' && dto.result_kind === 'walkover' && dto.score_a === null && dto.score_b === null && dto.winner_id !== null) {
-    return { ...base, state: 'completed', score: null, resultKind: 'walkover', winnerId: dto.winner_id }
-  }
-  if (dto.state === 'void' && dto.score_a === null && dto.score_b === null && dto.result_kind === null && dto.winner_id === null) {
-    return { ...base, state: 'void', score: null, resultKind: null, winnerId: null }
-  }
-  throw new InvalidTournamentDataError(`Match ${dto.id} has inconsistent state and result fields`)
+function mapPair(seed1PlayerId: string | null, seed2PlayerId: string | null): LineupPair | null {
+  return seed1PlayerId === null || seed2PlayerId === null ? null : { seed1PlayerId, seed2PlayerId }
 }
 
-function mapTieResolution(dto: z.infer<typeof tieResolutionDtoSchema>): TieResolution {
+function mapGame(dto: GameDto): Game {
   return {
-    group: dto.group_code as Group,
-    orderedPairIds: dto.ordered_pair_ids,
-    explanation: dto.explanation,
-    standingsRevision: dto.standings_revision,
+    gameNumber: dto.game_number,
+    score: { a: dto.score_a, b: dto.score_b },
+    confirmedAt: dto.confirmed_at,
+  }
+}
+
+function mapMatch(dto: MatchDto, games: readonly GameDto[]): FixtureMatch {
+  const resolved = dto.result_kind !== null && dto.winner_side !== null
+  const consistent = dto.state === 'completed'
+    ? resolved
+    : dto.result_kind === null && dto.winner_side === null
+  const pairA = mapPair(dto.pair_a_seed1_player_id, dto.pair_a_seed2_player_id)
+  const pairB = mapPair(dto.pair_b_seed1_player_id, dto.pair_b_seed2_player_id)
+  if (!consistent || (pairA === null) !== (pairB === null)) {
+    throw new InvalidTournamentDataError(`Match ${dto.id} has inconsistent state and result fields`)
+  }
+  return {
+    id: dto.id,
+    fixtureId: dto.fixture_id,
+    matchNumber: dto.match_number,
+    pairA,
+    pairB,
+    court: dto.court as Court | null,
+    state: dto.state,
+    resultKind: dto.result_kind,
+    winnerSide: dto.winner_side,
+    games: games
+      .filter((game) => game.match_id === dto.id)
+      .toSorted((first, second) => first.game_number - second.game_number)
+      .map(mapGame),
+    version: dto.version,
+  }
+}
+
+function mapLineup(dto: z.infer<typeof lineupDtoSchema>): Lineup {
+  return {
+    fixtureId: dto.fixtureId,
+    teamId: dto.teamId,
+    pairs: dto.pairs,
+    confirmedAt: dto.confirmedAt,
   }
 }
 
 function mapSnapshotDto(dto: z.infer<typeof snapshotDtoSchema>): TournamentSnapshot {
   return {
     tournament: mapTournament(dto.tournament),
+    teams: dto.teams.map(mapTeam),
     players: dto.players.map(mapPlayer),
-    pairs: dto.pairs.map(mapPair),
-    matches: dto.matches.map(mapMatch),
-    tieResolutions: dto.tieResolutions.map(mapTieResolution),
+    fixtures: dto.fixtures.map(mapFixture),
+    matches: dto.matches.map((match) => mapMatch(match, dto.games)),
+    lineups: dto.lineups.map(mapLineup),
   }
 }
 
