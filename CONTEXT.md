@@ -10,6 +10,10 @@ someone entered.
 Two players who compete together. _Avoid_: "team" in English, and "cặp" or
 "cặp đôi" in Vietnamese.
 
+**Organizer** (_Điều hành_):
+The person who runs the tournament: sets it up, schedules matches, and records
+or corrects results. _Avoid_: "ban tổ chức" and "BTC".
+
 **Group** (_Bảng_):
 A pool of doubles pairs that play one another in the group stage. The tournament
 has two groups, named A and B.

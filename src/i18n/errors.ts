@@ -76,8 +76,8 @@ const serverMessages: Record<string, string> = {
   // Staff access
   'Authenticated session required': 'Phiên đăng nhập đã hết hạn. Hãy tải lại trang.',
   'Verified session identity required': 'Phiên đăng nhập đã hết hạn. Hãy tải lại trang.',
-  'Staff authentication required': 'Cần đăng nhập ban tổ chức.',
-  'Staff access expired or revoked': 'Quyền ban tổ chức đã hết hạn. Hãy nhập lại mã PIN.',
+  'Staff authentication required': 'Cần quyền điều hành.',
+  'Staff access expired or revoked': 'Quyền điều hành đã hết hạn. Hãy nhập lại mã PIN.',
   'PIN must contain 4 to 12 digits': 'Mã PIN phải có 4 đến 12 chữ số.',
   'Invalid rate-limit bucket': 'Yêu cầu không hợp lệ.',
   'Service role required': 'Thao tác này chỉ chạy được từ công cụ quản trị.',
