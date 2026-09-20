@@ -51,13 +51,54 @@ alter table public.tournament
   add column finalists_confirmed_at timestamptz;
 
 create index matches_playing_players_idx
-  on public.matches (
+  on public.matches using gin ((array[
     pair_a_player_1_id,
     pair_a_player_2_id,
     pair_b_player_1_id,
     pair_b_player_2_id
-  )
+  ]))
   where state = 'playing';
+
+create or replace function private.prevent_playing_player_overlap()
+returns trigger
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  player_ids uuid[] := array[
+    new.pair_a_player_1_id,
+    new.pair_a_player_2_id,
+    new.pair_b_player_1_id,
+    new.pair_b_player_2_id
+  ];
+begin
+  if new.state <> 'playing' then return new; end if;
+  perform pg_catalog.pg_advisory_xact_lock(
+    pg_catalog.hashtext('public.matches.playing-players')
+  );
+  if exists (
+    select 1 from public.matches as playing
+    where playing.id <> new.id
+      and playing.state = 'playing'
+      and array[
+        playing.pair_a_player_1_id,
+        playing.pair_a_player_2_id,
+        playing.pair_b_player_1_id,
+        playing.pair_b_player_2_id
+      ] && player_ids
+  ) then
+    raise exception 'A player is already playing' using errcode = '23505';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger matches_playing_players_guard
+before insert or update of state, pair_a_player_1_id, pair_a_player_2_id,
+  pair_b_player_1_id, pair_b_player_2_id
+on public.matches
+for each row execute function private.prevent_playing_player_overlap();
 
 create or replace function private.qualifying_standings()
 returns table (
@@ -1534,6 +1575,21 @@ begin
   set state = 'completed', result_kind = 'played', winner_side = p_winner_side,
       court = null, version = version + 1, updated_at = clock_timestamp()
   where id = target_match.id returning version into next_match_version;
+  if fixture_stage = 'qualifying' and not exists (
+    select 1 from public.matches as playoff_match
+    join public.team_fixtures as playoff on playoff.id = playoff_match.fixture_id
+    where playoff.stage = 'qualification-playoff'
+      and playoff_match.state <> 'unstarted'
+  ) then
+    delete from public.team_fixtures where stage = 'qualification-playoff';
+    update public.team_fixtures
+    set team_a_id = null, team_b_id = null, version = version + 1,
+        updated_at = clock_timestamp()
+    where stage in ('third-place', 'final');
+    update public.tournament
+    set finalists_confirmed_at = null, updated_at = clock_timestamp()
+    where singleton;
+  end if;
   perform private.finish_fixture_if_decided(target_match.fixture_id);
   perform private.populate_placement_fixtures();
   return next_match_version;
@@ -1654,3 +1710,239 @@ begin
   return response;
 end;
 $$;
+
+-- Correction boundaries ----------------------------------------------------
+
+drop function private.team_correction_block_code(uuid, text);
+create function private.team_correction_block_code(
+  p_match_id uuid,
+  p_new_winner_side text,
+  p_games jsonb
+)
+returns text
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_match public.matches%rowtype;
+  fixture public.team_fixtures%rowtype;
+  playoff_started boolean;
+  placement_started boolean;
+  before_playoff jsonb;
+  after_playoff jsonb;
+  before_placement jsonb;
+  after_placement jsonb;
+begin
+  if (select stage from public.tournament where singleton) = 'completed' then
+    return 'tournament-completed';
+  end if;
+  select * into target_match from public.matches where id = p_match_id;
+  if not found or target_match.state <> 'completed'
+    or p_new_winner_side not in ('a', 'b') then
+    return 'invalid-match-state';
+  end if;
+  select * into strict fixture
+  from public.team_fixtures where id = target_match.fixture_id;
+
+  select exists (
+    select 1 from public.matches as playoff_match
+    join public.team_fixtures as playoff
+      on playoff.id = playoff_match.fixture_id
+    where playoff.tournament_id = fixture.tournament_id
+      and playoff.stage = 'qualification-playoff'
+      and playoff_match.state <> 'unstarted'
+  ) into playoff_started;
+  select exists (
+    select 1 from public.matches as placement_match
+    join public.team_fixtures as placement
+      on placement.id = placement_match.fixture_id
+    where placement.tournament_id = fixture.tournament_id
+      and placement.stage in ('third-place', 'final')
+      and placement_match.state <> 'unstarted'
+  ) into placement_started;
+
+  if not placement_started
+    and not (fixture.stage = 'qualifying' and playoff_started) then
+    return null;
+  end if;
+
+  select coalesce(jsonb_agg(jsonb_build_array(
+    playoff.team_a_id, playoff.team_b_id
+  ) order by playoff.id), '[]'::jsonb)
+  into before_playoff
+  from public.team_fixtures as playoff
+  where playoff.tournament_id = fixture.tournament_id
+    and playoff.stage = 'qualification-playoff';
+  select coalesce(jsonb_agg(jsonb_build_array(
+    placement.stage, placement.team_a_id, placement.team_b_id
+  ) order by placement.stage), '[]'::jsonb)
+  into before_placement
+  from public.team_fixtures as placement
+  where placement.tournament_id = fixture.tournament_id
+    and placement.stage in ('third-place', 'final');
+
+  begin
+    delete from public.match_games as game
+    using public.matches as downstream_match,
+          public.team_fixtures as downstream_fixture
+    where game.match_id = downstream_match.id
+      and downstream_match.fixture_id = downstream_fixture.id
+      and downstream_fixture.tournament_id = fixture.tournament_id
+      and (
+        (fixture.stage = 'qualifying'
+          and downstream_fixture.stage = 'qualification-playoff')
+        or downstream_fixture.stage in ('third-place', 'final')
+      );
+    delete from private.match_ownership as ownership
+    using public.matches as downstream_match,
+          public.team_fixtures as downstream_fixture
+    where ownership.match_id = downstream_match.id
+      and downstream_match.fixture_id = downstream_fixture.id
+      and downstream_fixture.tournament_id = fixture.tournament_id
+      and (
+        (fixture.stage = 'qualifying'
+          and downstream_fixture.stage = 'qualification-playoff')
+        or downstream_fixture.stage in ('third-place', 'final')
+      );
+    update public.matches as downstream_match
+    set state = 'unstarted', result_kind = null, winner_side = null,
+        court = null, version = version + 1, updated_at = clock_timestamp()
+    from public.team_fixtures as downstream_fixture
+    where downstream_match.fixture_id = downstream_fixture.id
+      and downstream_fixture.tournament_id = fixture.tournament_id
+      and (
+        (fixture.stage = 'qualifying'
+          and downstream_fixture.stage = 'qualification-playoff')
+        or downstream_fixture.stage in ('third-place', 'final')
+      );
+    perform private.apply_team_correction(
+      p_match_id, p_new_winner_side, p_games
+    );
+    select coalesce(jsonb_agg(jsonb_build_array(
+      playoff.team_a_id, playoff.team_b_id
+    ) order by playoff.id), '[]'::jsonb)
+    into after_playoff
+    from public.team_fixtures as playoff
+    where playoff.tournament_id = fixture.tournament_id
+      and playoff.stage = 'qualification-playoff';
+    select coalesce(jsonb_agg(jsonb_build_array(
+      placement.stage, placement.team_a_id, placement.team_b_id
+    ) order by placement.stage), '[]'::jsonb)
+    into after_placement
+    from public.team_fixtures as placement
+    where placement.tournament_id = fixture.tournament_id
+      and placement.stage in ('third-place', 'final');
+    raise exception 'rollback-correction-boundary-projection' using errcode = 'P0001';
+  exception when raise_exception then
+    if sqlerrm <> 'rollback-correction-boundary-projection' then raise; end if;
+  end;
+
+  if fixture.stage = 'qualifying' and playoff_started
+    and before_playoff is distinct from after_playoff then
+    return 'playoff-started';
+  end if;
+  if placement_started
+    and before_placement is distinct from after_placement then
+    return 'placement-started';
+  end if;
+  return null;
+end;
+$$;
+
+create or replace function private.team_correct_result(
+  p_request_id uuid,
+  p_expected_version integer,
+  p_payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_match public.matches%rowtype;
+  block_code text;
+  next_match_version integer;
+  next_tournament_version integer;
+begin
+  select * into strict target_match from public.matches
+  where id = (p_payload ->> 'matchId')::uuid for update;
+  if target_match.version <> p_expected_version then
+    raise exception 'Match version conflict' using errcode = '40001';
+  end if;
+  if (p_payload ->> 'previewTournamentVersion')::integer is distinct from
+    (select result_revision from public.tournament where singleton) then
+    raise exception 'Reviewed result impact is stale' using errcode = '40001';
+  end if;
+  block_code := private.team_correction_block_code(
+    target_match.id, p_payload ->> 'winnerSide', p_payload -> 'games'
+  );
+  if block_code is not null then
+    raise exception '%', block_code using errcode = '55000';
+  end if;
+  next_match_version := private.apply_team_correction(
+    target_match.id, p_payload ->> 'winnerSide', p_payload -> 'games'
+  );
+  next_tournament_version := private.bump_team_tournament();
+  return private.receipt(
+    p_request_id, next_tournament_version, target_match.id, next_match_version
+  );
+end;
+$$;
+
+create or replace function public.preview_result_correction(
+  p_request_id uuid,
+  p_reset_generation integer,
+  p_expected_version integer,
+  p_payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_match public.matches%rowtype;
+  block_code text;
+  before_body jsonb;
+  after_body jsonb;
+  current_revision integer;
+begin
+  perform private.require_organizer();
+  perform private.lock_mutations();
+  perform private.require_reset_generation(p_reset_generation);
+  select * into strict target_match from public.matches
+  where id = (p_payload ->> 'matchId')::uuid;
+  if target_match.version <> p_expected_version then
+    raise exception 'Match version conflict' using errcode = '40001';
+  end if;
+  select result_revision into strict current_revision
+  from public.tournament where singleton;
+  block_code := private.team_correction_block_code(
+    target_match.id, p_payload ->> 'winnerSide', p_payload -> 'games'
+  );
+  before_body := private.snapshot_body();
+  if block_code is null then
+    begin
+      perform private.apply_team_correction(
+        target_match.id, p_payload ->> 'winnerSide', p_payload -> 'games'
+      );
+      after_body := private.snapshot_body();
+      raise exception 'rollback-team-correction-preview' using errcode = 'P0001';
+    exception when raise_exception then
+      if sqlerrm <> 'rollback-team-correction-preview' then raise; end if;
+    end;
+  end if;
+  return jsonb_build_object(
+    'requestId', p_request_id,
+    'tournamentVersion', current_revision,
+    'blockedReason', block_code,
+    'before', before_body,
+    'after', case when block_code is null then after_body else null end
+  );
+end;
+$$;
+
+revoke all on all functions in schema private
+  from public, anon, authenticated, service_role;

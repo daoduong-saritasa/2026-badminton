@@ -39,9 +39,10 @@ Fresh review: required — persistent-data migration with destructive writes, pl
 - [x] `public.confirm_finalists(p_request_id, p_reset_generation, p_expected_version, p_payload)` writing organizer confirmation, and revoking it when a correction changes placement participants
 - [x] `public.record_draw(...)` setting `team_a_id`/`team_b_id` on `qualification-playoff` fixtures, and clearing them when the playoff is recalculated
 - [x] `public.substitute_players(...)` replacing one match's `pair_a_*`/`pair_b_*` players before it starts, rejecting only a duplicate player within a pair and a player already in a `playing` match (per PLAN.md → "Substitution")
-- [ ] Partial unique index preventing one player from being in two `playing` matches, alongside the existing `matches_active_court_unique`
+- [x] Partial GIN overlap index plus a serialized constraint trigger preventing one player from being in two `playing` matches, alongside the existing `matches_active_court_unique` (amended 2026-09-20: PostgreSQL unique indexes compare complete B-tree keys and cannot enforce overlap across four denormalized UUID columns)
 - [x] `private.team_mark_walkover()`: allow from state `unstarted`, not only mid-match
-- [ ] `private.team_correction_block_code()`: block qualifying corrections that change playoff participants, format, or available final places once a playoff match starts; block placement-participant changes once a placement fixture starts; allow playoff-result corrections until a placement fixture starts (per PLAN.md → "Confirmed decisions")
+- [x] `private.team_correction_block_code()`: block qualifying corrections that change playoff participants, format, or available final places once a playoff match starts; block placement-participant changes once a placement fixture starts; allow playoff-result corrections until a placement fixture starts (per PLAN.md → "Confirmed decisions")
+- [x] `(amended 2026-09-20)` Pass corrected games into `private.team_correction_block_code()` and use a rolled-back projection so participant-preserving corrections remain allowed
 - [x] `private.snapshot_body()` and `public.get_tournament_snapshot()`: emit the new stage values, generic pair columns, the fourth lineup row, and the standings
 - [x] `public.reset_tournament()` `progress` mode: stop retaining group assignments, rebuild the new fixture set
 - [x] Hand-edit `src/lib/database.types.ts` to match the migration (never claim it was generated, per `AGENTS.md`)
