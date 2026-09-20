@@ -10,8 +10,7 @@ export type Json =
   | Json[]
 
 type TournamentStage = 'setup' | 'groups' | 'knockouts' | 'completed'
-type GroupCode = 'A' | 'B'
-type FixtureStage = 'group' | 'third-place' | 'final'
+type FixtureStage = 'qualifying' | 'qualification-playoff' | 'third-place' | 'final'
 type MatchState = 'unstarted' | 'playing' | 'completed' | 'unnecessary'
 type ResultKind = 'played' | 'walkover'
 type Side = 'a' | 'b'
@@ -32,6 +31,7 @@ export type Database = {
       tournament: {
         Row: {
           created_at: string
+          finalists_confirmed_at: string | null
           id: string
           name: string
           result_revision: number
@@ -43,6 +43,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          finalists_confirmed_at?: string | null
           id?: string
           name: string
           result_revision?: number
@@ -54,6 +55,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          finalists_confirmed_at?: string | null
           id?: string
           name?: string
           result_revision?: number
@@ -74,21 +76,18 @@ export type Database = {
       teams: {
         Row: {
           created_at: string
-          group_code: GroupCode
           id: string
           name: string
           tournament_id: string
         }
         Insert: {
           created_at?: string
-          group_code: GroupCode
           id?: string
           name: string
           tournament_id: string
         }
         Update: {
           created_at?: string
-          group_code?: GroupCode
           id?: string
           name?: string
           tournament_id?: string
@@ -104,7 +103,6 @@ export type Database = {
       team_fixtures: {
         Row: {
           created_at: string
-          group_code: GroupCode | null
           id: string
           stage: FixtureStage
           team_a_id: string | null
@@ -115,7 +113,6 @@ export type Database = {
         }
         Insert: {
           created_at?: string
-          group_code?: GroupCode | null
           id?: string
           stage: FixtureStage
           team_a_id?: string | null
@@ -126,7 +123,6 @@ export type Database = {
         }
         Update: {
           created_at?: string
-          group_code?: GroupCode | null
           id?: string
           stage?: FixtureStage
           team_a_id?: string | null
@@ -144,10 +140,10 @@ export type Database = {
           fixture_id: string
           id: string
           match_number: number
-          pair_a_seed1_player_id: string | null
-          pair_a_seed2_player_id: string | null
-          pair_b_seed1_player_id: string | null
-          pair_b_seed2_player_id: string | null
+          pair_a_player_1_id: string | null
+          pair_a_player_2_id: string | null
+          pair_b_player_1_id: string | null
+          pair_b_player_2_id: string | null
           result_kind: ResultKind | null
           state: MatchState
           updated_at: string
@@ -160,10 +156,10 @@ export type Database = {
           fixture_id: string
           id?: string
           match_number: number
-          pair_a_seed1_player_id?: string | null
-          pair_a_seed2_player_id?: string | null
-          pair_b_seed1_player_id?: string | null
-          pair_b_seed2_player_id?: string | null
+          pair_a_player_1_id?: string | null
+          pair_a_player_2_id?: string | null
+          pair_b_player_1_id?: string | null
+          pair_b_player_2_id?: string | null
           result_kind?: ResultKind | null
           state?: MatchState
           updated_at?: string
@@ -176,10 +172,10 @@ export type Database = {
           fixture_id?: string
           id?: string
           match_number?: number
-          pair_a_seed1_player_id?: string | null
-          pair_a_seed2_player_id?: string | null
-          pair_b_seed1_player_id?: string | null
-          pair_b_seed2_player_id?: string | null
+          pair_a_player_1_id?: string | null
+          pair_a_player_2_id?: string | null
+          pair_b_player_1_id?: string | null
+          pair_b_player_2_id?: string | null
           result_kind?: ResultKind | null
           state?: MatchState
           updated_at?: string
@@ -227,6 +223,7 @@ export type Database = {
       add_point: MutationFunction
       assign_courts: MutationFunction
       confirm_game: MutationFunction
+      confirm_finalists: MutationFunction
       confirm_lineup: MutationFunction
       correct_result: MutationFunction
       exchange_staff_pin: {
@@ -245,6 +242,7 @@ export type Database = {
       get_tournament_snapshot: { Args: Record<PropertyKey, never>; Returns: Json }
       mark_walkover: MutationFunction
       preview_result_correction: MutationFunction
+      record_draw: MutationFunction
       reopen_lineups: MutationFunction
       revoke_staff_access: { Args: Record<PropertyKey, never>; Returns: undefined }
       rotate_staff_pin_for_session: {
@@ -270,8 +268,10 @@ export type Database = {
         }
         Returns: Json
       }
+      start_qualifying: MutationFunction
       start_group_play: MutationFunction
       start_match: MutationFunction
+      substitute_players: MutationFunction
       take_over: MutationFunction
       undo_point: MutationFunction
     }
