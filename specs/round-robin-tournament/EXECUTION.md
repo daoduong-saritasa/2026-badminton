@@ -48,8 +48,8 @@ Fresh review: required — persistent-data migration with destructive writes, pl
 - [x] Hand-edit `src/lib/database.types.ts` to match the migration (never claim it was generated, per `AGENTS.md`)
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npm run test:related -- <changed files from the phase diff>`
+- [x] `npm run typecheck`
+- [x] `npm run test:related -- <changed files from the phase diff>` (0 related test files)
 
 **Review checklist (user, at PR review):**
 - [ ] Migration SQL reads correctly against `202609170002_team_tournament.sql`; no data loss beyond fixtures, matches, lineups and confirmations
