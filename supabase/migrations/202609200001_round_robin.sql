@@ -447,6 +447,9 @@ declare
   participants_changed boolean;
   playoff_fixture_id uuid;
   draw_winner_ids uuid[];
+  automatic_playoff_ids uuid[];
+  draw_candidate_ids uuid[];
+  draw_slots integer;
 begin
   select id into target_tournament_id from public.tournament where singleton;
   if target_tournament_id is null then return; end if;
@@ -526,6 +529,11 @@ begin
           perform private.sync_fixture_matches(playoff_fixture_id);
         end loop;
       end if;
+      delete from private.lineups as lineup
+      using public.team_fixtures as placement
+      where lineup.fixture_id = placement.id
+        and placement.tournament_id = target_tournament_id
+        and placement.stage in ('third-place', 'final');
       update public.team_fixtures
       set team_a_id = null, team_b_id = null, version = version + 1,
           updated_at = clock_timestamp()
@@ -593,31 +601,72 @@ begin
         offset available_places - 1 limit 1
       )
       select case
-        when (select count(*) from ranked where playoff_rank = (select playoff_rank from cutoff))
-          > available_places - (select count(*) from ranked where playoff_rank < (select playoff_rank from cutoff))
-        then null
-        else array_agg(team_id order by playoff_rank, team_id)
-          filter (where playoff_rank <= (select playoff_rank from cutoff))
-      end
-      into finalist_ids
+               when count(*) filter (
+                 where playoff_rank = (select playoff_rank from cutoff)
+               ) > available_places - count(*) filter (
+                 where playoff_rank < (select playoff_rank from cutoff)
+               ) then null
+               else array_agg(team_id order by playoff_rank, team_id)
+                 filter (where playoff_rank <= (select playoff_rank from cutoff))
+             end,
+             coalesce(array_agg(team_id order by team_id) filter (
+               where playoff_rank < (select playoff_rank from cutoff)
+             ), array[]::uuid[]),
+             coalesce(array_agg(team_id order by team_id) filter (
+               where playoff_rank = (select playoff_rank from cutoff)
+             ), array[]::uuid[])
+      into finalist_ids, automatic_playoff_ids, draw_candidate_ids
       from ranked;
 
       if finalist_ids is null then
+        draw_slots := available_places - cardinality(automatic_playoff_ids);
         select qualification_draw_winner_ids into draw_winner_ids
         from public.tournament where id = target_tournament_id;
         if draw_winner_ids is null
           or cardinality(draw_winner_ids) <> available_places
+          or not automatic_playoff_ids <@ draw_winner_ids
+          or cardinality(array(
+            select drawn.team_id
+            from unnest(draw_winner_ids) as drawn(team_id)
+            where drawn.team_id <> all(automatic_playoff_ids)
+          )) <> draw_slots
           or exists (
-            select 1 from unnest(draw_winner_ids) as drawn(team_id)
-            where drawn.team_id <> all(tied_teams)
+            select 1
+            from unnest(draw_winner_ids) as drawn(team_id)
+            where drawn.team_id <> all(automatic_playoff_ids)
+              and drawn.team_id <> all(draw_candidate_ids)
           ) then
+          delete from private.lineups as lineup
+          using public.team_fixtures as placement
+          where lineup.fixture_id = placement.id
+            and placement.tournament_id = target_tournament_id
+            and placement.stage in ('third-place', 'final');
+          update public.team_fixtures
+          set team_a_id = null, team_b_id = null, version = version + 1,
+              updated_at = clock_timestamp()
+          where tournament_id = target_tournament_id
+            and stage in ('third-place', 'final');
+          update public.tournament
+          set qualification_draw_winner_ids = null,
+              finalists_confirmed_at = null,
+              updated_at = clock_timestamp()
+          where id = target_tournament_id;
           return;
         end if;
         finalist_ids := draw_winner_ids;
+      else
+        update public.tournament
+        set qualification_draw_winner_ids = null,
+            updated_at = clock_timestamp()
+        where id = target_tournament_id
+          and qualification_draw_winner_ids is not null;
       end if;
       finalist_ids := fixed_finalists || finalist_ids;
     end if;
   end if;
+
+  select array_agg(team_id order by team_id)
+  into finalist_ids from unnest(finalist_ids) as finalist(team_id);
 
   select exists (
     select 1
@@ -821,15 +870,28 @@ declare
   supplied_fixtures uuid[];
   advancing_team_ids uuid[];
   draw_candidate_ids uuid[];
+  automatic_playoff_ids uuid[];
+  resolved_playoff_ids uuid[];
   matchup jsonb;
   playoff_fixture_id uuid;
   cutoff_rank integer;
   available_places integer;
+  draw_slots integer;
 begin
   select * into strict tournament_row
   from public.tournament where singleton for update;
   if tournament_row.version <> p_expected_version then
     raise exception 'Tournament version conflict' using errcode = '40001';
+  end if;
+  if exists (
+    select 1 from public.matches as placement_match
+    join public.team_fixtures as placement on placement.id = placement_match.fixture_id
+    where placement.tournament_id = tournament_row.id
+      and placement.stage in ('third-place', 'final')
+      and placement_match.state <> 'unstarted'
+  ) then
+    raise exception 'Draws are locked after placement play starts'
+      using errcode = '55000';
   end if;
 
   select standings.rank into cutoff_rank
@@ -896,11 +958,17 @@ begin
       select playoff_rank from ranked
       order by playoff_rank, team_id offset available_places - 1 limit 1
     )
-    select array_agg(team_id order by team_id)
-    into draw_candidate_ids
-    from ranked where playoff_rank = (select playoff_rank from cutoff);
+    select coalesce(array_agg(team_id order by team_id) filter (
+             where playoff_rank < (select playoff_rank from cutoff)
+           ), array[]::uuid[]),
+           coalesce(array_agg(team_id order by team_id) filter (
+             where playoff_rank = (select playoff_rank from cutoff)
+           ), array[]::uuid[])
+    into automatic_playoff_ids, draw_candidate_ids
+    from ranked;
+    draw_slots := available_places - cardinality(automatic_playoff_ids);
 
-    if cardinality(advancing_team_ids) <> available_places
+    if cardinality(advancing_team_ids) <> draw_slots
       or cardinality(advancing_team_ids) <>
         (select count(distinct team_id) from unnest(advancing_team_ids) as chosen(team_id))
       or exists (
@@ -910,8 +978,11 @@ begin
       raise exception 'Advancement draw does not match the unresolved playoff tie'
         using errcode = '22023';
     end if;
+    select array_agg(team_id order by team_id)
+    into resolved_playoff_ids
+    from unnest(automatic_playoff_ids || advancing_team_ids) as resolved(team_id);
     update public.tournament
-    set qualification_draw_winner_ids = advancing_team_ids,
+    set qualification_draw_winner_ids = resolved_playoff_ids,
         finalists_confirmed_at = null,
         version = version + 1,
         result_revision = result_revision + 1,
@@ -1809,31 +1880,6 @@ begin
       and playoff_match.state <> 'unstarted'
   ) then
     delete from public.team_fixtures where stage = 'qualification-playoff';
-    delete from private.lineups as lineup
-    using public.team_fixtures as placement
-    where lineup.fixture_id = placement.id
-      and placement.stage in ('third-place', 'final');
-    update public.team_fixtures
-    set team_a_id = null, team_b_id = null, version = version + 1,
-        updated_at = clock_timestamp()
-    where stage in ('third-place', 'final');
-    update public.tournament
-    set finalists_confirmed_at = null,
-        qualification_draw_winner_ids = null,
-        updated_at = clock_timestamp()
-    where singleton;
-  end if;
-  if fixture_stage = 'qualification-playoff'
-    and target_match.winner_side is distinct from p_winner_side then
-    delete from private.lineups as lineup
-    using public.team_fixtures as placement
-    where lineup.fixture_id = placement.id
-      and placement.stage in ('third-place', 'final');
-    update public.tournament
-    set finalists_confirmed_at = null,
-        qualification_draw_winner_ids = null,
-        updated_at = clock_timestamp()
-    where singleton;
   end if;
   perform private.finish_fixture_if_decided(target_match.fixture_id);
   perform private.populate_placement_fixtures();

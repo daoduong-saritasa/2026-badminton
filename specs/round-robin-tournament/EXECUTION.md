@@ -8,12 +8,12 @@ gate run. Report the skip count alongside passes; never delete or weaken them.
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — Schema and SQL command surface: in-progress
+- Current phase: 1 — done-with-debt
+- Phase 1 — Schema and SQL command surface: done-with-debt
 - Phase 2 — Domain model: pending
 - Phase 3 — Data layer: pending
 - Phase 4 — UI and copy: pending
-- Verification debt: none
+- Verification debt: `tests/integration/round-robin-phase1.test.ts` could not connect to the prohibited local Supabase stack; 1 suite failed in setup and 4 tests were skipped. Substitute evidence: `npm run typecheck` and `npm run lint` exit 0.
 
 ## Phase 1 — Schema and SQL command surface
 
@@ -24,6 +24,8 @@ Nothing downstream can be typed or mapped until the tables, stages, and command 
 Produces: `public.team_fixtures.stage` values `'qualifying' | 'qualification-playoff' | 'third-place' | 'final'`; `public.matches.player_1_id`/`player_2_id`; `private.lineups.player_1_id`/`player_2_id` with `match_number` 1..4; `public.tournament.qualification_draw_winner_ids`; `private.qualifying_standings()`; `public.substitute_players()`; `public.record_draw()` for matchup and advancement draws; `public.confirm_finalists()`
 
 Fresh review: required — persistent-data migration with destructive writes, plus `security definer` command functions
+
+Fresh re-review: all P1 findings corrected; user accepted the remaining P2 empty-advancement-draw finding on 2026-09-20 and requested no further fresh review.
 
 - [x] New migration `supabase/migrations/<ts>_round_robin.sql`, forward-only in the style of `202609170002_team_tournament.sql`
 - [x] Widen `team_fixtures.stage` check to the four new values; drop the `'group'` value, the `group_code` column, its check constraints, `team_fixtures_group_unique`, `team_fixtures_placement_unique`, and the `unique (tournament_id, stage, group_code)` constraint — playoffs need many fixtures per stage
@@ -54,10 +56,15 @@ Fresh review: required — persistent-data migration with destructive writes, pl
 - [x] `(amended 2026-09-20)` Validate four-team matchup draws atomically against the unresolved tied set and reject in-progress rewrites
 - [x] `(amended 2026-09-20)` Compare canonical qualification requirements in correction-boundary projections
 - [x] `(amended 2026-09-20)` Enforce one consistent predeclared row-four playoff pair per team
+- [x] `(amended 2026-09-20)` Preserve automatic three-team playoff qualifiers and draw only the remaining tied cutoff slots
+- [x] `(amended 2026-09-20)` Reject matchup and advancement draw changes after placement play starts
+- [x] `(amended 2026-09-20)` Revalidate stored advancement draws after every playoff score correction
+- [x] `(amended 2026-09-20)` Preserve finalist confirmation and placement lineups when a qualifying correction leaves participants unchanged
 
 **Phase gate (hard):**
 - [x] `npm run typecheck`
 - [x] `npm run test:related -- <changed files from the phase diff>` (0 related test files)
+- [~] `(amended 2026-09-20)` `npm run test:related -- tests/integration/round-robin-phase1.test.ts supabase/migrations/202609200001_round_robin.sql src/lib/database.types.ts specs/round-robin-tournament/EXECUTION.md` — local Supabase unavailable because the OrbStack socket is absent; 1 suite failed in setup and all 4 focused scenarios were skipped. Substitute evidence: typecheck and lint exit 0.
 
 **Review checklist (user, at PR review):**
 - [ ] Migration SQL reads correctly against `202609170002_team_tournament.sql`; no data loss beyond fixtures, matches, lineups and confirmations
