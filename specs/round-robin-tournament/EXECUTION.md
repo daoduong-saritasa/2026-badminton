@@ -8,8 +8,8 @@ gate run. Report the skip count alongside passes; never delete or weaken them.
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — Schema and SQL command surface: pending
+- Current phase: 1 — in-progress
+- Phase 1 — Schema and SQL command surface: in-progress
 - Phase 2 — Domain model: pending
 - Phase 3 — Data layer: pending
 - Phase 4 — UI and copy: pending
@@ -26,14 +26,14 @@ Produces: `public.team_fixtures.stage` values `'qualifying' | 'qualification-pla
 Fresh review: required — persistent-data migration with destructive writes, plus `security definer` command functions
 
 - [ ] New migration `supabase/migrations/<ts>_round_robin.sql`, forward-only in the style of `202609170002_team_tournament.sql`
-- [ ] Widen `team_fixtures.stage` check to the four new values; drop the `'group'` value, the `group_code` column, its check constraints, `team_fixtures_group_unique`, `team_fixtures_placement_unique`, and the `unique (tournament_id, stage, group_code)` constraint — playoffs need many fixtures per stage
-- [ ] Drop `public.teams.group_code` and its check constraint
-- [ ] Rename `matches.pair_a_seed1_player_id`/`pair_a_seed2_player_id`/`pair_b_seed1_player_id`/`pair_b_seed2_player_id` to `pair_a_player_1_id`/`pair_a_player_2_id`/`pair_b_player_1_id`/`pair_b_player_2_id`; add checks that each pair's two players differ
-- [ ] Rename `private.lineups.seed1_player_id`/`seed2_player_id` to `player_1_id`/`player_2_id`; widen `match_number` check to 1..4 for the predeclared playoff pair (per PLAN.md → "Implementation decisions")
-- [ ] Transition migration body: delete existing fixtures, matches, match_games, lineups, and scoring_handovers; keep `tournament`, `teams`, `players`; build six `qualifying` fixtures pairing every team once, plus one `third-place` and one `final` (per PLAN.md → "The deployment migration performs the format transition")
-- [ ] `private.sync_fixture_matches()`: two matches for a qualifying fixture, one for a `qualification-playoff`, up to three for a placement fixture
-- [ ] `private.is_game_won()`: 21/cap 30 for `qualifying`, `third-place`, `final`; 11/cap 15 for `qualification-playoff`; BO1 everywhere except `final` (per PLAN.md → "Base format — confirmed")
-- [ ] `private.qualifying_standings()` returning match wins, points scored, points conceded, point difference and rank per team, applying the five ranking criteria over the fixed original tied set, excluding walkover matches from point totals
+- [x] Widen `team_fixtures.stage` check to the four new values; drop the `'group'` value, the `group_code` column, its check constraints, `team_fixtures_group_unique`, `team_fixtures_placement_unique`, and the `unique (tournament_id, stage, group_code)` constraint — playoffs need many fixtures per stage
+- [x] Drop `public.teams.group_code` and its check constraint
+- [x] Rename `matches.pair_a_seed1_player_id`/`pair_a_seed2_player_id`/`pair_b_seed1_player_id`/`pair_b_seed2_player_id` to `pair_a_player_1_id`/`pair_a_player_2_id`/`pair_b_player_1_id`/`pair_b_player_2_id`; add checks that each pair's two players differ
+- [x] Rename `private.lineups.seed1_player_id`/`seed2_player_id` to `player_1_id`/`player_2_id`; widen `match_number` check to 1..4 for the predeclared playoff pair (per PLAN.md → "Implementation decisions")
+- [x] Transition migration body: delete existing fixtures, matches, match_games, lineups, and scoring_handovers; keep `tournament`, `teams`, `players`; build six `qualifying` fixtures pairing every team once, plus one `third-place` and one `final` (per PLAN.md → "The deployment migration performs the format transition")
+- [x] `private.sync_fixture_matches()`: two matches for a qualifying fixture, one for a `qualification-playoff`, up to three for a placement fixture
+- [x] `private.is_game_won()`: 21/cap 30 for `qualifying`, `third-place`, `final`; 11/cap 15 for `qualification-playoff`; BO1 everywhere except `final` (per PLAN.md → "Base format — confirmed")
+- [x] `private.qualifying_standings()` returning match wins, points scored, points conceded, point difference and rank per team, applying the five ranking criteria over the fixed original tied set, excluding walkover matches from point totals
 - [ ] `private.populate_placement_fixtures()`: derive finalists and third-place teams from `private.qualifying_standings()` instead of two group winners; leave placement fixtures empty while a qualification tie is unresolved
 - [ ] `public.confirm_finalists(p_request_id, p_reset_generation, p_expected_version, p_payload)` writing organizer confirmation, and revoking it when a correction changes placement participants
 - [ ] `public.record_draw(...)` setting `team_a_id`/`team_b_id` on `qualification-playoff` fixtures, and clearing them when the playoff is recalculated
