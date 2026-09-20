@@ -21,7 +21,7 @@ Branch: `round-robin-tournament/phase-1-schema` (stacked: `gh stack init -b main
 
 Nothing downstream can be typed or mapped until the tables, stages, and command functions exist.
 
-Produces: `public.team_fixtures.stage` values `'qualifying' | 'qualification-playoff' | 'third-place' | 'final'`; `public.matches.player_1_id`/`player_2_id`; `private.lineups.player_1_id`/`player_2_id` with `match_number` 1..4; `private.qualifying_standings()`; `public.substitute_players()`; `public.record_draw()`; `public.confirm_finalists()`
+Produces: `public.team_fixtures.stage` values `'qualifying' | 'qualification-playoff' | 'third-place' | 'final'`; `public.matches.player_1_id`/`player_2_id`; `private.lineups.player_1_id`/`player_2_id` with `match_number` 1..4; `public.tournament.qualification_draw_winner_ids`; `private.qualifying_standings()`; `public.substitute_players()`; `public.record_draw()` for matchup and advancement draws; `public.confirm_finalists()`
 
 Fresh review: required — persistent-data migration with destructive writes, plus `security definer` command functions
 
@@ -46,6 +46,14 @@ Fresh review: required — persistent-data migration with destructive writes, pl
 - [x] `private.snapshot_body()` and `public.get_tournament_snapshot()`: emit the new stage values, generic pair columns, the fourth lineup row, and the standings
 - [x] `public.reset_tournament()` `progress` mode: stop retaining group assignments, rebuild the new fixture set
 - [x] Hand-edit `src/lib/database.types.ts` to match the migration (never claim it was generated, per `AGENTS.md`)
+- [x] `(amended 2026-09-20)` Synchronize matches for automatically created two- and three-team qualification playoffs
+- [x] `(amended 2026-09-20)` Persist and consume a supervised advancement draw when a three-team playoff remains tied
+- [x] `(amended 2026-09-20)` Clear stale placement lineups whenever a correction invalidates placement participants
+- [x] `(amended 2026-09-20)` Reveal qualifying lineups only after all 48 rows are confirmed and placement lineups only after both fixture teams confirm
+- [x] `(amended 2026-09-20)` Gate placement lineup save and confirmation on organizer finalist confirmation
+- [x] `(amended 2026-09-20)` Validate four-team matchup draws atomically against the unresolved tied set and reject in-progress rewrites
+- [x] `(amended 2026-09-20)` Compare canonical qualification requirements in correction-boundary projections
+- [x] `(amended 2026-09-20)` Enforce one consistent predeclared row-four playoff pair per team
 
 **Phase gate (hard):**
 - [x] `npm run typecheck`
@@ -76,7 +84,7 @@ Fresh review: not required
 - [ ] New `src/domain/standings.ts`: `requiredPlayoff()` returning the two-, three-, or four-team playoff shape, or null
 - [ ] `src/domain/team-fixtures.ts`: `fixtureWinnerTeamId()` handles a drawn qualifying fixture (1–1, no winner) and a single-match playoff fixture; `deciderStatus()` applies to placement fixtures only
 - [ ] `src/domain/progression.ts`: `placementParticipants()` derives from `qualifyingStandings()` plus finalist confirmation instead of two group winners; extend `CorrectionBlockCode` with `'playoff-started'`
-- [ ] `src/domain/commands.ts`: rename `start_group_play` to `start_qualifying`, add `substitute_players: { matchId: UUID; side: Side; pair: LineupPair }`, `record_draw: { fixtureId: UUID; teamAId: UUID; teamBId: UUID }`, `confirm_finalists: Record<string, never>`
+- [ ] `src/domain/commands.ts`: rename `start_group_play` to `start_qualifying`, add `substitute_players: { matchId: UUID; side: Side; pair: LineupPair }`, `record_draw: { matchups: Array<{ fixtureId: UUID; teamAId: UUID; teamBId: UUID }> } | { advancingTeamIds: UUID[] }`, `confirm_finalists: Record<string, never>`
 - [ ] Update `src/domain/roster.test.ts`, `scoring.test.ts`, `team-fixtures.test.ts`, `progression.test.ts`; add `src/domain/standings.test.ts` covering each ranking criterion, the two/three/four-team playoff shapes, and an unbreakable tie
 
 **Phase gate (hard):**

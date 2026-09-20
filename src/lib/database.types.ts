@@ -34,6 +34,7 @@ export type Database = {
           finalists_confirmed_at: string | null
           id: string
           name: string
+          qualification_draw_winner_ids: string[] | null
           result_revision: number
           setup_locked_at: string | null
           singleton: boolean
@@ -46,6 +47,7 @@ export type Database = {
           finalists_confirmed_at?: string | null
           id?: string
           name: string
+          qualification_draw_winner_ids?: string[] | null
           result_revision?: number
           setup_locked_at?: string | null
           singleton?: boolean
@@ -58,6 +60,7 @@ export type Database = {
           finalists_confirmed_at?: string | null
           id?: string
           name?: string
+          qualification_draw_winner_ids?: string[] | null
           result_revision?: number
           setup_locked_at?: string | null
           singleton?: boolean
