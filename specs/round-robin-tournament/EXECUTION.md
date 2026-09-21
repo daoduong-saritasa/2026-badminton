@@ -139,6 +139,8 @@ Consumes: Phase 3's mapped snapshot and mutation wrappers; Phase 2's `qualifying
 
 Fresh review: required — upgraded 2026-09-21: the ported integration suites could not be run locally, so confidence is lower than usual
 
+Fresh re-review: the four initial findings (2 P1, 2 P2) were corrected. The re-review raised one new P2: a team's unsaved draft stays on screen and blocks confirmation after the opponent confirms (`LineupEditor.tsx`). The user decided on 2026-09-21 to leave it unfixed for now and create the PR.
+
 - [x] `(amended 2026-09-21)` `src/domain/progression.ts`: export `isQualifyingComplete()` and `resolvedFinalists()` (each finalist's basis: standings, playoff, or draw) for the provisional-standings state and the finalist-confirmation panel; tests in `progression.test.ts`
 - [x] `src/features/tournament/StandingsTable.tsx`: round-robin table with match wins, points scored, points conceded, point difference; equal rank plus a marker for teams the criteria did not separate; the criterion that separated tied teams
 - [x] `src/features/tournament/StandingsTable.tsx`: distinguish provisional standings, a required playoff, and confirmed finalists
