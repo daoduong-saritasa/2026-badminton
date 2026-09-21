@@ -79,7 +79,7 @@ Branch: `round-robin-tournament/phase-2-domain` (stacked: `gh stack add`)
 The TypeScript mirror of the SQL rules; every consumer below depends on these types and functions.
 
 Consumes: the Phase 1 stage values, `player_1_id`/`player_2_id` columns, and `src/lib/database.types.ts`
-Produces: `LineupPair { player1Id: UUID; player2Id: UUID }`; `FixtureStage = 'qualifying' | 'qualification-playoff' | 'third-place' | 'final'`; `Lineup.pairs: [LineupPair, LineupPair, LineupPair, LineupPair]`; `qualifyingStandings(fixtures, matches, teams): TeamStanding[]`; `requiredPlayoff(standings): PlayoffRequirement | null`; `CommandPayloads['substitute_players' | 'record_draw' | 'confirm_finalists']`
+Produces: `LineupPair { player1Id: UUID; player2Id: UUID }`; `FixtureStage = 'qualifying' | 'qualification-playoff' | 'third-place' | 'final'`; `Lineup.pairs: [LineupPair, LineupPair, LineupPair, LineupPair]`; `qualifyingStandings(fixtures, matches, teams): TeamStanding[]`; `requiredPlayoff(standings): PlayoffRequirement | null`; `CommandPayloads['substitute_players' | 'record_draw' | 'confirm_finalists']` (amended 2026-09-21: `substitute_players` is `{ matchId; side } & LineupPair`, flat, because `private.team_substitute_players()` reads `player1Id`/`player2Id` from the payload root)
 
 Fresh review: not required
 
@@ -91,7 +91,7 @@ Fresh review: not required
 - [x] New `src/domain/standings.ts`: `requiredPlayoff()` returning the two-, three-, or four-team playoff shape, or null
 - [x] `src/domain/team-fixtures.ts`: `fixtureWinnerTeamId()` handles a drawn qualifying fixture (1–1, no winner) and a single-match playoff fixture; `deciderStatus()` applies to placement fixtures only
 - [x] `src/domain/progression.ts`: `placementParticipants()` derives from `qualifyingStandings()` plus finalist confirmation instead of two group winners; extend `CorrectionBlockCode` with `'playoff-started'`
-- [ ] `src/domain/commands.ts`: rename `start_group_play` to `start_qualifying`, add `substitute_players: { matchId: UUID; side: Side; pair: LineupPair }`, `record_draw: { matchups: Array<{ fixtureId: UUID; teamAId: UUID; teamBId: UUID }> } | { advancingTeamIds: UUID[] }`, `confirm_finalists: Record<string, never>`
+- [x] `src/domain/commands.ts`: rename `start_group_play` to `start_qualifying`, add `substitute_players: { matchId: UUID; side: Side; pair: LineupPair }`, `record_draw: { matchups: Array<{ fixtureId: UUID; teamAId: UUID; teamBId: UUID }> } | { advancingTeamIds: UUID[] }`, `confirm_finalists: Record<string, never>`
 - [ ] Update `src/domain/roster.test.ts`, `scoring.test.ts`, `team-fixtures.test.ts`, `progression.test.ts`; add `src/domain/standings.test.ts` covering each ranking criterion, the two/three/four-team playoff shapes, and an unbreakable tie
 
 **Phase gate (hard):**
