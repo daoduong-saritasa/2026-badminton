@@ -8,10 +8,10 @@ gate run. Report the skip count alongside passes; never delete or weaken them.
 
 ## STATUS
 
-- Current phase: 3 — in-progress
+- Current phase: 3 — done
 - Phase 1 — Schema and SQL command surface: done-with-debt
 - Phase 2 — Domain model: done
-- Phase 3 — Data layer: in-progress
+- Phase 3 — Data layer: done
 - Phase 4 — UI and copy: pending
 - Verification debt: `tests/integration/round-robin-phase1.test.ts` could not connect to the prohibited local Supabase stack; 1 suite failed in setup and 4 tests were skipped. Substitute evidence: `npm run typecheck` and `npm run lint` exit 0.
 
@@ -113,7 +113,7 @@ The zod/DTO boundary between the new SQL snapshot and the new domain types; the 
 Consumes: Phase 2's `LineupPair`, `FixtureStage`, `TeamStanding`, and the new `CommandPayloads` keys
 Produces: snapshot mapping emitting four-pair lineups and generic pair fields; `mutateTournament('substitute_players' | 'record_draw' | 'confirm_finalists', …)` (amended 2026-09-21: no per-command wrappers exist in the codebase); `impactConsequences(impact)` in `src/domain/impacts.ts`
 
-Fresh review: not required
+Fresh review: not required — re-evaluated 2026-09-21 against the actual diff: no hard trigger
 
 - [x] `src/data/tournament.ts`: update the zod schemas and DTO mapping (schema and mapping landed in Phase 2's compile-only amendment; this phase adds the tests) for the new stage values, `player_1_id`/`player_2_id`, the fourth lineup row, and dropped group fields
 - [x] `src/data/tournament.ts`: add mutation wrappers for `substitute_players`, `record_draw`, `confirm_finalists`; rename the `start_group_play` wrapper to `startQualifying` — resolved without wrappers: the codebase has none, and the generic `mutateTournament(operation, input)` typed by `CommandPayloads` already sends these commands (`start_qualifying` renamed in Phase 2); covered by tests
@@ -121,8 +121,8 @@ Fresh review: not required
 - [x] Update `src/data/tournament.test.ts` and `src/data/impacts.test.ts` for the new shapes
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npm run test:related -- <changed files from the phase diff>`
+- [x] `npm run typecheck`
+- [x] `npm run test:related -- <changed files from the phase diff>` (3 files, 30 passed, 0 failed, 0 skipped; no integration suite is related)
 
 **Review checklist (user, at PR review):**
 - [ ] A malformed snapshot still fails zod parsing rather than reaching the UI
