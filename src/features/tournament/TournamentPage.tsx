@@ -1,8 +1,7 @@
 import type { Court, FixtureMatch, TournamentSnapshot } from '@/domain/types'
 import { messages } from '@/i18n/vi'
-import { cn } from '@/lib/utils'
 
-import { fixtureOf, groupTone, isDeciderEligible, matchLabel, matchResultText, sideTeamId, teamName } from './labels'
+import { fixtureOf, isDeciderEligible, matchLabel, matchResultText, sideTeamId, teamName } from './labels'
 import { MatchTicket } from './MatchTicket'
 
 const courts: readonly Court[] = [1, 2]
@@ -23,9 +22,8 @@ function currentMatch(snapshot: TournamentSnapshot, court: Court): FixtureMatch 
 }
 
 function GroupChip({ snapshot, match }: { snapshot: TournamentSnapshot; match: FixtureMatch }) {
-  const fixture = fixtureOf(snapshot, match)
   return (
-    <span className={cn('rounded-pill px-2 py-0.5 text-[0.625rem] font-semibold', fixture?.group ? groupTone(fixture.group) : 'bg-well text-muted-ink')}>
+    <span className="rounded-pill bg-well px-2 py-0.5 text-[0.625rem] font-semibold text-muted-ink">
       {matchLabel(snapshot, match)}
     </span>
   )

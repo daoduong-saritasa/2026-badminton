@@ -21,7 +21,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import {
   fixtureMatches,
   fixtureOf,
-  groupTone,
   isDeciderEligible,
   matchLabel,
   sideTeamId,
@@ -30,7 +29,6 @@ import {
 import { errorMessage } from '@/i18n/errors'
 import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
-import { cn } from '@/lib/utils'
 import { LineupEditor } from './LineupEditor'
 import { ResultEditor } from './ResultEditor'
 import { ResultSchedule } from './ResultSchedule'
@@ -167,12 +165,11 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
       ) : null}
       <div className="space-y-3">
         {waiting.map((match) => {
-          const fixture = fixtureOf(snapshot, match)
           const court = drafts[match.id] ?? match.court
           return (
             <div className="grid gap-2.5 rounded-field border border-hairline p-3.5 md:grid-cols-[minmax(0,1fr)_9rem_6.5rem] md:items-center" key={match.id}>
               <span className="flex min-w-0 flex-wrap items-center gap-2.5">
-                <span className={cn('shrink-0 rounded-pill px-2 py-0.5 text-[0.625rem] font-semibold', fixture?.group ? groupTone(fixture.group) : 'bg-well text-muted-ink')}>
+                <span className="shrink-0 rounded-pill bg-well px-2 py-0.5 text-[0.625rem] font-semibold text-muted-ink">
                   {matchLabel(snapshot, match)}
                 </span>
                 <span className="min-w-0 [overflow-wrap:anywhere] text-[0.8125rem] font-medium">{teams(snapshot, match)}</span>
@@ -238,11 +235,11 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
 
 function StartGroupPlay({ snapshot, resetGeneration }: { snapshot: TournamentSnapshot; resetGeneration: number }) {
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const groupFixtureIds = new Set(snapshot.fixtures.filter((fixture) => fixture.stage === 'group').map((fixture) => fixture.id))
-  const ready = groupFixtureIds.size === 2
-    && snapshot.lineups.filter((lineup) => groupFixtureIds.has(lineup.fixtureId) && lineup.confirmedAt !== null).length === 4
+  const qualifyingFixtureIds = new Set(snapshot.fixtures.filter((fixture) => fixture.stage === 'qualifying').map((fixture) => fixture.id))
+  const ready = qualifyingFixtureIds.size === 6
+    && snapshot.lineups.filter((lineup) => qualifyingFixtureIds.has(lineup.fixtureId) && lineup.confirmedAt !== null).length === 12
   const mutation = useMutation({
-    mutationFn: () => mutateTournament('start_group_play', {
+    mutationFn: () => mutateTournament('start_qualifying', {
       requestId: crypto.randomUUID(),
       resetGeneration,
       expectedVersion: snapshot.tournament.version,

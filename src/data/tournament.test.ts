@@ -28,10 +28,10 @@ function match(overrides: Record<string, unknown> = {}) {
     id: matchId,
     fixture_id: fixtureId,
     match_number: 1,
-    pair_a_seed1_player_id: playerAId,
-    pair_a_seed2_player_id: playerBId,
-    pair_b_seed1_player_id: playerCId,
-    pair_b_seed2_player_id: playerDId,
+    pair_a_player_1_id: playerAId,
+    pair_a_player_2_id: playerBId,
+    pair_b_player_1_id: playerCId,
+    pair_b_player_2_id: playerDId,
     court: 1,
     state: 'playing',
     result_kind: null,
@@ -50,10 +50,12 @@ function snapshot(version: number, overrides: Record<string, unknown> = {}) {
       setup_locked_at: '2026-09-09T00:00:00Z',
       version,
       result_revision: version,
+      finalists_confirmed_at: null,
+      qualification_draw_winner_ids: null,
     },
     teams: [
-      { id: teamId, name: 'Team A', group_code: 'A' },
-      { id: otherTeamId, name: 'Team B', group_code: 'A' },
+      { id: teamId, name: 'Team A' },
+      { id: otherTeamId, name: 'Team B' },
     ],
     players: [
       { id: playerAId, team_id: teamId, name: 'A', seed: 1 },
@@ -62,7 +64,7 @@ function snapshot(version: number, overrides: Record<string, unknown> = {}) {
       { id: playerDId, team_id: otherTeamId, name: 'D', seed: 2 },
     ],
     fixtures: [
-      { id: fixtureId, stage: 'group', group_code: 'A', team_a_id: teamId, team_b_id: otherTeamId, version: 2 },
+      { id: fixtureId, stage: 'qualifying', team_a_id: teamId, team_b_id: otherTeamId, version: 2 },
     ],
     matches: [match()],
     games: [
@@ -99,14 +101,14 @@ describe('tournament data', () => {
       resetGeneration: 0,
       snapshot: {
         tournament: { id: tournamentId, setupLockedAt: '2026-09-09T00:00:00Z', version: 1 },
-        teams: [{ id: teamId, group: 'A' }, { id: otherTeamId, group: 'A' }],
+        teams: [{ id: teamId, name: 'Team A' }, { id: otherTeamId, name: 'Team B' }],
         players: [{ id: playerAId, teamId, seed: 1 }, { id: playerBId, teamId, seed: 2 }, { id: playerCId }, { id: playerDId }],
-        fixtures: [{ id: fixtureId, stage: 'group', group: 'A', teamAId: teamId, teamBId: otherTeamId }],
+        fixtures: [{ id: fixtureId, stage: 'qualifying', teamAId: teamId, teamBId: otherTeamId }],
         matches: [{
           id: matchId,
           matchNumber: 1,
-          pairA: { seed1PlayerId: playerAId, seed2PlayerId: playerBId },
-          pairB: { seed1PlayerId: playerCId, seed2PlayerId: playerDId },
+          pairA: { player1Id: playerAId, player2Id: playerBId },
+          pairB: { player1Id: playerCId, player2Id: playerDId },
           court: 1,
           games: [
             { gameNumber: 1, score: { a: 15, b: 10 }, confirmedAt: '2026-09-09T00:10:00Z' },
@@ -128,7 +130,7 @@ describe('tournament data', () => {
     await expect(fetchTournament()).rejects.toBeInstanceOf(InvalidTournamentDataError)
   })
 
-  it('rejects a lineup that does not carry three pairs', async () => {
+  it('rejects a lineup that does not carry four pairs', async () => {
     rpc.mockResolvedValueOnce({
       data: {
         resetGeneration: 9,
@@ -136,7 +138,7 @@ describe('tournament data', () => {
           lineups: [{
             fixtureId,
             teamId,
-            pairs: [{ seed1PlayerId: playerAId, seed2PlayerId: playerBId }],
+            pairs: [{ player1Id: playerAId, player2Id: playerBId }],
             confirmedAt: null,
           }],
         }),
@@ -166,14 +168,14 @@ describe('tournament data', () => {
       .mockResolvedValueOnce({ data: state(2, 1), error: null })
 
     await expect(
-      mutateTournament('start_group_play', {
+      mutateTournament('start_qualifying', {
         requestId,
         resetGeneration: 1,
         expectedVersion: 1,
         payload: {},
       }),
     ).resolves.toMatchObject({ requestId, resetGeneration: 1, tournamentVersion: 2 })
-    expect(rpc).toHaveBeenNthCalledWith(1, 'start_group_play', {
+    expect(rpc).toHaveBeenNthCalledWith(1, 'start_qualifying', {
       p_request_id: requestId,
       p_reset_generation: 1,
       p_expected_version: 1,
@@ -271,7 +273,7 @@ describe('tournament data', () => {
       .mockResolvedValueOnce({ data: { requestId, resetGeneration: 1, tournamentVersion: 10, matchId: null, matchVersion: null }, error: null })
       .mockResolvedValueOnce({ data: state(10, 1), error: null })
 
-    await mutateTournament('start_group_play', { requestId, resetGeneration: 1, expectedVersion: 9, payload: {} })
+    await mutateTournament('start_qualifying', { requestId, resetGeneration: 1, expectedVersion: 9, payload: {} })
 
     expect(rpc).toHaveBeenCalledTimes(2)
     expect(onChange).toHaveBeenCalledOnce()
@@ -364,7 +366,7 @@ describe('tournament data', () => {
       .mockReturnValueOnce(refresh)
       .mockResolvedValueOnce({ data: state(3, 5), error: null })
 
-    const committed = mutateTournament('start_group_play', { requestId, resetGeneration: 5, expectedVersion: 2, payload: {} })
+    const committed = mutateTournament('start_qualifying', { requestId, resetGeneration: 5, expectedVersion: 2, payload: {} })
     await vi.waitFor(() => expect(rpc).toHaveBeenCalledTimes(2))
     await expect(fetchTournament()).resolves.toMatchObject({ resetGeneration: 5, snapshot: { tournament: { version: 3 } } })
 

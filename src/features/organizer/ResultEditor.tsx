@@ -110,7 +110,7 @@ function WalkoverForm({ snapshot, resetGeneration, matchId, onClose }: ResultEdi
 // would wipe the typed games mid-review.
 function CorrectionForm({ snapshot, resetGeneration, matchId, onClose }: ResultEditorProps) {
   const match = snapshot.matches.find((candidate) => candidate.id === matchId)
-  const stage = (match ? fixtureOf(snapshot, match)?.stage : undefined) ?? 'group'
+  const stage = (match ? fixtureOf(snapshot, match)?.stage : undefined) ?? 'qualifying'
   const [games, setGames] = useState<GameDraft[]>(() => {
     const recorded = match ? confirmedGames(match) : []
     const drafts = recorded.map((game) => ({ a: String(game.score.a), b: String(game.score.b) }))

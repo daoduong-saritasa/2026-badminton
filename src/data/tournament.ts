@@ -18,7 +18,6 @@ import type { Json } from '../lib/database.types'
 import { getSupabaseClient } from '../lib/supabase'
 
 const uuidSchema = z.uuid()
-const groupSchema = z.enum(['A', 'B'])
 const courtSchema = z.union([z.literal(1), z.literal(2)])
 const seedSchema = z.union([z.literal(1), z.literal(2)])
 const sideSchema = z.enum(['a', 'b'])
@@ -31,12 +30,13 @@ const tournamentDtoSchema = z.object({
   setup_locked_at: z.string().nullable(),
   version: z.int().nonnegative(),
   result_revision: z.int().nonnegative(),
+  finalists_confirmed_at: z.string().nullable(),
+  qualification_draw_winner_ids: z.array(uuidSchema).nullable(),
 })
 
 const teamDtoSchema = z.object({
   id: uuidSchema,
   name: z.string(),
-  group_code: groupSchema,
 })
 
 const playerDtoSchema = z.object({
@@ -48,8 +48,7 @@ const playerDtoSchema = z.object({
 
 const fixtureDtoSchema = z.object({
   id: uuidSchema,
-  stage: z.enum(['group', 'third-place', 'final']),
-  group_code: groupSchema.nullable(),
+  stage: z.enum(['qualifying', 'qualification-playoff', 'third-place', 'final']),
   team_a_id: uuidSchema.nullable(),
   team_b_id: uuidSchema.nullable(),
   version: z.int().nonnegative(),
@@ -59,10 +58,10 @@ const matchDtoSchema = z.object({
   id: uuidSchema,
   fixture_id: uuidSchema,
   match_number: matchNumberSchema,
-  pair_a_seed1_player_id: uuidSchema.nullable(),
-  pair_a_seed2_player_id: uuidSchema.nullable(),
-  pair_b_seed1_player_id: uuidSchema.nullable(),
-  pair_b_seed2_player_id: uuidSchema.nullable(),
+  pair_a_player_1_id: uuidSchema.nullable(),
+  pair_a_player_2_id: uuidSchema.nullable(),
+  pair_b_player_1_id: uuidSchema.nullable(),
+  pair_b_player_2_id: uuidSchema.nullable(),
   court: courtSchema.nullable(),
   state: z.enum(['unstarted', 'playing', 'completed', 'unnecessary']),
   result_kind: z.enum(['played', 'walkover']).nullable(),
@@ -79,14 +78,14 @@ const gameDtoSchema = z.object({
 })
 
 const lineupPairDtoSchema = z.object({
-  seed1PlayerId: uuidSchema,
-  seed2PlayerId: uuidSchema,
+  player1Id: uuidSchema,
+  player2Id: uuidSchema,
 })
 
 const lineupDtoSchema = z.object({
   fixtureId: uuidSchema,
   teamId: uuidSchema,
-  pairs: z.tuple([lineupPairDtoSchema, lineupPairDtoSchema, lineupPairDtoSchema]),
+  pairs: z.tuple([lineupPairDtoSchema, lineupPairDtoSchema, lineupPairDtoSchema, lineupPairDtoSchema]),
   confirmedAt: z.string().nullable(),
 })
 
@@ -171,11 +170,13 @@ function mapTournament(dto: z.infer<typeof tournamentDtoSchema>): Tournament {
     setupLockedAt: dto.setup_locked_at,
     version: dto.version,
     resultRevision: dto.result_revision,
+    finalistsConfirmedAt: dto.finalists_confirmed_at,
+    qualificationDrawWinnerIds: dto.qualification_draw_winner_ids,
   }
 }
 
 function mapTeam(dto: z.infer<typeof teamDtoSchema>): Team {
-  return { id: dto.id, name: dto.name, group: dto.group_code }
+  return { id: dto.id, name: dto.name }
 }
 
 function mapPlayer(dto: z.infer<typeof playerDtoSchema>): TeamPlayer {
@@ -183,21 +184,17 @@ function mapPlayer(dto: z.infer<typeof playerDtoSchema>): TeamPlayer {
 }
 
 function mapFixture(dto: z.infer<typeof fixtureDtoSchema>): TeamFixture {
-  if ((dto.stage === 'group') !== (dto.group_code !== null)) {
-    throw new InvalidTournamentDataError(`Fixture ${dto.id} has an inconsistent stage and group`)
-  }
   return {
     id: dto.id,
     stage: dto.stage,
-    group: dto.group_code,
     teamAId: dto.team_a_id,
     teamBId: dto.team_b_id,
     version: dto.version,
   }
 }
 
-function mapPair(seed1PlayerId: string | null, seed2PlayerId: string | null): LineupPair | null {
-  return seed1PlayerId === null || seed2PlayerId === null ? null : { seed1PlayerId, seed2PlayerId }
+function mapPair(player1Id: string | null, player2Id: string | null): LineupPair | null {
+  return player1Id === null || player2Id === null ? null : { player1Id, player2Id }
 }
 
 function mapGame(dto: GameDto): Game {
@@ -213,8 +210,8 @@ function mapMatch(dto: MatchDto, games: readonly GameDto[]): FixtureMatch {
   const consistent = dto.state === 'completed'
     ? resolved
     : dto.result_kind === null && dto.winner_side === null
-  const pairA = mapPair(dto.pair_a_seed1_player_id, dto.pair_a_seed2_player_id)
-  const pairB = mapPair(dto.pair_b_seed1_player_id, dto.pair_b_seed2_player_id)
+  const pairA = mapPair(dto.pair_a_player_1_id, dto.pair_a_player_2_id)
+  const pairB = mapPair(dto.pair_b_player_1_id, dto.pair_b_player_2_id)
   if (!consistent || (pairA === null) !== (pairB === null)) {
     throw new InvalidTournamentDataError(`Match ${dto.id} has inconsistent state and result fields`)
   }

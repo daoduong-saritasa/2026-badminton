@@ -1,7 +1,7 @@
 import { ArrowRight } from 'lucide-react'
 
 import type { MutationImpact } from '@/domain/impacts'
-import type { FixtureMatch, FixtureStage, TournamentSnapshot, UUID } from '@/domain/types'
+import type { FixtureMatch, TournamentSnapshot, UUID } from '@/domain/types'
 import {
   confirmedGames,
   fixtureLabel,
@@ -46,7 +46,7 @@ function Row({ label, before, after }: { label: string; before: string; after: s
   )
 }
 
-function placementText(snapshot: TournamentSnapshot, stage: Exclude<FixtureStage, 'group'>): string {
+function placementText(snapshot: TournamentSnapshot, stage: 'third-place' | 'final'): string {
   const fixture = snapshot.fixtures.find((candidate) => candidate.stage === stage)
   if (!fixture) return messages.common.toBeDecided
   return messages.common.versus(teamName(snapshot, fixture.teamAId), teamName(snapshot, fixture.teamBId))
@@ -74,7 +74,7 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
     match.id !== matchId && outcomeText(before, matchById(before, match.id)) !== outcomeText(after, match))
   const removedMatches = before.matches.filter((match) => !matchById(after, match.id))
   const corrected = matchById(after, matchId)
-  const fixtures = after.fixtures.filter((fixture) => fixture.stage === 'group')
+  const fixtures = after.fixtures.filter((fixture) => fixture.stage === 'qualifying')
 
   return (
     <div className="max-h-[50dvh] space-y-4 overflow-y-auto pr-1">

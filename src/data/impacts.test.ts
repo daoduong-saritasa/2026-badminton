@@ -27,8 +27,10 @@ function snapshot(version: number) {
       setup_locked_at: '2026-09-09T00:00:00Z',
       version,
       result_revision: version,
+      finalists_confirmed_at: null,
+      qualification_draw_winner_ids: null,
     },
-    teams: [{ id: teamId, name: 'Team', group_code: 'A' }],
+    teams: [{ id: teamId, name: 'Team' }],
     players: [],
     fixtures: [],
     matches: [],
@@ -70,7 +72,7 @@ describe('impact previews', () => {
     expect(result.resetGeneration).toBe(3)
     expect(result.blockedReason).toBeNull()
     expect(result.after?.tournament.version).toBe(4)
-    expect(result.before.teams[0]?.group).toBe('A')
+    expect(result.before.teams[0]?.name).toBe('Team')
   })
 
   it('keeps a blocked impact readable and without a projected result', async () => {

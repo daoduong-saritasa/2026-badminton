@@ -92,7 +92,8 @@ Fresh review: not required
 - [x] `src/domain/team-fixtures.ts`: `fixtureWinnerTeamId()` handles a drawn qualifying fixture (1–1, no winner) and a single-match playoff fixture; `deciderStatus()` applies to placement fixtures only
 - [x] `src/domain/progression.ts`: `placementParticipants()` derives from `qualifyingStandings()` plus finalist confirmation instead of two group winners; extend `CorrectionBlockCode` with `'playoff-started'`
 - [x] `src/domain/commands.ts`: rename `start_group_play` to `start_qualifying`, add `substitute_players: { matchId: UUID; side: Side; pair: LineupPair }`, `record_draw: { matchups: Array<{ fixtureId: UUID; teamAId: UUID; teamBId: UUID }> } | { advancingTeamIds: UUID[] }`, `confirm_finalists: Record<string, never>`
-- [ ] Update `src/domain/roster.test.ts`, `scoring.test.ts`, `team-fixtures.test.ts`, `progression.test.ts`; add `src/domain/standings.test.ts` covering each ranking criterion, the two/three/four-team playoff shapes, and an unbreakable tie
+- [x] `(amended 2026-09-21)` Compile-only fixes in consumers of the Phase 2 types, so the project-wide typecheck passes (user decision 2026-09-21); no new behavior or UI, which stays in Phases 3–4: `src/data/tournament.ts`, `src/data/tournament.test.ts`, `src/data/impacts.test.ts`, `src/features/organizer/ImpactPreview.tsx`, `LineupEditor.tsx`, `OrganizerPage.tsx`, `ResultEditor.tsx`, `SetupForm.tsx`, `src/features/scoring/ScoreTracker.tsx`, `src/features/scoring/scoring-state.test.ts`, `src/features/tournament/FixtureCard.tsx`, `MatchTicket.tsx`, `StandingsTable.tsx`, `TournamentPage.tsx`, `labels.ts`, `src/i18n/vi.ts`
+- [x] Update `src/domain/roster.test.ts`, `scoring.test.ts`, `team-fixtures.test.ts`, `progression.test.ts`; add `src/domain/standings.test.ts` covering each ranking criterion, the two/three/four-team playoff shapes, and an unbreakable tie
 
 **Phase gate (hard):**
 - [ ] `npm run typecheck`

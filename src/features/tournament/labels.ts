@@ -1,7 +1,6 @@
 import { deciderStatus, fixtureTally } from '@/domain/team-fixtures'
 import type {
   FixtureMatch,
-  Group,
   Lineup,
   LineupPair,
   Score,
@@ -12,11 +11,6 @@ import type {
 } from '@/domain/types'
 import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
-
-/** Group colour, shared by the ticket head, the fixture cards and the schedule. */
-export function groupTone(group: Group): string {
-  return group === 'A' ? 'bg-mist text-navy' : 'bg-ice text-ink'
-}
 
 export function teamName(snapshot: TournamentSnapshot, teamId: UUID | null): string {
   if (teamId === null) return messages.common.toBeDecided
@@ -29,7 +23,7 @@ export function playerName(snapshot: TournamentSnapshot, playerId: UUID): string
 
 export function pairPlayers(snapshot: TournamentSnapshot, pair: LineupPair | null): string {
   if (pair === null) return messages.common.pairPending
-  return messages.common.pair(playerName(snapshot, pair.seed1PlayerId), playerName(snapshot, pair.seed2PlayerId))
+  return messages.common.pair(playerName(snapshot, pair.player1Id), playerName(snapshot, pair.player2Id))
 }
 
 export function fixtureOf(snapshot: TournamentSnapshot, match: FixtureMatch): TeamFixture | undefined {
@@ -41,14 +35,13 @@ export function sideTeamId(fixture: TeamFixture | undefined, side: Side): UUID |
   return side === 'a' ? fixture.teamAId : fixture.teamBId
 }
 
-/** "Bảng A" / "Tranh hạng ba" / "Chung kết". */
+/** "Vòng loại" / "Tranh hạng ba" / "Chung kết". */
 export function fixtureLabel(fixture: TeamFixture | undefined): string {
   if (!fixture) return messages.common.unknownFixture
-  if (fixture.stage === 'group') return messages.common.group(fixture.group ?? '')
   return messages.stages[fixture.stage]
 }
 
-/** "Bảng A · Trận 2": which contest a match belongs to, for lists and labels. */
+/** "Vòng loại · Trận 2": which contest a match belongs to, for lists and labels. */
 export function matchLabel(snapshot: TournamentSnapshot, match: FixtureMatch): string {
   return messages.common.fixtureMatch(fixtureLabel(fixtureOf(snapshot, match)), match.matchNumber)
 }
@@ -96,7 +89,9 @@ export function fixtureScore(snapshot: TournamentSnapshot, fixtureId: UUID): Sco
 }
 
 export function isDeciderEligible(snapshot: TournamentSnapshot, match: FixtureMatch): boolean {
-  return match.matchNumber !== 3 || deciderStatus(fixtureMatches(snapshot, match.fixtureId)) === 'eligible'
+  if (match.matchNumber !== 3) return true
+  const fixture = fixtureOf(snapshot, match)
+  return fixture !== undefined && deciderStatus(fixture, fixtureMatches(snapshot, match.fixtureId)) === 'eligible'
 }
 
 /**

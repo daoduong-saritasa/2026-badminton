@@ -75,7 +75,7 @@ function liveGame(match: FixtureMatch): Game {
 }
 
 function stageOf(snapshot: TournamentSnapshot, match: FixtureMatch) {
-  return fixtureOf(snapshot, match)?.stage ?? 'group'
+  return fixtureOf(snapshot, match)?.stage ?? 'qualifying'
 }
 
 function createInitialState(snapshot: TournamentSnapshot, match: PlayingMatch, resetGeneration: number, hasOwnership: boolean): IdleScoringState {

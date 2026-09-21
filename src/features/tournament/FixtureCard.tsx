@@ -8,7 +8,6 @@ import {
   fixtureLabel,
   fixtureMatches,
   fixtureScore,
-  groupTone,
   matchPair,
   matchResultText,
   pairPlayers,
@@ -47,11 +46,6 @@ export function FixtureCard({
       )}
     >
       <h3 className="mb-4 flex items-center gap-2.5 text-[0.9375rem] font-semibold">
-        {fixture?.group ? (
-          <span className={cn('grid size-[1.625rem] place-items-center rounded-chip text-[0.625rem] font-bold', groupTone(fixture.group))}>
-            {fixture.group}
-          </span>
-        ) : null}
         {label ?? fixtureLabel(fixture)}
       </h3>
       <div className="space-y-2">

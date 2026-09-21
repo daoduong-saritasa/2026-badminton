@@ -8,7 +8,6 @@ import { cn } from '@/lib/utils'
 import {
   fixtureLabel,
   fixtureOf,
-  groupTone,
   matchPair,
   openGame,
   pairPlayers,
@@ -81,7 +80,7 @@ export function MatchTicket({
           <span
             className={cn(
               'shrink-0 rounded-pill px-2.5 py-1 text-[0.625rem] font-semibold',
-              fixture?.group ? groupTone(fixture.group) : 'bg-well text-muted-ink',
+              'bg-well text-muted-ink',
             )}
           >
             {fixtureLabel(fixture)}

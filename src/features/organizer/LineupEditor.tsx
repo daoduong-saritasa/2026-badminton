@@ -25,11 +25,11 @@ import { messages } from '@/i18n/vi'
 type LineupPairs = Lineup['pairs']
 
 const matchNumbers = [1, 2, 3] as const
-const emptyPair: LineupPair = { seed1PlayerId: '', seed2PlayerId: '' }
+const emptyPair: LineupPair = { player1Id: '', player2Id: '' }
 
 function samePairs(left: LineupPairs, right: LineupPairs | undefined): boolean {
   return right !== undefined && left.every((pair, index) =>
-    pair.seed1PlayerId === right[index]?.seed1PlayerId && pair.seed2PlayerId === right[index]?.seed2PlayerId)
+    pair.player1Id === right[index]?.player1Id && pair.player2Id === right[index]?.player2Id)
 }
 
 function TeamLineup({
@@ -46,7 +46,7 @@ function TeamLineup({
   started: boolean
 }) {
   const saved = snapshot.lineups.find((lineup) => lineup.fixtureId === fixture.id && lineup.teamId === teamId)
-  const [pairs, setPairs] = useState<LineupPairs>(saved?.pairs ?? [emptyPair, emptyPair, emptyPair])
+  const [pairs, setPairs] = useState<LineupPairs>(saved?.pairs ?? [emptyPair, emptyPair, emptyPair, emptyPair])
   const [confirmOpen, setConfirmOpen] = useState(false)
   const name = teamName(snapshot, teamId)
   const confirmed = saved?.confirmedAt != null
@@ -83,7 +83,7 @@ function TeamLineup({
           <div className="grid grid-cols-[3.25rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2" key={matchNumber}>
             <span className="text-[0.6875rem] text-muted-ink">{messages.common.matchNumber(matchNumber)}</span>
             {([1, 2] as const).map((seed) => {
-              const field: keyof LineupPair = seed === 1 ? 'seed1PlayerId' : 'seed2PlayerId'
+              const field: keyof LineupPair = seed === 1 ? 'player1Id' : 'player2Id'
               return (
                 <Select key={seed} value={pairs[index]?.[field] ?? ''} disabled={locked} onValueChange={(value) => update(index, field, value)}>
                   <SelectTrigger className="w-full" aria-label={messages.lineups.seedFor(name, matchNumber, seed)}>
