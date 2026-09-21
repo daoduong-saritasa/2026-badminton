@@ -353,9 +353,10 @@ type DrawPayload =
   | { advancingTeamIds: UUID[] }
 
 /**
- * What the organizer can draw now: the two matchups of a four-team tie before
- * any playoff match starts, or the teams a finished three-team playoff left
- * tied. Null when no draw decides anything.
+ * What the organizer can draw now: the two matchups of a four-team tie while
+ * no playoff match is being played (re-drawing discards played results), or
+ * the teams a finished three-team playoff left tied. Null when no draw decides
+ * anything.
  */
 function drawNeeded(snapshot: TournamentSnapshot) {
   const placementStarted = snapshot.fixtures
@@ -367,8 +368,13 @@ function drawNeeded(snapshot: TournamentSnapshot) {
   const playoff = requiredPlayoff(standings)
   if (placementStarted || !playoff) return null
 
-  if (playoff.format === 'four-team' && playoffs.length === 2 && playoffMatches.every((match) => match.state === 'unstarted')) {
-    return { kind: 'matchups' as const, tiedTeamIds: playoff.tiedTeamIds, fixtureIds: playoffs.map((fixture) => fixture.id) }
+  if (playoff.format === 'four-team' && playoffs.length === 2 && playoffMatches.every((match) => match.state !== 'playing')) {
+    return {
+      kind: 'matchups' as const,
+      tiedTeamIds: playoff.tiedTeamIds,
+      fixtureIds: playoffs.map((fixture) => fixture.id),
+      discardsResults: playoffMatches.some((match) => match.state === 'completed'),
+    }
   }
   const cutoff = qualificationCutoff(standings)
   if (playoff.format === 'three-team' && cutoff && playoffMatches.length === 3 && playoffMatches.every((match) => match.state === 'completed')) {
@@ -477,7 +483,10 @@ function DrawRecording({ snapshot, resetGeneration }: { snapshot: TournamentSnap
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{messages.organizer.draw.title}</AlertDialogTitle>
-            <AlertDialogDescription>{messages.organizer.draw.recorded(summary)} {messages.organizer.draw.body}</AlertDialogDescription>
+            <AlertDialogDescription>
+              {messages.organizer.draw.recorded(summary)} {messages.organizer.draw.body}
+              {needed.kind === 'matchups' && needed.discardsResults ? ` ${messages.organizer.draw.discardsResults}` : ''}
+            </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>

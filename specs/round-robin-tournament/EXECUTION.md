@@ -157,6 +157,11 @@ Fresh review: required — upgraded 2026-09-21: the ported integration suites co
 - [x] `src/i18n/errors.ts`: messages for substitution rejections and the new correction blocks
 - [x] Update `src/features/scoring/scoring-state.test.ts` and `src/features/tournament/document-title.test.ts` (`document-title.test.ts` needed no change: the title comes from the tournament name, which this spec leaves alone)
 
+- [x] `(amended 2026-09-21)` Fresh-review P1: `tests/integration/tournament.test.ts` saves both teams' lineups before either confirms, because one confirmation locks the fixture against saves; the reveal test also asserts that lock
+- [x] `(amended 2026-09-21)` Fresh-review P1: `tests/integration/tournament.test.ts` "rejects invalid declared pairs" starts qualifying on its existing roster instead of re-creating it
+- [x] `(amended 2026-09-21)` Fresh-review P2: `src/features/organizer/LineupEditor.tsx` locks both teams' pairs once either confirms, enables **Confirm** only after both teams have saved, and explains the lock; `src/i18n/errors.ts` and `vi.ts` copy updated
+- [x] `(amended 2026-09-21)` Fresh-review P2: `src/features/organizer/OrganizerPage.tsx` keeps the four-team matchup draw open while no playoff match is playing, warning when re-drawing discards played playoff results (PLAN.md: re-record a draw while it still decides something)
+
 **Phase gate (hard):**
 - [x] `npm run typecheck`
 - [x] `npm run test:related -- <changed files from the phase diff>` (4 files, 46 passed, 0 failed, 0 skipped)

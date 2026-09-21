@@ -25,7 +25,8 @@ const serverMessages: Record<string, string> = {
   'Roster is locked after qualifying starts': 'Không thể sửa danh sách đội sau khi vòng loại bắt đầu.',
 
   // Lineups and qualifying
-  'Lineup cannot be changed': 'Không thể sửa đội hình này. Cuộc đối đầu đã bắt đầu hoặc cả hai đội đã xác nhận.',
+  'Lineup cannot be changed':
+    'Không thể sửa đội hình này. Cuộc đối đầu đã bắt đầu hoặc đã có đội xác nhận; hãy mở lại đội hình nếu cần sửa.',
   'Lineup players must be distinct teammates': 'Mỗi cặp phải gồm hai người chơi khác nhau của đội này.',
   'Declared match pairs must mix seeds': 'Cặp của trận 1, 2 và 3 phải gồm một hạt giống 1 và một hạt giống 2.',
   'A team must declare one consistent playoff pair': 'Cặp tranh vé của một đội phải giống nhau ở cả ba cuộc đối đầu vòng loại.',

@@ -64,12 +64,17 @@ function TeamLineup({
   teamId,
   resetGeneration,
   started,
+  fixtureConfirmed,
+  opponentSaved,
 }: {
   snapshot: TournamentSnapshot
   fixture: TeamFixture
   teamId: UUID
   resetGeneration: number
   started: boolean
+  /** Any lineup in the fixture is confirmed, which the server treats as a lock on both. */
+  fixtureConfirmed: boolean
+  opponentSaved: boolean
 }) {
   const saved = snapshot.lineups.find((lineup) => lineup.fixtureId === fixture.id && lineup.teamId === teamId)
   const [pairs, setPairs] = useState<LineupPairs>(() => saved?.pairs ?? [
@@ -81,7 +86,8 @@ function TeamLineup({
   const [confirmOpen, setConfirmOpen] = useState(false)
   const name = teamName(snapshot, teamId)
   const confirmed = saved?.confirmedAt != null
-  const locked = started || confirmed
+  // A confirmed lineup locks both teams' pairs; only confirming remains open.
+  const locked = started || fixtureConfirmed
   const complete = completePairs(fixture, pairs)
   const dirty = !samePairs(complete, saved?.pairs)
   const issueCodes = [...new Set(validateLineup({ fixtureId: fixture.id, teamId, pairs: complete, confirmedAt: null }, snapshot.players)
@@ -144,15 +150,23 @@ function TeamLineup({
         </ul>
       ) : null}
       {!locked && dirty && saved ? <p className="mt-2 text-[0.6875rem] text-muted-ink">{messages.lineups.unsaved}</p> : null}
-      {!locked ? (
+      {!started && !confirmed ? (
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" disabled={!dirty || issueCodes.length > 0 || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-            {saveMutation.isPending ? messages.common.saving : messages.lineups.save}
-          </Button>
-          <Button size="sm" disabled={!saved || dirty || confirmMutation.isPending} onClick={() => setConfirmOpen(true)}>
+          {!locked ? (
+            <Button size="sm" variant="outline" disabled={!dirty || issueCodes.length > 0 || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+              {saveMutation.isPending ? messages.common.saving : messages.lineups.save}
+            </Button>
+          ) : null}
+          <Button size="sm" disabled={!saved || dirty || !opponentSaved || confirmMutation.isPending} onClick={() => setConfirmOpen(true)}>
             <CheckCircle2 /> {messages.lineups.confirm}
           </Button>
         </div>
+      ) : null}
+      {!started && !confirmed && saved && !opponentSaved ? (
+        <p className="mt-2 text-[0.6875rem] text-muted-ink">{messages.lineups.awaitingOpponent}</p>
+      ) : null}
+      {!started && !confirmed && fixtureConfirmed ? (
+        <p className="mt-2 text-[0.6875rem] text-muted-ink">{messages.lineups.lockedByConfirmation}</p>
       ) : null}
       {saveMutation.isError ? <p className="mt-2 text-sm text-destructive" role="alert">{errorMessage(saveMutation.error)}</p> : null}
       {confirmMutation.isError ? <p className="mt-2 text-sm text-destructive" role="alert">{errorMessage(confirmMutation.error)}</p> : null}
@@ -234,6 +248,9 @@ export function LineupEditor({
                 teamId={teamId}
                 resetGeneration={resetGeneration}
                 started={started}
+                fixtureConfirmed={anyConfirmed}
+                opponentSaved={snapshot.lineups.some((lineup) =>
+                  lineup.fixtureId === fixture.id && lineup.teamId !== teamId && teamIds.includes(lineup.teamId))}
               />
             )
           })}

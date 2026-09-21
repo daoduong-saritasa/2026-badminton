@@ -116,6 +116,7 @@ export const messages = {
       advancementDescription: (slots: number) =>
         `Trận tranh vé ba đội chưa tách được các đội. Chọn ${formatNumber(slots)} đội theo kết quả bốc thăm.`,
       recorded: (teams: string) => `Đã ghi: ${teams}`,
+      discardsResults: 'Kết quả các trận tranh vé đã đấu sẽ bị huỷ và phải đấu lại.',
       review: 'Ghi kết quả bốc thăm',
       title: 'Ghi kết quả bốc thăm?',
       body: 'Kết quả được công bố ngay. Có thể ghi lại khi bốc thăm vẫn còn quyết định điều gì đó.',
@@ -172,7 +173,9 @@ export const messages = {
     save: 'Lưu đội hình',
     confirm: 'Xác nhận đội hình',
     confirmTitle: (team: string) => `Xác nhận đội hình của ${team}?`,
-    confirmBody: 'Khi cả hai đội đã xác nhận, hai đội hình được công bố cùng lúc và bị khoá.',
+    confirmBody: 'Sau khi xác nhận, đội hình của cả hai đội trong cuộc đối đầu bị khoá; chỉ còn xác nhận được.',
+    awaitingOpponent: 'Chờ đội còn lại lưu đội hình trước khi xác nhận.',
+    lockedByConfirmation: 'Đã có đội xác nhận nên đội hình bị khoá. Mở lại đội hình nếu cần sửa.',
     reopen: 'Mở lại đội hình',
     reopenTitle: 'Mở lại đội hình của cả hai đội?',
     reopenBody: 'Cả hai đội phải xác nhận lại. Chỉ làm được khi chưa trận nào của cuộc đối đầu bắt đầu.',
