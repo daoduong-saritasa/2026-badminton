@@ -8,9 +8,9 @@ gate run. Report the skip count alongside passes; never delete or weaken them.
 
 ## STATUS
 
-- Current phase: 2 — in-progress
+- Current phase: 2 — done
 - Phase 1 — Schema and SQL command surface: done-with-debt
-- Phase 2 — Domain model: in-progress
+- Phase 2 — Domain model: done
 - Phase 3 — Data layer: pending
 - Phase 4 — UI and copy: pending
 - Verification debt: `tests/integration/round-robin-phase1.test.ts` could not connect to the prohibited local Supabase stack; 1 suite failed in setup and 4 tests were skipped. Substitute evidence: `npm run typecheck` and `npm run lint` exit 0.
@@ -81,7 +81,7 @@ The TypeScript mirror of the SQL rules; every consumer below depends on these ty
 Consumes: the Phase 1 stage values, `player_1_id`/`player_2_id` columns, and `src/lib/database.types.ts`
 Produces: `LineupPair { player1Id: UUID; player2Id: UUID }`; `FixtureStage = 'qualifying' | 'qualification-playoff' | 'third-place' | 'final'`; `Lineup.pairs: [LineupPair, LineupPair, LineupPair, LineupPair]`; `qualifyingStandings(fixtures, matches, teams): TeamStanding[]`; `requiredPlayoff(standings): PlayoffRequirement | null`; `CommandPayloads['substitute_players' | 'record_draw' | 'confirm_finalists']` (amended 2026-09-21: `substitute_players` is `{ matchId; side } & LineupPair`, flat, because `private.team_substitute_players()` reads `player1Id`/`player2Id` from the payload root)
 
-Fresh review: not required
+Fresh review: not required — re-evaluated 2026-09-21 against the actual diff: no hard trigger; growth into consumer files was the user-approved compile-only amendment
 
 - [x] `src/domain/types.ts`: replace `Group`/`TournamentStage` `'groups'`, retype `FixtureStage`, drop `Team.group` and `TeamFixture.group`, rename `LineupPair` fields, widen `Lineup.pairs` to four, add `TeamStanding` and `PlayoffRequirement`
 - [x] `src/domain/scoring.ts`: `gameRules(stage)` returns 21/30 for `qualifying`, `third-place`, `final` and 11/15 for `qualification-playoff`; add `gamesToWinMatch(stage)` returning 2 for `final`, 1 otherwise
@@ -96,8 +96,8 @@ Fresh review: not required
 - [x] Update `src/domain/roster.test.ts`, `scoring.test.ts`, `team-fixtures.test.ts`, `progression.test.ts`; add `src/domain/standings.test.ts` covering each ranking criterion, the two/three/four-team playoff shapes, and an unbreakable tie
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npm run test:related -- <changed files from the phase diff>`
+- [x] `npm run typecheck`
+- [x] `npm run test:related -- <changed files from the phase diff>` (9 files, 99 passed, 0 failed, 0 skipped; no integration suite is related)
 
 **Review checklist (user, at PR review):**
 - [ ] Ranking criteria in `standings.ts` match PLAN.md's five criteria in order, including the fixed original tied set
