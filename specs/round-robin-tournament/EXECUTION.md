@@ -8,9 +8,9 @@ gate run. Report the skip count alongside passes; never delete or weaken them.
 
 ## STATUS
 
-- Current phase: 1 — done-with-debt
+- Current phase: 2 — in-progress
 - Phase 1 — Schema and SQL command surface: done-with-debt
-- Phase 2 — Domain model: pending
+- Phase 2 — Domain model: in-progress
 - Phase 3 — Data layer: pending
 - Phase 4 — UI and copy: pending
 - Verification debt: `tests/integration/round-robin-phase1.test.ts` could not connect to the prohibited local Supabase stack; 1 suite failed in setup and 4 tests were skipped. Substitute evidence: `npm run typecheck` and `npm run lint` exit 0.
@@ -83,8 +83,8 @@ Produces: `LineupPair { player1Id: UUID; player2Id: UUID }`; `FixtureStage = 'qu
 
 Fresh review: not required
 
-- [ ] `src/domain/types.ts`: replace `Group`/`TournamentStage` `'groups'`, retype `FixtureStage`, drop `Team.group` and `TeamFixture.group`, rename `LineupPair` fields, widen `Lineup.pairs` to four, add `TeamStanding` and `PlayoffRequirement`
-- [ ] `src/domain/scoring.ts`: `gameRules(stage)` returns 21/30 for `qualifying`, `third-place`, `final` and 11/15 for `qualification-playoff`; add `gamesToWinMatch(stage)` returning 2 for `final`, 1 otherwise
+- [x] `src/domain/types.ts`: replace `Group`/`TournamentStage` `'groups'`, retype `FixtureStage`, drop `Team.group` and `TeamFixture.group`, rename `LineupPair` fields, widen `Lineup.pairs` to four, add `TeamStanding` and `PlayoffRequirement`
+- [x] `src/domain/scoring.ts`: `gameRules(stage)` returns 21/30 for `qualifying`, `third-place`, `final` and 11/15 for `qualification-playoff`; add `gamesToWinMatch(stage)` returning 2 for `final`, 1 otherwise
 - [ ] `src/domain/roster.ts`: drop `group-split` from `RosterIssueCode` and its check; validate declared lineups as mixed-seed pairs 1–3 using all four players once, and pair 4 (playoff) as any two distinct teammates; keep `decider-repeats-opening-pair`
 - [ ] `src/domain/roster.ts`: add `validateQualifyingRotation(lineups, roster)` enforcing both disjoint mixed-seed arrangements across a team's three qualifying fixtures (per PLAN.md → "Qualifying pairs must mix seeds")
 - [ ] New `src/domain/standings.ts`: `qualifyingStandings()` applying the five ranking criteria over the fixed original tied set, excluding walkovers from point totals, and marking teams the criteria did not separate

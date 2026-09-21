@@ -1,6 +1,5 @@
 export type UUID = string
 
-export type Group = 'A' | 'B'
 export type Side = 'a' | 'b'
 export type Seed = 1 | 2
 export type Court = 1 | 2
@@ -10,6 +9,10 @@ export interface Score {
   b: number
 }
 
+/**
+ * `'groups'` is the qualifying stage. It keeps the value the database stores;
+ * renaming it needs a migration.
+ */
 export type TournamentStage = 'setup' | 'groups' | 'knockouts' | 'completed'
 
 export interface Tournament {
@@ -24,6 +27,13 @@ export interface Tournament {
    * reviewed projection from one a scored point invalidated.
    */
   resultRevision: number
+  /** Set when the organizer confirms the finalists; cleared when they change. */
+  finalistsConfirmedAt: string | null
+  /**
+   * The teams a three-team playoff sends to the final once a supervised draw
+   * settles its remaining tie: the automatic qualifiers plus the drawn teams.
+   */
+  qualificationDrawWinnerIds: UUID[] | null
 }
 
 export interface Player {
@@ -35,34 +45,73 @@ export interface Player {
 export interface Team {
   id: UUID
   name: string
-  group: Group
 }
 
 export interface TeamPlayer extends Player {
   teamId: UUID
 }
 
+/**
+ * Two teammates playing one match. Seed rules live in validation: declared
+ * pairs 1–3 mix seeds, while the playoff pair and substitutions do not.
+ */
 export interface LineupPair {
-  seed1PlayerId: UUID
-  seed2PlayerId: UUID
+  player1Id: UUID
+  player2Id: UUID
 }
 
 export interface Lineup {
   fixtureId: UUID
   teamId: UUID
-  pairs: [LineupPair, LineupPair, LineupPair]
+  /** Matches 1–3, then the predeclared qualification playoff pair. */
+  pairs: [LineupPair, LineupPair, LineupPair, LineupPair]
   confirmedAt: string | null
 }
 
-export type FixtureStage = 'group' | 'third-place' | 'final'
+export type FixtureStage =
+  | 'qualifying'
+  | 'qualification-playoff'
+  | 'third-place'
+  | 'final'
 
 export interface TeamFixture {
   id: UUID
   stage: FixtureStage
-  group: Group | null
   teamAId: UUID | null
   teamBId: UUID | null
   version: number
+}
+
+export type RankingCriterion =
+  | 'match-wins'
+  | 'tied-match-wins'
+  | 'tied-point-difference'
+  | 'point-difference'
+
+export interface TeamStanding {
+  teamId: UUID
+  matchWins: number
+  /** Walkovers count as match wins but add no points. */
+  pointsScored: number
+  pointsConceded: number
+  pointDifference: number
+  /** Competition rank; teams the criteria did not separate share one. */
+  rank: number
+  /**
+   * The criterion that fixed this team's rank among the teams level with it on
+   * match wins, or null when the criteria did not separate it.
+   */
+  separatedBy: RankingCriterion | null
+}
+
+export type PlayoffFormat = 'two-team' | 'three-team' | 'four-team'
+
+export interface PlayoffRequirement {
+  format: PlayoffFormat
+  /** Teams ranked above the tie, already in the final. */
+  fixedFinalistIds: UUID[]
+  tiedTeamIds: UUID[]
+  availablePlaces: 1 | 2
 }
 
 export type FixtureMatchState =
@@ -115,7 +164,6 @@ export interface RosterPlayerInput {
 
 export interface RosterTeamInput {
   name: string
-  group: Group
   players: [RosterPlayerInput, RosterPlayerInput, RosterPlayerInput, RosterPlayerInput]
 }
 

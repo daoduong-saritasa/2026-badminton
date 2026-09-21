@@ -1,9 +1,14 @@
 import type { FixtureStage, Game, Score, Side } from './types'
 
 export function gameRules(stage: FixtureStage): { target: number; cap: number } {
-  return stage === 'final'
-    ? { target: 21, cap: 30 }
-    : { target: 15, cap: 21 }
+  return stage === 'qualification-playoff'
+    ? { target: 11, cap: 15 }
+    : { target: 21, cap: 30 }
+}
+
+/** Final matches are best of three games; every other match is one game. */
+export function gamesToWinMatch(stage: FixtureStage): 1 | 2 {
+  return stage === 'final' ? 2 : 1
 }
 
 export function isGameWon(score: Score, stage: FixtureStage): boolean {
@@ -59,11 +64,12 @@ export function matchWinnerSide(
     (game) => game.confirmedAt !== null && isGameWon(game.score, stage),
   )
   const tally = matchGameTally(confirmedWins)
+  const needed = gamesToWinMatch(stage)
 
-  if (tally.a >= 2) {
+  if (tally.a >= needed) {
     return 'a'
   }
-  if (tally.b >= 2) {
+  if (tally.b >= needed) {
     return 'b'
   }
   return null
@@ -71,26 +77,27 @@ export function matchWinnerSide(
 
 /**
  * The winner of a result entered game by game, or null when the games are not
- * a finished best-of-three: every game won under the stage rules, and none
- * played after a side reached two wins.
+ * a finished match: every game won under the stage rules, and none played
+ * after a side reached the wins the stage requires.
  */
 export function correctedMatchWinner(
   games: readonly Score[],
   stage: FixtureStage,
 ): Side | null {
+  const needed = gamesToWinMatch(stage)
   const wins = { a: 0, b: 0 }
 
   for (const game of games) {
-    if (wins.a === 2 || wins.b === 2 || !isGameWon(game, stage)) {
+    if (wins.a === needed || wins.b === needed || !isGameWon(game, stage)) {
       return null
     }
     wins[game.a > game.b ? 'a' : 'b'] += 1
   }
 
-  if (wins.a === 2) {
+  if (wins.a === needed) {
     return 'a'
   }
-  if (wins.b === 2) {
+  if (wins.b === needed) {
     return 'b'
   }
   return null
