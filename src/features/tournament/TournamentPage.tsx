@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { ChevronDown, Info } from 'lucide-react'
 
 import type { Court, FixtureMatch, Side, TeamFixture, TournamentSnapshot, UUID } from '@/domain/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -125,7 +126,7 @@ function PublishedRules({ snapshot }: { snapshot: TournamentSnapshot }) {
     const List = ordered ? 'ol' : 'ul'
     return (
       <div>
-        <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{heading}</h4>
+        <h4 className="text-xs font-semibold text-muted-ink">{heading}</h4>
         <List className={ordered ? 'mt-2 list-decimal space-y-1 pl-5' : 'mt-2 list-disc space-y-1 pl-5'}>
           {items.map((item) => <li key={item}>{item}</li>)}
         </List>
@@ -133,20 +134,25 @@ function PublishedRules({ snapshot }: { snapshot: TournamentSnapshot }) {
     )
   }
   return (
-    <section className="space-y-5 rounded-card border border-ink/5 bg-white p-6 text-[0.8125rem]/[1.6] shadow-card">
-      <h2 className="text-sm font-semibold">{rules.heading}</h2>
-      {section(rules.scoringHeading, rules.scoring)}
-      <div>
-        {section(rules.rankingHeading, rules.ranking, true)}
-        <p className="mt-2 text-[0.6875rem] text-muted-ink">{rules.rankingNote}</p>
+    <details className="group rounded-card border border-ink/5 bg-white shadow-card">
+      <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-sm font-semibold marker:hidden">
+        <span className="flex items-center gap-2.5"><Info className="size-4 text-navy" />{rules.heading}</span>
+        <ChevronDown className="size-4 text-muted-ink transition-transform group-open:rotate-180" aria-hidden="true" />
+      </summary>
+      <div className="space-y-5 border-t border-hairline px-5 py-5 text-sm/[1.65]">
+        {section(rules.scoringHeading, rules.scoring)}
+        <div>
+          {section(rules.rankingHeading, rules.ranking, true)}
+          <p className="mt-2 text-xs text-muted-ink">{rules.rankingNote}</p>
+        </div>
+        {section(rules.playoffHeading, rules.playoffs)}
+        <div>
+          <h4 className="text-xs font-semibold text-muted-ink">{rules.walkoverHeading}</h4>
+          <p className="mt-2">{rules.walkover}</p>
+        </div>
+        <DrawOutcomeList snapshot={snapshot} />
       </div>
-      {section(rules.playoffHeading, rules.playoffs)}
-      <div>
-        <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{rules.walkoverHeading}</h4>
-        <p className="mt-2">{rules.walkover}</p>
-      </div>
-      <DrawOutcomeList snapshot={snapshot} />
-    </section>
+    </details>
   )
 }
 
@@ -162,6 +168,7 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
     .filter((match) => match.state === 'completed')
     .toReversed()
     .slice(0, 6)
+  const isSetup = snapshot.tournament.stage === 'setup'
 
   const nextLabel = (court: Court | null) => {
     const next = upcoming.find((match) => match.court === court)
@@ -199,9 +206,12 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
           {current.map((match) => <MatchTicket match={match} snapshot={snapshot} nextLabel={nextLabel(match.court)} key={match.id} />)}
         </div>
         {current.length === 0 ? (
-          <p className="rounded-card border border-dashed border-rule bg-white/60 p-8 text-center text-[0.8125rem] text-muted-ink">
-            {messages.publicView.noCourtMatches}
-          </p>
+          <div className="rounded-card border border-dashed border-rule bg-white/60 px-6 py-10 text-center">
+            <p className="text-sm font-semibold text-ink">
+              {isSetup ? messages.publicView.setupInProgress : messages.publicView.noCourtMatches}
+            </p>
+            {isSetup ? <p className="mx-auto mt-2 max-w-md text-xs/[1.6] text-muted-ink">{messages.publicView.setupInProgressDescription}</p> : null}
+          </div>
         ) : null}
       </div>
       {upcoming.length > 0 ? (

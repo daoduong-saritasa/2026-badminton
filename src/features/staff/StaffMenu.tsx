@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { KeyRound, LogOut } from 'lucide-react'
+import { KeyRound, LayoutDashboard, LogOut } from 'lucide-react'
 
 import { rotateStaffPin, signOutStaff } from '@/data/staff'
 import {
@@ -37,9 +37,11 @@ import type { StaffRole } from '@/domain/types'
 
 export function StaffMenu({
   role,
+  onOpenWorkspace,
   onSignedOut,
 }: {
   role: StaffRole
+  onOpenWorkspace?: () => void
   onSignedOut: () => void
 }) {
   const [rotationOpen, setRotationOpen] = useState(false)
@@ -81,6 +83,14 @@ export function StaffMenu({
         <DropdownMenuContent align="end" className="w-56">
           <DropdownMenuLabel>{messages.staff.role[role]}</DropdownMenuLabel>
           <DropdownMenuSeparator />
+          {onOpenWorkspace ? (
+            <>
+              <DropdownMenuItem onSelect={onOpenWorkspace}>
+                <LayoutDashboard /> {messages.staff.openWorkspace[role]}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
           {role === 'organizer' ? (
             <>
               <DropdownMenuItem onSelect={() => openRotation('organizer')}>

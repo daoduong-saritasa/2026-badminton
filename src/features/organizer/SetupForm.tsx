@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { AlertTriangle } from 'lucide-react'
+import { AlertTriangle, Check, ChevronLeft, ChevronRight } from 'lucide-react'
 
 import { mutateTournament } from '@/data/tournament'
 import { validateRoster } from '@/domain/roster'
@@ -92,6 +92,8 @@ function rosterIssues(roster: RosterInput): SetupIssue[] {
 export function SetupForm({ snapshot, resetGeneration }: { snapshot: TournamentSnapshot | null; resetGeneration: number }) {
   const initial = useMemo(() => rosterFromSnapshot(snapshot), [snapshot])
   const [roster, setRoster] = useState(initial)
+  const [activeTeamIndex, setActiveTeamIndex] = useState(0)
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false)
   const [confirmationOpen, setConfirmationOpen] = useState(false)
   const locked = snapshot !== null && snapshot.tournament.stage !== 'setup'
   const hasLineups = (snapshot?.lineups.length ?? 0) > 0
@@ -130,10 +132,16 @@ export function SetupForm({ snapshot, resetGeneration }: { snapshot: TournamentS
 
   const submit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    setAttemptedSubmit(true)
     if (issues.length > 0 || locked) return
     if (hasLineups) setConfirmationOpen(true)
     else saveMutation.mutate()
   }
+
+  const teamComplete = (team: RosterTeamInput) =>
+    team.name.trim().length > 0 && team.players.every((player) => player.name.trim().length > 0)
+
+  const activeTeam = roster.teams[activeTeamIndex]
 
   return (
     <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
@@ -160,36 +168,82 @@ export function SetupForm({ snapshot, resetGeneration }: { snapshot: TournamentS
             onChange={(event) => setRoster((current) => ({ ...current, tournamentName: event.target.value }))}
           />
         </div>
-        <div className="grid gap-4 xl:grid-cols-2">
-          {roster.teams.map((team, teamIndex) => (
-            <fieldset key={teamIndex} className="rounded-field border border-hairline p-4" disabled={locked}>
-              <legend className="sr-only">{messages.setup.teamLegend(teamIndex + 1)}</legend>
+        <div>
+          <div className="mb-4 grid grid-cols-4 gap-2" role="group" aria-label={messages.setup.heading}>
+            {roster.teams.map((team, teamIndex) => (
+              <button
+                type="button"
+                aria-label={messages.setup.teamLegend(teamIndex + 1)}
+                aria-pressed={activeTeamIndex === teamIndex}
+                className={`flex min-h-11 items-center justify-center gap-1.5 rounded-chip border px-2 text-xs font-semibold transition-colors ${
+                  activeTeamIndex === teamIndex
+                    ? 'border-navy bg-navy text-white'
+                    : 'border-hairline bg-well text-muted-ink hover:border-rule hover:bg-white'
+                }`}
+                key={teamIndex}
+                onClick={() => setActiveTeamIndex(teamIndex)}
+              >
+                {teamComplete(team) ? <Check className="size-3.5" aria-hidden="true" /> : null}
+                {teamIndex + 1}
+              </button>
+            ))}
+          </div>
+
+          {activeTeam ? (
+            <fieldset className="rounded-field border border-hairline p-4 sm:p-5" disabled={locked}>
+              <legend className="px-1 text-sm font-semibold">{messages.setup.teamLegend(activeTeamIndex + 1)}</legend>
+              <Label htmlFor={`team-${activeTeamIndex}-name`}>{messages.setup.teamNameLabel(activeTeamIndex + 1)}</Label>
               <Input
-                aria-label={messages.setup.teamNameLabel(teamIndex + 1)}
-                placeholder={messages.setup.teamNamePlaceholder(teamIndex + 1)}
-                value={team.name}
-                onChange={(event) => updateTeam(teamIndex, (current) => ({ ...current, name: event.target.value }))}
+                id={`team-${activeTeamIndex}-name`}
+                className="mt-2"
+                placeholder={messages.setup.teamNamePlaceholder(activeTeamIndex + 1)}
+                value={activeTeam.name}
+                onChange={(event) => updateTeam(activeTeamIndex, (current) => ({ ...current, name: event.target.value }))}
               />
-              {team.players.map((player, playerIndex) => (
-                <div className="mt-2.5 grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-2.5" key={playerIndex}>
-                  <span className="text-[0.625rem] text-muted-ink">{messages.common.seed(player.seed)}</span>
-                  <Input
-                    aria-label={messages.setup.playerLabel(teamIndex + 1, playerIndex + 1)}
-                    placeholder={messages.setup.playerPlaceholder(player.seed)}
-                    value={player.name}
-                    onChange={(event) => updatePlayer(teamIndex, playerIndex, event.target.value)}
-                  />
-                </div>
-              ))}
+              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                {activeTeam.players.map((player, playerIndex) => (
+                  <div key={playerIndex}>
+                    <Label htmlFor={`team-${activeTeamIndex}-player-${playerIndex}`}>
+                      {messages.common.seed(player.seed)}
+                    </Label>
+                    <Input
+                      id={`team-${activeTeamIndex}-player-${playerIndex}`}
+                      className="mt-2"
+                      aria-label={messages.setup.playerLabel(activeTeamIndex + 1, playerIndex + 1)}
+                      placeholder={messages.setup.playerPlaceholder(player.seed)}
+                      value={player.name}
+                      onChange={(event) => updatePlayer(activeTeamIndex, playerIndex, event.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
             </fieldset>
-          ))}
+          ) : null}
         </div>
-        <div className="flex justify-end">
-          <Button disabled={locked || issues.length > 0 || saveMutation.isPending}>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={activeTeamIndex === 0}
+              onClick={() => setActiveTeamIndex((current) => Math.max(0, current - 1))}
+            >
+              <ChevronLeft /> {messages.common.back}
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={activeTeamIndex === roster.teams.length - 1}
+              onClick={() => setActiveTeamIndex((current) => Math.min(roster.teams.length - 1, current + 1))}
+            >
+              {messages.common.continueAction} <ChevronRight />
+            </Button>
+          </div>
+          <Button disabled={locked || saveMutation.isPending}>
             {saveMutation.isPending ? messages.common.saving : messages.setup.save}
           </Button>
         </div>
-        {!locked && issues.length > 0 ? (
+        {!locked && attemptedSubmit && issues.length > 0 ? (
           <ul className="space-y-1 text-sm text-destructive" role="alert">
             {issues.map((issue) => <li key={issue}>{messages.setup.issues[issue]}</li>)}
           </ul>
