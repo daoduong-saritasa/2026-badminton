@@ -433,6 +433,21 @@ describe('reduceScoring', () => {
     expect(finalContinues).toMatchObject({ status: 'idle', score: { a: 15, b: 12 } })
   })
 
+  it.each([
+    ['qualifying', { a: 20, b: 19 }, 'a', 'reviewing', { a: 21, b: 19 }],
+    ['qualifying', { a: 20, b: 20 }, 'a', 'idle', { a: 21, b: 20 }],
+    ['qualifying', { a: 29, b: 29 }, 'b', 'reviewing', { a: 29, b: 30 }],
+    ['third-place', { a: 20, b: 19 }, 'a', 'reviewing', { a: 21, b: 19 }],
+    ['qualification-playoff', { a: 14, b: 14 }, 'a', 'reviewing', { a: 15, b: 14 }],
+    ['qualification-playoff', { a: 12, b: 12 }, 'b', 'idle', { a: 12, b: 13 }],
+  ] as const)('applies the %s target and cap from %o', (stage, score, side, status, next) => {
+    const reviewed = reduceScoring(
+      reduceScoring(idle({ stage, score }), { type: 'point-requested', side, requestId }),
+      { type: 'point-acknowledged', resetGeneration: 0, requestId, matchVersion: 8 },
+    )
+    expect(reviewed).toMatchObject({ status, score: next })
+  })
+
   it('opens the next game at 0–0 after a confirmed game and ignores a stale confirmation', () => {
     const reviewing = reduceScoring(idle({ stage: 'final', score: { a: 21, b: 9 } }), {
       type: 'snapshot-received',
