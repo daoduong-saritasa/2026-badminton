@@ -3,8 +3,10 @@ import { describe, expect, it } from 'vitest'
 import {
   correctionBlockCode,
   finalPositions,
+  isQualifyingComplete,
   isTournamentComplete,
   placementParticipants,
+  resolvedFinalists,
   type ProgressionState,
 } from './progression'
 import type {
@@ -197,6 +199,46 @@ describe('placementParticipants', () => {
     expect(placementParticipants(state(matches, fixtures))).toMatchObject({
       finalTeamIds: ['t1', 't3'],
     })
+  })
+})
+
+describe('resolvedFinalists', () => {
+  it('reports qualifying complete only once all twelve matches finish', () => {
+    expect(isQualifyingComplete(state(separated.slice(0, 11)))).toBe(false)
+    expect(isQualifyingComplete(state(separated))).toBe(true)
+  })
+
+  it('credits finalists to the standings, a playoff, or a supervised draw', () => {
+    expect(resolvedFinalists(state(separated))).toEqual([
+      { teamId: 't1', basis: 'standings' },
+      { teamId: 't2', basis: 'standings' },
+    ])
+
+    const p23 = fixture('qualification-playoff', 't2', 't3')
+    const p24 = fixture('qualification-playoff', 't2', 't4')
+    const p34 = fixture('qualification-playoff', 't3', 't4')
+    const fixtures = [...qualifying, p23, p24, p34, third, final]
+    const cycle = [
+      match(p23, 1, 'a', 'completed', { a: 11, b: 9 }),
+      match(p34, 1, 'a', 'completed', { a: 11, b: 9 }),
+      match(p24, 1, 'b', 'completed', { a: 9, b: 11 }),
+    ]
+    expect(
+      resolvedFinalists(state([...threeWayTie, ...cycle], fixtures, { qualificationDrawWinnerIds: ['t4'] })),
+    ).toEqual([
+      { teamId: 't1', basis: 'standings' },
+      { teamId: 't4', basis: 'draw' },
+    ])
+
+    const decisive = [
+      match(p23, 1, 'b', 'completed', { a: 5, b: 11 }),
+      match(p34, 1, 'a', 'completed', { a: 11, b: 5 }),
+      match(p24, 1, 'a', 'completed', { a: 11, b: 5 }),
+    ]
+    expect(resolvedFinalists(state([...threeWayTie, ...decisive], fixtures))).toEqual([
+      { teamId: 't1', basis: 'standings' },
+      { teamId: 't3', basis: 'playoff' },
+    ])
   })
 })
 

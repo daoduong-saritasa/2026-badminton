@@ -8,11 +8,11 @@ gate run. Report the skip count alongside passes; never delete or weaken them.
 
 ## STATUS
 
-- Current phase: 3 — done
+- Current phase: 4 — in-progress
 - Phase 1 — Schema and SQL command surface: done-with-debt
 - Phase 2 — Domain model: done
 - Phase 3 — Data layer: done
-- Phase 4 — UI and copy: pending
+- Phase 4 — UI and copy: in-progress
 - Verification debt: `tests/integration/round-robin-phase1.test.ts` could not connect to the prohibited local Supabase stack; 1 suite failed in setup and 4 tests were skipped. Substitute evidence: `npm run typecheck` and `npm run lint` exit 0.
 
 ## Phase 1 — Schema and SQL command surface
@@ -139,6 +139,7 @@ Consumes: Phase 3's mapped snapshot and mutation wrappers; Phase 2's `qualifying
 
 Fresh review: not required
 
+- [x] `(amended 2026-09-21)` `src/domain/progression.ts`: export `isQualifyingComplete()` and `resolvedFinalists()` (each finalist's basis: standings, playoff, or draw) for the provisional-standings state and the finalist-confirmation panel; tests in `progression.test.ts`
 - [ ] `src/features/tournament/StandingsTable.tsx`: round-robin table with match wins, points scored, points conceded, point difference; equal rank plus a marker for teams the criteria did not separate; the criterion that separated tied teams
 - [ ] `src/features/tournament/StandingsTable.tsx`: distinguish provisional standings, a required playoff, and confirmed finalists
 - [ ] `src/features/tournament/KnockoutBracket.tsx`: replace the group bracket with qualification playoffs, third place, and the final

@@ -25,6 +25,14 @@ export interface PlacementParticipants {
   confirmed: boolean
 }
 
+/** How a finalist earned its place, for the organizer's confirmation. */
+export type FinalistBasis = 'standings' | 'playoff' | 'draw'
+
+export interface Finalist {
+  teamId: UUID
+  basis: FinalistBasis
+}
+
 export type CorrectionBlockCode =
   | 'playoff-started'
   | 'placement-started'
@@ -43,10 +51,11 @@ const qualifyingMatchCount = 12
 export function placementParticipants(
   state: ProgressionState,
 ): PlacementParticipants | null {
-  const finalistIds = resolvedFinalistIds(state)
-  if (!finalistIds) {
+  const finalists = resolvedFinalists(state)
+  if (!finalists) {
     return null
   }
+  const finalistIds = finalists.map(({ teamId }) => teamId)
 
   const [first, second] = [...finalistIds].sort()
   const [third, fourth] = state.teams
@@ -125,8 +134,63 @@ export function correctionBlockCode(
   return null
 }
 
+/**
+ * The two finalists in team id order, each with how it qualified, or null while
+ * qualification is unresolved.
+ */
+export function resolvedFinalists(state: ProgressionState): Finalist[] | null {
+  const cutoff = cutoffFor(state)
+  const ids = resolvedFinalistIds(state)
+  if (!cutoff || !ids) {
+    return null
+  }
+
+  const byStandings = new Set(
+    cutoff.tiedTeamIds.length <= cutoff.availablePlaces
+      ? [...cutoff.fixedFinalistIds, ...cutoff.tiedTeamIds]
+      : cutoff.fixedFinalistIds,
+  )
+  const drawnIds = drawnTeamIds(state, cutoff)
+
+  return [...ids].sort().map((teamId) => ({
+    teamId,
+    basis: byStandings.has(teamId) ? 'standings' : drawnIds.includes(teamId) ? 'draw' : 'playoff',
+  }))
+}
+
+/** Every qualifying match is completed. Standings before then are provisional. */
+export function isQualifyingComplete(state: ProgressionState): boolean {
+  const qualifyingMatches = matchesInStage(state, (stage) => stage === 'qualifying')
+
+  return (
+    qualifyingMatches.length === qualifyingMatchCount &&
+    qualifyingMatches.every(
+      (match) => match.state === 'completed' || match.state === 'unnecessary',
+    )
+  )
+}
+
+/** Teams a stored supervised draw sent through, beyond the playoff's automatic qualifiers. */
+function drawnTeamIds(state: ProgressionState, cutoff: QualificationCutoff): UUID[] {
+  if (cutoff.tiedTeamIds.length !== 3 || cutoff.tiedTeamIds.length <= cutoff.availablePlaces) {
+    return []
+  }
+  const outcome = threeTeamPlayoffOutcome(
+    state.fixtures.filter((fixture) => fixture.stage === 'qualification-playoff'),
+    state.matches,
+    cutoff.tiedTeamIds,
+    cutoff.availablePlaces,
+  )
+  if (!outcome || outcome.drawSlots === 0) {
+    return []
+  }
+  return (state.tournament.qualificationDrawWinnerIds ?? []).filter(
+    (teamId) => !outcome.automaticTeamIds.includes(teamId),
+  )
+}
+
 function resolvedFinalistIds(state: ProgressionState): UUID[] | null {
-  if (!qualifyingFinished(state)) {
+  if (!isQualifyingComplete(state)) {
     return null
   }
 
@@ -194,17 +258,6 @@ function drawnPlayoffTeamIds(
     drawn.every((teamId) => candidateIds.includes(teamId))
 
   return valid ? [...drawWinnerIds] : null
-}
-
-function qualifyingFinished(state: ProgressionState): boolean {
-  const qualifyingMatches = matchesInStage(state, (stage) => stage === 'qualifying')
-
-  return (
-    qualifyingMatches.length === qualifyingMatchCount &&
-    qualifyingMatches.every(
-      (match) => match.state === 'completed' || match.state === 'unnecessary',
-    )
-  )
 }
 
 function cutoffFor(state: ProgressionState): QualificationCutoff | null {
