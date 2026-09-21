@@ -151,11 +151,11 @@ Fresh review: not required
 - [x] `src/features/organizer/ResultSchedule.tsx`: substitution control on an unstarted match, listing the team's four players (per PLAN.md → "Substitution") (the form lives in `ResultEditor.tsx`, which hosts the dialog)
 - [x] `src/features/organizer/ResultEditor.tsx` and `ImpactPreview.tsx`: surface the new correction block reasons (also: one game row outside the final, and preview consequences from `impactConsequences()`)
 - [x] `src/features/scoring/scoring-state.ts` and `ScoreTracker.tsx`: per-stage targets and caps, BO1 outside the final (`scoring-state.ts` needed no change: it already applies each stage's target and cap through `isGameWon()`)
-- [ ] `src/features/tournament/TournamentPage.tsx`: team filter — a selector (no login) narrowing the schedule to one team's fixtures, showing opponent, stage and court; hide pairs until the lineup reveal (per PLAN.md → "Let any viewer filter the public schedule")
-- [ ] `src/features/tournament/TournamentPage.tsx`: publish the rules, ranking criteria, playoff formats, walkover treatment, and draw outcomes
+- [x] `src/features/tournament/TournamentPage.tsx`: team filter — a selector (no login) narrowing the schedule to one team's fixtures, showing opponent, stage and court; hide pairs until the lineup reveal (per PLAN.md → "Let any viewer filter the public schedule")
+- [x] `src/features/tournament/TournamentPage.tsx`: publish the rules, ranking criteria, playoff formats, walkover treatment, and draw outcomes
 - [x] `src/i18n/vi.ts`: Vietnamese copy for the new terms, using CONTEXT.md's canonical words (_Vòng loại_, _Trận tranh vé_, _Cuộc đối đầu xếp hạng_, _Hòa_, _Bốc thăm_, _Thay người_); remove group copy
 - [x] `src/i18n/errors.ts`: messages for substitution rejections and the new correction blocks
-- [ ] Update `src/features/scoring/scoring-state.test.ts` and `src/features/tournament/document-title.test.ts`
+- [x] Update `src/features/scoring/scoring-state.test.ts` and `src/features/tournament/document-title.test.ts` (`document-title.test.ts` needed no change: the title comes from the tournament name, which this spec leaves alone)
 
 **Phase gate (hard):**
 - [ ] `npm run typecheck`
