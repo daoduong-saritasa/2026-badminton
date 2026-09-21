@@ -4,6 +4,7 @@ const { getSupabaseClient } = vi.hoisted(() => ({ getSupabaseClient: vi.fn() }))
 
 vi.mock('../lib/supabase', () => ({ getSupabaseClient }))
 
+import type { CommandPayloads } from '../domain/commands'
 import {
   fetchTournament,
   mutateTournament,
@@ -122,6 +123,54 @@ describe('tournament data', () => {
     await expect(fetchTournament()).rejects.toBeInstanceOf(StaleTournamentSnapshotError)
   })
 
+  it('maps finalist confirmation, playoff fixtures, and four-pair lineups', async () => {
+    const playoffId = '00000000-0000-4000-8000-000000000020'
+    const pair = { player1Id: playerAId, player2Id: playerBId }
+    const base = snapshot(1)
+    rpc.mockResolvedValueOnce({
+      data: {
+        resetGeneration: 0,
+        snapshot: snapshot(1, {
+          tournament: {
+            ...base.tournament,
+            finalists_confirmed_at: '2026-09-21T02:00:00Z',
+            qualification_draw_winner_ids: [teamId],
+          },
+          fixtures: [
+            ...base.fixtures,
+            { id: playoffId, stage: 'qualification-playoff', team_a_id: null, team_b_id: null, version: 1 },
+          ],
+          lineups: [{ fixtureId, teamId, pairs: [pair, pair, pair, pair], confirmedAt: null }],
+        }),
+      },
+      error: null,
+    })
+
+    await expect(fetchTournament()).resolves.toMatchObject({
+      snapshot: {
+        tournament: { finalistsConfirmedAt: '2026-09-21T02:00:00Z', qualificationDrawWinnerIds: [teamId] },
+        fixtures: [
+          { id: fixtureId, stage: 'qualifying' },
+          { id: playoffId, stage: 'qualification-playoff', teamAId: null, teamBId: null },
+        ],
+        lineups: [{ fixtureId, teamId, pairs: [pair, pair, pair, pair] }],
+      },
+    })
+  })
+
+  it('rejects a snapshot that still carries the removed group stage', async () => {
+    rpc.mockResolvedValueOnce({
+      data: {
+        resetGeneration: 9,
+        snapshot: snapshot(0, {
+          fixtures: [{ id: fixtureId, stage: 'group', team_a_id: teamId, team_b_id: otherTeamId, version: 2 }],
+        }),
+      },
+      error: null,
+    })
+    await expect(fetchTournament()).rejects.toBeInstanceOf(InvalidTournamentDataError)
+  })
+
   it('rejects a completed match without a winner', async () => {
     rpc.mockResolvedValueOnce({
       data: { resetGeneration: 9, snapshot: snapshot(0, { matches: [match({ state: 'completed' })] }) },
@@ -182,6 +231,31 @@ describe('tournament data', () => {
       p_payload: {},
     })
     expect(rpc).toHaveBeenNthCalledWith(2, 'get_tournament_snapshot')
+  })
+
+  it('sends the substitution, draw, and finalist commands with their payloads unchanged', async () => {
+    async function expectSent<K extends keyof CommandPayloads>(operation: K, payload: CommandPayloads[K]) {
+      rpc.mockReset()
+      rpc
+        .mockResolvedValueOnce({
+          data: { requestId, resetGeneration: 1, tournamentVersion: 2, matchId: null, matchVersion: null },
+          error: null,
+        })
+        .mockResolvedValueOnce({ data: state(2, 1), error: null })
+
+      await mutateTournament(operation, { requestId, resetGeneration: 1, expectedVersion: 1, payload })
+      expect(rpc).toHaveBeenNthCalledWith(1, operation, {
+        p_request_id: requestId,
+        p_reset_generation: 1,
+        p_expected_version: 1,
+        p_payload: payload,
+      })
+    }
+
+    await expectSent('substitute_players', { matchId, side: 'b', player1Id: playerCId, player2Id: playerDId })
+    await expectSent('record_draw', { matchups: [{ fixtureId, teamAId: teamId, teamBId: otherTeamId }] })
+    await expectSent('record_draw', { advancingTeamIds: [teamId] })
+    await expectSent('confirm_finalists', {})
   })
 
   it('sends a versioned court assignment mutation', async () => {

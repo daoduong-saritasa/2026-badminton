@@ -111,14 +111,14 @@ Branch: `round-robin-tournament/phase-3-data` (stacked: `gh stack add`)
 The zod/DTO boundary between the new SQL snapshot and the new domain types; the UI consumes only mapped values.
 
 Consumes: Phase 2's `LineupPair`, `FixtureStage`, `TeamStanding`, and the new `CommandPayloads` keys
-Produces: snapshot mapping emitting four-pair lineups and generic pair fields; `substitutePlayers()`, `recordDraw()`, `confirmFinalists()` mutation wrappers
+Produces: snapshot mapping emitting four-pair lineups and generic pair fields; `mutateTournament('substitute_players' | 'record_draw' | 'confirm_finalists', …)` (amended 2026-09-21: no per-command wrappers exist in the codebase); `impactConsequences(impact)` in `src/domain/impacts.ts`
 
 Fresh review: not required
 
-- [ ] `src/data/tournament.ts`: update the zod schemas and DTO mapping for the new stage values, `player_1_id`/`player_2_id`, the fourth lineup row, and dropped group fields
-- [ ] `src/data/tournament.ts`: add mutation wrappers for `substitute_players`, `record_draw`, `confirm_finalists`; rename the `start_group_play` wrapper to `startQualifying`
+- [x] `src/data/tournament.ts`: update the zod schemas and DTO mapping (schema and mapping landed in Phase 2's compile-only amendment; this phase adds the tests) for the new stage values, `player_1_id`/`player_2_id`, the fourth lineup row, and dropped group fields
+- [x] `src/data/tournament.ts`: add mutation wrappers for `substitute_players`, `record_draw`, `confirm_finalists`; rename the `start_group_play` wrapper to `startQualifying` — resolved without wrappers: the codebase has none, and the generic `mutateTournament(operation, input)` typed by `CommandPayloads` already sends these commands (`start_qualifying` renamed in Phase 2); covered by tests
 - [x] `src/data/impacts.ts` and `src/domain/impacts.ts`: extend correction-preview impacts for revoked finalist confirmation and cleared placement lineups
-- [ ] Update `src/data/tournament.test.ts` and `src/data/impacts.test.ts` for the new shapes
+- [x] Update `src/data/tournament.test.ts` and `src/data/impacts.test.ts` for the new shapes
 
 **Phase gate (hard):**
 - [ ] `npm run typecheck`
