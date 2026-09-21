@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, KeyRound, RefreshCw } from 'lucide-react'
+import { AlertCircle, ArrowLeft, KeyRound, RefreshCw } from 'lucide-react'
 
 import { fetchTournament, subscribeTournament } from '@/data/tournament'
 import { getStaffAccess } from '@/data/staff'
@@ -196,19 +196,43 @@ export default function App() {
   if (view === 'scoring') {
     return <ScoreTracker snapshot={snapshot} resetGeneration={tournamentState.resetGeneration} onExit={() => setSelectedView('matches')} />
   }
+  if (view === 'organizer' && staffAccess) {
+    return (
+      <div className="app-shell">
+        <header className="mb-8">
+          <div className="flex items-center justify-between gap-4">
+            <Button variant="ghost" className="-ml-3 text-muted-ink" onClick={() => setSelectedView('matches')}>
+              <ArrowLeft /> {messages.organizer.returnToTournament}
+            </Button>
+            <StaffMenu role={staffAccess.role} onSignedOut={handleSignedOut} />
+          </div>
+          <div className="mt-6">
+            <h1 className="text-[clamp(1.5rem,5vw,2rem)] font-extrabold tracking-[-0.0433em]">
+              <span className="brand-mark" aria-hidden="true" />
+              {snapshot.tournament.name}
+            </h1>
+            <p className="ml-[2.5625rem] mt-2 text-sm text-muted-ink">{messages.app.stage[snapshot.tournament.stage]}</p>
+          </div>
+        </header>
+        <OrganizerPage
+          snapshot={snapshot}
+          resetGeneration={tournamentState.resetGeneration}
+          onStartScoring={() => setSelectedView('scoring')}
+        />
+      </div>
+    )
+  }
   const viewContent = renderView(snapshot, tournamentState.resetGeneration, view, () => setSelectedView('scoring'))
-  const tabs: { value: AppView; label: string }[] = [
+  const tabs: { value: PublicView; label: string }[] = [
     { value: 'matches', label: messages.app.tabs.matches },
     { value: 'standings', label: messages.app.tabs.standings },
     { value: 'knockouts', label: messages.app.tabs.knockouts },
-    ...(isStaff ? [{ value: 'scoring', label: messages.app.tabs.scoring } as const] : []),
-    ...(isOrganizer ? [{ value: 'organizer', label: messages.app.tabs.organizer } as const] : []),
   ]
 
   return (
     <div className="app-shell">
-      <header className="mb-9 flex items-start justify-between gap-4">
-        <div>
+      <header className="mb-8 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:gap-5">
+        <div className="min-w-0">
           <h1 className="text-[clamp(1.4375rem,4vw,1.875rem)] font-extrabold tracking-[-0.0433em]">
             <span className="brand-mark" aria-hidden="true" />
             {snapshot.tournament.name}
@@ -218,14 +242,15 @@ export default function App() {
           </p>
         </div>
         {isStaff ? (
-          <StaffMenu role={staffAccess.role} onSignedOut={handleSignedOut} />
+          <StaffMenu role={staffAccess.role} onOpenWorkspace={handleStaffAction} onSignedOut={handleSignedOut} />
         ) : (
           <Button
             variant="outline"
-            className="border-rule bg-transparent text-muted-ink hover:bg-white"
+            className="shrink-0 border-rule bg-transparent px-3 text-muted-ink hover:bg-white sm:px-4"
+            aria-label={messages.app.staffAccess}
             onClick={handleStaffAction}
           >
-            <KeyRound /> {messages.app.staffAccess}
+            <KeyRound /> <span className="hidden sm:inline">{messages.app.staffAccess}</span>
           </Button>
         )}
       </header>
@@ -241,7 +266,7 @@ export default function App() {
         {viewContent}
       </Tabs>
 
-      <footer className="mt-[2.625rem] flex flex-wrap justify-between gap-4 text-[0.625rem] text-muted-ink">
+      <footer className="mt-[2.625rem] flex flex-wrap justify-between gap-4 text-xs text-muted-ink">
         <span>{messages.app.scoringRule}</span>
         <span aria-live="polite">{tournamentQuery.isFetching ? messages.app.updating : messages.app.liveReady}</span>
       </footer>

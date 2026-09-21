@@ -1,6 +1,18 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { CalendarRange, CheckCircle2, Flag, Play, Shuffle } from 'lucide-react'
+import {
+  CalendarRange,
+  CheckCircle2,
+  ChevronRight,
+  ClipboardList,
+  Flag,
+  LayoutDashboard,
+  ListChecks,
+  Play,
+  Shuffle,
+  Trophy,
+  Users,
+} from 'lucide-react'
 
 import { mutateTournament } from '@/data/tournament'
 import { resolvedFinalists, type FinalistBasis } from '@/domain/progression'
@@ -17,12 +29,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import {
   fixtureMatches,
+  fixtureLabel,
   fixtureOf,
   isDeciderEligible,
   matchLabel,
@@ -500,40 +512,219 @@ function DrawRecording({ snapshot, resetGeneration }: { snapshot: TournamentSnap
   )
 }
 
-export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { snapshot: TournamentSnapshot; resetGeneration: number; onStartScoring: () => void }) {
-  const inSetup = snapshot.tournament.stage === 'setup'
-  // Lineups stay editable until a match of their fixture starts. Playoffs use
-  // predeclared pairs, and placement lineups wait for their teams.
-  const openFixtures = snapshot.fixtures.filter((fixture) =>
-    fixture.stage !== 'qualification-playoff'
-    && (fixture.stage === 'qualifying' || fixture.teamAId !== null)
-    && fixtureMatches(snapshot, fixture.id).every((match) => match.state === 'unstarted'))
-  /*
-   * The roster leads during setup, because nothing else is actionable yet. Once
-   * play starts it is locked and drops to the bottom as a reference.
-   */
-  const setupPanel = <SetupForm key={`setup-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} />
+type OrganizerSection = 'overview' | 'teams' | 'lineups' | 'matches' | 'results'
+
+function LineupsWorkspace({
+  snapshot,
+  fixtures,
+  resetGeneration,
+}: {
+  snapshot: TournamentSnapshot
+  fixtures: TournamentSnapshot['fixtures']
+  resetGeneration: number
+}) {
+  const [selectedFixtureId, setSelectedFixtureId] = useState<UUID | null>(null)
+  const selectedFixture = fixtures.find((fixture) => fixture.id === selectedFixtureId)
+  if (selectedFixture) {
+    return (
+      <div className="space-y-4">
+        <Button variant="ghost" className="-ml-3 text-muted-ink" onClick={() => setSelectedFixtureId(null)}>
+          {messages.organizer.lineupsWorkspace.back}
+        </Button>
+        <LineupEditor
+          key={`lineup-${resetGeneration}-${selectedFixture.id}`}
+          snapshot={snapshot}
+          fixture={selectedFixture}
+          resetGeneration={resetGeneration}
+        />
+      </div>
+    )
+  }
 
   return (
-    <section className="view-enter space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
-        <h2 className="text-[1.375rem] font-semibold tracking-[-0.036em]">{messages.organizer.heading}</h2>
-        <div className="flex flex-wrap items-center gap-x-5 gap-y-3">
-          <StageProgressMeter snapshot={snapshot} />
-          <Badge variant="outline">{messages.organizer.stageBadge(messages.app.stage[snapshot.tournament.stage])}</Badge>
+    <section className="rounded-card border border-ink/5 bg-white p-5 shadow-card sm:p-6">
+      <h3 className="text-base font-semibold">{messages.organizer.lineupsWorkspace.heading}</h3>
+      <p className="mt-1.5 max-w-2xl text-sm/[1.6] text-muted-ink">{messages.organizer.lineupsWorkspace.description}</p>
+      <ul className="mt-5 divide-y divide-hairline">
+        {fixtures.map((fixture) => {
+          const fixtureLineups = snapshot.lineups.filter((lineup) => lineup.fixtureId === fixture.id)
+          const confirmed = fixtureLineups.filter((lineup) => lineup.confirmedAt !== null).length
+          const started = fixtureMatches(snapshot, fixture.id).some((match) => match.state !== 'unstarted')
+          const teamsKnown = fixture.teamAId !== null && fixture.teamBId !== null
+          const status = !teamsKnown
+            ? messages.organizer.lineupsWorkspace.awaitingTeams
+            : started
+              ? messages.organizer.lineupsWorkspace.locked
+              : confirmed > 0
+                ? messages.organizer.lineupsWorkspace.confirmed(confirmed)
+                : fixtureLineups.length > 0
+                  ? messages.organizer.lineupsWorkspace.saved(fixtureLineups.length)
+                  : messages.organizer.lineupsWorkspace.notStarted
+          return (
+            <li key={fixture.id}>
+              <button
+                type="button"
+                className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-4 text-left"
+                onClick={() => setSelectedFixtureId(fixture.id)}
+              >
+                <span className="min-w-0">
+                  <span className="block text-sm font-semibold">{fixtureLabel(fixture)}</span>
+                  <span className="mt-1 block truncate text-xs text-muted-ink">
+                    {messages.common.versus(teamName(snapshot, fixture.teamAId), teamName(snapshot, fixture.teamBId))}
+                  </span>
+                </span>
+                <span className="flex items-center gap-2 text-xs font-medium text-muted-ink">
+                  {status}<ChevronRight className="size-4" aria-hidden="true" />
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+}
+
+function OrganizerOverview({
+  snapshot,
+  resetGeneration,
+  lineupFixtures,
+  onNavigate,
+}: {
+  snapshot: TournamentSnapshot
+  resetGeneration: number
+  lineupFixtures: TournamentSnapshot['fixtures']
+  onNavigate: (section: OrganizerSection) => void
+}) {
+  const inSetup = snapshot.tournament.stage === 'setup'
+  const expectedLineups = lineupFixtures.reduce((total, fixture) =>
+    total + Number(fixture.teamAId !== null) + Number(fixture.teamBId !== null), 0)
+  const confirmedLineups = snapshot.lineups.filter((lineup) =>
+    lineup.confirmedAt !== null && lineupFixtures.some((fixture) => fixture.id === lineup.fixtureId)).length
+  const eligibleMatches = snapshot.matches.filter((match) => isDeciderEligible(snapshot, match))
+  const scheduledMatches = eligibleMatches.filter((match) => match.court !== null).length
+  const completedMatches = eligibleMatches.filter((match) => match.state === 'completed').length
+  const teamsReady = snapshot.teams.length === 4 && snapshot.players.length === 16
+  const next = !teamsReady
+    ? { section: 'teams' as const, text: messages.organizer.overview.setupTeams }
+    : confirmedLineups < expectedLineups
+      ? { section: 'lineups' as const, text: messages.organizer.overview.setupLineups }
+      : inSetup
+        ? { section: null, text: messages.organizer.overview.readyToStart }
+        : { section: 'matches' as const, text: messages.organizer.overview.manageMatches }
+  const metrics = [
+    { label: messages.organizer.overview.teams, value: `${snapshot.teams.length}/4`, section: 'teams' as const, icon: Users },
+    { label: messages.organizer.overview.lineups, value: `${confirmedLineups}/${expectedLineups}`, section: 'lineups' as const, icon: ClipboardList },
+    ...(!inSetup ? [
+      { label: messages.organizer.overview.scheduled, value: String(scheduledMatches), section: 'matches' as const, icon: ListChecks },
+      { label: messages.organizer.overview.completed, value: String(completedMatches), section: 'results' as const, icon: Trophy },
+    ] : []),
+  ]
+
+  return (
+    <div className="space-y-6">
+      <section className="overflow-hidden rounded-card bg-navy text-white shadow-final">
+        <div className="grid gap-6 p-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:p-7">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-navy-soft">{messages.organizer.overview.heading}</p>
+            <p className="mt-3 max-w-2xl text-lg/[1.45] font-semibold">{next.text}</p>
+          </div>
+          {next.section ? (
+            <Button className="bg-white text-navy hover:bg-navy-soft" onClick={() => onNavigate(next.section)}>
+              {messages.organizer.overview.open}<ChevronRight />
+            </Button>
+          ) : null}
         </div>
+      </section>
+
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {metrics.map(({ label, value, section, icon: Icon }) => (
+          <button
+            type="button"
+            className="rounded-card border border-ink/5 bg-white p-5 text-left shadow-card transition-transform hover:-translate-y-0.5"
+            key={section}
+            onClick={() => onNavigate(section)}
+          >
+            <span className="flex items-center justify-between gap-3 text-xs font-medium text-muted-ink">
+              {label}<Icon className="size-4" aria-hidden="true" />
+            </span>
+            <strong className="numeric mt-3 block text-2xl tracking-tight text-ink">{value}</strong>
+          </button>
+        ))}
       </div>
 
-      {inSetup ? setupPanel : null}
-      {!inSetup ? <CourtSchedule snapshot={snapshot} resetGeneration={resetGeneration} onStartScoring={onStartScoring} /> : null}
+      {inSetup && snapshot.fixtures.length > 0 ? <StartQualifying snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
       {!inSetup ? <DrawRecording key={`draw-${resetGeneration}-${snapshot.tournament.resultRevision}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
       {!inSetup ? <FinalistConfirmation snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
-      {openFixtures.map((fixture) => (
-        <LineupEditor key={`lineup-${resetGeneration}-${fixture.id}`} snapshot={snapshot} fixture={fixture} resetGeneration={resetGeneration} />
-      ))}
-      {inSetup && snapshot.fixtures.length > 0 ? <StartQualifying snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
-      {!inSetup ? <ResultsSection key={`results-${resetGeneration}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
-      {!inSetup ? setupPanel : null}
-    </section>
+    </div>
+  )
+}
+
+export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { snapshot: TournamentSnapshot; resetGeneration: number; onStartScoring: () => void }) {
+  const [selectedSection, setSelectedSection] = useState<OrganizerSection>('overview')
+  const inSetup = snapshot.tournament.stage === 'setup'
+  const section = inSetup && (selectedSection === 'matches' || selectedSection === 'results') ? 'overview' : selectedSection
+  const lineupFixtures = snapshot.fixtures.filter((fixture) =>
+    fixture.stage !== 'qualification-playoff'
+    && (fixture.stage === 'qualifying' || fixture.teamAId !== null))
+  const navigation = [
+    { value: 'overview' as const, label: messages.organizer.navigation.overview, icon: LayoutDashboard },
+    { value: 'teams' as const, label: messages.organizer.navigation.teams, icon: Users },
+    { value: 'lineups' as const, label: messages.organizer.navigation.lineups, icon: ClipboardList },
+    ...(!inSetup ? [
+      { value: 'matches' as const, label: messages.organizer.navigation.matches, icon: CalendarRange },
+      { value: 'results' as const, label: messages.organizer.navigation.results, icon: Trophy },
+    ] : []),
+  ]
+
+  let content: React.ReactNode
+  switch (section) {
+    case 'overview':
+      content = <OrganizerOverview snapshot={snapshot} resetGeneration={resetGeneration} lineupFixtures={lineupFixtures} onNavigate={setSelectedSection} />
+      break
+    case 'teams':
+      content = <SetupForm key={`setup-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} />
+      break
+    case 'lineups':
+      content = <LineupsWorkspace snapshot={snapshot} fixtures={lineupFixtures} resetGeneration={resetGeneration} />
+      break
+    case 'matches':
+      content = <CourtSchedule snapshot={snapshot} resetGeneration={resetGeneration} onStartScoring={onStartScoring} />
+      break
+    case 'results':
+      content = <ResultsSection key={`results-${resetGeneration}`} snapshot={snapshot} resetGeneration={resetGeneration} />
+      break
+  }
+
+  return (
+    <main className="view-enter space-y-6">
+      <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-orange">{messages.organizer.stageBadge(messages.app.stage[snapshot.tournament.stage])}</p>
+          <h2 className="mt-1 text-[1.625rem] font-semibold tracking-[-0.036em]">{messages.organizer.heading}</h2>
+        </div>
+        <StageProgressMeter snapshot={snapshot} />
+      </div>
+
+      <nav className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0" aria-label={messages.organizer.navigationLabel}>
+        <div className="flex min-w-max gap-2 border-b border-line pb-3">
+          {navigation.map(({ value, label, icon: Icon }) => (
+            <button
+              type="button"
+              className={`flex min-h-11 items-center gap-2 rounded-pill px-4 text-sm font-semibold transition-colors ${
+                section === value ? 'bg-navy text-white' : 'text-muted-ink hover:bg-white hover:text-ink'
+              }`}
+              aria-current={section === value ? 'page' : undefined}
+              key={value}
+              onClick={() => setSelectedSection(value)}
+            >
+              <Icon className="size-4" aria-hidden="true" />{label}
+            </button>
+          ))}
+        </div>
+      </nav>
+
+      {content}
+    </main>
   )
 }
