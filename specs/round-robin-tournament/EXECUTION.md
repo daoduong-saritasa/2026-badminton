@@ -90,7 +90,7 @@ Fresh review: not required
 - [x] New `src/domain/standings.ts`: `qualifyingStandings()` applying the five ranking criteria over the fixed original tied set, excluding walkovers from point totals, and marking teams the criteria did not separate
 - [x] New `src/domain/standings.ts`: `requiredPlayoff()` returning the two-, three-, or four-team playoff shape, or null
 - [x] `src/domain/team-fixtures.ts`: `fixtureWinnerTeamId()` handles a drawn qualifying fixture (1–1, no winner) and a single-match playoff fixture; `deciderStatus()` applies to placement fixtures only
-- [ ] `src/domain/progression.ts`: `placementParticipants()` derives from `qualifyingStandings()` plus finalist confirmation instead of two group winners; extend `CorrectionBlockCode` with `'playoff-started'`
+- [x] `src/domain/progression.ts`: `placementParticipants()` derives from `qualifyingStandings()` plus finalist confirmation instead of two group winners; extend `CorrectionBlockCode` with `'playoff-started'`
 - [ ] `src/domain/commands.ts`: rename `start_group_play` to `start_qualifying`, add `substitute_players: { matchId: UUID; side: Side; pair: LineupPair }`, `record_draw: { matchups: Array<{ fixtureId: UUID; teamAId: UUID; teamBId: UUID }> } | { advancingTeamIds: UUID[] }`, `confirm_finalists: Record<string, never>`
 - [ ] Update `src/domain/roster.test.ts`, `scoring.test.ts`, `team-fixtures.test.ts`, `progression.test.ts`; add `src/domain/standings.test.ts` covering each ranking criterion, the two/three/four-team playoff shapes, and an unbreakable tie
 
