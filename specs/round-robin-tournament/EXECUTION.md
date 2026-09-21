@@ -165,6 +165,7 @@ Fresh review: required — upgraded 2026-09-21: the ported integration suites co
 **Phase gate (hard):**
 - [x] `npm run typecheck`
 - [x] `npm run test:related -- <changed files from the phase diff>` (4 files, 46 passed, 0 failed, 0 skipped)
+- [~] `(amended 2026-09-21)` Gate rerun after the fresh-review corrections: `npm run typecheck` and `npm run lint` exit 0; `npm run test:related` now selects the ported integration suites: 4 files passed, 3 failed in `requireLocalSupabase` setup (local Supabase prohibited by `AGENTS.md`), 46 tests passed, 16 skipped. Substitute evidence: typecheck and every non-database suite pass.
 
 **Review checklist (user, at PR review):**
 - [ ] Standings read correctly for a provisional table, a required playoff, and confirmed finalists
