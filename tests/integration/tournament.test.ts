@@ -151,26 +151,36 @@ async function confirmLineup(session: LocalSession, fixtureId: string, teamId: s
   await callMutation('confirm_lineup', session, fixture.version, { fixtureId, teamId })
 }
 
-async function saveAndConfirmLineup(session: LocalSession, fixtureId: string, teamId: string): Promise<void> {
-  await saveLineup(session, fixtureId, teamId)
-  await confirmLineup(session, fixtureId, teamId)
+/**
+ * A confirmed lineup locks its fixture against further saves, so both teams
+ * save before either confirms.
+ */
+async function saveAndConfirmFixture(session: LocalSession, fixture: Fixture): Promise<void> {
+  if (!fixture.team_a_id || !fixture.team_b_id) throw new Error('Fixture participants are missing')
+  await saveLineup(session, fixture.id, fixture.team_a_id)
+  await saveLineup(session, fixture.id, fixture.team_b_id)
+  await confirmLineup(session, fixture.id, fixture.team_a_id)
+  await confirmLineup(session, fixture.id, fixture.team_b_id)
 }
 
 async function confirmAllLineups(session: LocalSession, stages: Fixture['stage'][]): Promise<void> {
   const fixtures = (await snapshot(session)).fixtures.filter((fixture) => stages.includes(fixture.stage))
   for (const fixture of fixtures) {
-    if (!fixture.team_a_id || !fixture.team_b_id) throw new Error('Fixture participants are missing')
-    await saveAndConfirmLineup(session, fixture.id, fixture.team_a_id)
-    await saveAndConfirmLineup(session, fixture.id, fixture.team_b_id)
+    await saveAndConfirmFixture(session, fixture)
   }
 }
 
-async function startQualifying(session: LocalSession): Promise<Snapshot> {
-  await createRoster(session)
+/** Confirms every qualifying lineup on the existing roster and starts play. */
+async function beginQualifying(session: LocalSession): Promise<Snapshot> {
   await confirmAllLineups(session, ['qualifying'])
   const current = await snapshot(session)
   await callMutation('start_qualifying', session, current.tournament.version, {})
   return snapshot(session)
+}
+
+async function startQualifying(session: LocalSession): Promise<Snapshot> {
+  await createRoster(session)
+  return beginQualifying(session)
 }
 
 function stageFixtures(current: Snapshot, stage: Fixture['stage']): Fixture[] {
@@ -244,16 +254,19 @@ describe('team tournament commands', () => {
     expect((await snapshot(referee)).lineups).toEqual([])
     expect((await snapshot()).lineups).toEqual([])
 
+    await saveLineup(organizer, fixture.id, fixture.team_b_id)
     await confirmLineup(organizer, fixture.id, fixture.team_a_id)
-    await saveAndConfirmLineup(organizer, fixture.id, fixture.team_b_id)
+    // One confirmation locks the fixture, so the opponent can no longer save.
+    const locked = (await snapshot(organizer)).fixtures.find((candidate) => candidate.id === fixture.id)
+    expect((await rpc('save_lineup', mutation(locked?.version ?? -1, lineupPayload(created, fixture, fixture.team_b_id)), organizer)).ok)
+      .toBe(false)
+    await confirmLineup(organizer, fixture.id, fixture.team_b_id)
     expect((await snapshot(referee)).lineups).toEqual([])
     expect((await snapshot()).lineups).toEqual([])
 
     const remaining = stageFixtures(await snapshot(organizer), 'qualifying').filter((candidate) => candidate.id !== fixture.id)
     for (const other of remaining) {
-      if (!other.team_a_id || !other.team_b_id) throw new Error('Fixture has no teams')
-      await saveAndConfirmLineup(organizer, other.id, other.team_a_id)
-      await saveAndConfirmLineup(organizer, other.id, other.team_b_id)
+      await saveAndConfirmFixture(organizer, other)
     }
     expect((await snapshot(referee)).lineups).toHaveLength(12)
     expect((await snapshot()).lineups).toHaveLength(12)
@@ -274,7 +287,7 @@ describe('team tournament commands', () => {
     sameSeed.pairs[0] = sameSeed.pairs[3]
     expect((await rpc('save_lineup', mutation(fixture.version, sameSeed), organizer)).ok).toBe(false)
 
-    const ready = await startQualifying(organizer)
+    const ready = await beginQualifying(organizer)
     const qualifyingMatch = fixtureMatches(ready, fixture.id)[0]
     if (!qualifyingMatch) throw new Error('Qualifying match is missing')
     const assigned = await assignCourt(organizer, qualifyingMatch.id, 1)
