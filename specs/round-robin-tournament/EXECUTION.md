@@ -146,10 +146,10 @@ Fresh review: not required
 - [x] `src/features/tournament/FixtureCard.tsx` and `MatchTicket.tsx`: render a drawn qualifying fixture, a single-match playoff, generic pairs, and per-stage game rules
 - [x] `src/features/tournament/labels.ts`: drop `groupTone`; add stage labels for qualifying, qualification playoff, and placement fixtures
 - [x] `(amended 2026-09-21)` `src/components/ui/select.tsx`: drop the unused `groupA`/`groupB` trigger tones with the group format
-- [ ] `src/features/organizer/LineupEditor.tsx`: four pairs per qualifying lineup (three mixed-seed plus the unrestricted playoff pair), with mixed-seed validation on pairs 1–3 only
-- [ ] `src/features/organizer/OrganizerPage.tsx`: finalist confirmation showing the proposed finalists and why each qualified; draw recording for playoff matchups
-- [ ] `src/features/organizer/ResultSchedule.tsx`: substitution control on an unstarted match, listing the team's four players (per PLAN.md → "Substitution")
-- [ ] `src/features/organizer/ResultEditor.tsx` and `ImpactPreview.tsx`: surface the new correction block reasons
+- [x] `src/features/organizer/LineupEditor.tsx`: four pairs per qualifying lineup (three mixed-seed plus the unrestricted playoff pair), with mixed-seed validation on pairs 1–3 only (qualifying rows: matches 1–2 plus the playoff pair, with match 3 derived by recombining the openers; placement rows: matches 1–3, with the unused fourth row derived from match 1; placement lineups open only after finalist confirmation)
+- [x] `src/features/organizer/OrganizerPage.tsx`: finalist confirmation showing the proposed finalists and why each qualified; draw recording for playoff matchups (also blocks the qualifying start when `validateQualifyingRotation()` reports a team)
+- [x] `src/features/organizer/ResultSchedule.tsx`: substitution control on an unstarted match, listing the team's four players (per PLAN.md → "Substitution") (the form lives in `ResultEditor.tsx`, which hosts the dialog)
+- [x] `src/features/organizer/ResultEditor.tsx` and `ImpactPreview.tsx`: surface the new correction block reasons (also: one game row outside the final, and preview consequences from `impactConsequences()`)
 - [ ] `src/features/scoring/scoring-state.ts` and `ScoreTracker.tsx`: per-stage targets and caps, BO1 outside the final
 - [ ] `src/features/tournament/TournamentPage.tsx`: team filter — a selector (no login) narrowing the schedule to one team's fixtures, showing opponent, stage and court; hide pairs until the lineup reveal (per PLAN.md → "Let any viewer filter the public schedule")
 - [ ] `src/features/tournament/TournamentPage.tsx`: publish the rules, ranking criteria, playoff formats, walkover treatment, and draw outcomes

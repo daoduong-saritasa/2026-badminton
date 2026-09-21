@@ -1,6 +1,6 @@
 import { ArrowRight } from 'lucide-react'
 
-import type { MutationImpact } from '@/domain/impacts'
+import { impactConsequences, type MutationImpact } from '@/domain/impacts'
 import type { FixtureMatch, TournamentSnapshot, UUID } from '@/domain/types'
 import {
   confirmedGames,
@@ -74,7 +74,9 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
     match.id !== matchId && outcomeText(before, matchById(before, match.id)) !== outcomeText(after, match))
   const removedMatches = before.matches.filter((match) => !matchById(after, match.id))
   const corrected = matchById(after, matchId)
-  const fixtures = after.fixtures.filter((fixture) => fixture.stage === 'qualifying')
+  const fixtures = after.fixtures.filter((fixture) => fixture.stage === 'qualifying' || fixture.stage === 'qualification-playoff')
+  const consequences = impactConsequences(impact)
+  const clearedTeamIds = consequences?.clearedPlacementLineups.map(({ teamId }) => teamId) ?? []
 
   return (
     <div className="max-h-[50dvh] space-y-4 overflow-y-auto pr-1">
@@ -131,6 +133,18 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
           after={placementText(after, 'third-place')}
         />
       </section>
+
+      {consequences && (consequences.finalistConfirmationRevoked || clearedTeamIds.length > 0) ? (
+        <section>
+          <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.impact.consequencesHeading}</h4>
+          <ul className="mt-1.5 space-y-1 text-[0.75rem]">
+            {consequences.finalistConfirmationRevoked ? <li>{messages.impact.finalistsRevoked}</li> : null}
+            {clearedTeamIds.length > 0 ? (
+              <li>{messages.impact.lineupsCleared(clearedTeamIds.map((teamId) => teamName(before, teamId)).join(', '))}</li>
+            ) : null}
+          </ul>
+        </section>
+      ) : null}
     </div>
   )
 }
