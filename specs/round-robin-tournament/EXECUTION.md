@@ -8,12 +8,12 @@ gate run. Report the skip count alongside passes; never delete or weaken them.
 
 ## STATUS
 
-- Current phase: 4 — in-progress (spec gate: stale integration suites pending decision)
+- Current phase: 4 — done-with-debt
 - Phase 1 — Schema and SQL command surface: done-with-debt
 - Phase 2 — Domain model: done
 - Phase 3 — Data layer: done
-- Phase 4 — UI and copy: in-progress
-- Verification debt: `tests/integration/round-robin-phase1.test.ts` could not connect to the prohibited local Supabase stack; 1 suite failed in setup and 4 tests were skipped. Substitute evidence: `npm run typecheck` and `npm run lint` exit 0. Spec gate (2026-09-21): all 5 integration files fail in setup for the same reason (133 passed, 31 skipped); `tests/integration/{tournament,impacts,reset}.test.ts` still target the group format.
+- Phase 4 — UI and copy: done-with-debt
+- Verification debt: `tests/integration/round-robin-phase1.test.ts` could not connect to the prohibited local Supabase stack; 1 suite failed in setup and 4 tests were skipped. Substitute evidence: `npm run typecheck` and `npm run lint` exit 0. Spec gate (2026-09-21): all 5 integration files fail in setup for the same reason (133 passed, 31 skipped); `tests/integration/{tournament,impacts,reset}.test.ts` are ported to the round-robin schema but unrun; they must pass against local Supabase before the spec counts as verified.
 
 ## Phase 1 — Schema and SQL command surface
 
@@ -174,6 +174,6 @@ Fresh review: not required — re-evaluated 2026-09-21 against the actual diff: 
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [~] `npm run test` — report the pass count with the integration-test failures and skip count, per `AGENTS.md` — 2026-09-21: 12 files passed, 5 failed; 133 tests passed, 31 skipped. All 5 failures are `requireLocalSupabase` setup errors (local Supabase unavailable, prohibited by `AGENTS.md`): `auth`, `impacts`, `reset`, `round-robin-phase1`, `tournament`. Substitute evidence: typecheck, lint, and every non-database suite pass.
+- [~] `npm run test` — report the pass count with the integration-test failures and skip count, per `AGENTS.md` — 2026-09-21: 12 files passed, 5 failed; 133 tests passed, 31 skipped (after the port: 133 passed, 32 skipped). All 5 failures are `requireLocalSupabase` setup errors (local Supabase unavailable, prohibited by `AGENTS.md`): `auth`, `impacts`, `reset`, `round-robin-phase1`, `tournament`. Substitute evidence: typecheck, lint, and every non-database suite pass.
 - [x] `npm run build` — exit 0 (existing warning: 817 kB chunk over the 500 kB limit)
-- [ ] `(amended 2026-09-21)` Port `tests/integration/tournament.test.ts`, `impacts.test.ts`, and `reset.test.ts` to the round-robin schema: they still use `group_code`, `seed1`/`seed2` pair columns, `start_group_play`, three-pair lineups, and the `'group'` stage, so they fail against the Phase 1 migration once local Supabase runs. Awaiting user direction (cannot be verified locally).
+- [x] `(amended 2026-09-21)` Port `tests/integration/tournament.test.ts`, `impacts.test.ts`, and `reset.test.ts` to the round-robin schema: they still use `group_code`, `seed1`/`seed2` pair columns, `start_group_play`, three-pair lineups, and the `'group'` stage, so they fail against the Phase 1 migration once local Supabase runs. Ported on user direction 2026-09-21. The suites cover the new format: rosters without groups; four-pair lineups with a consistent playoff pair; the reveal after all 12 qualifying lineups are confirmed; one-game scoring at the new targets; drawn qualifying fixtures; finalist confirmation before placement play; third place before the final; the placement decider; and the `playoff-started`, revoked-confirmation, and `placement-started` correction boundaries. Verified by the project typecheck only; they cannot run without local Supabase.
