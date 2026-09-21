@@ -1,6 +1,8 @@
+import { gameRules, gamesToWinMatch } from '@/domain/scoring'
 import { deciderStatus, fixtureTally } from '@/domain/team-fixtures'
 import type {
   FixtureMatch,
+  FixtureStage,
   Lineup,
   LineupPair,
   Score,
@@ -39,6 +41,26 @@ export function sideTeamId(fixture: TeamFixture | undefined, side: Side): UUID |
 export function fixtureLabel(fixture: TeamFixture | undefined): string {
   if (!fixture) return messages.common.unknownFixture
   return messages.stages[fixture.stage]
+}
+
+/** "Chạm 21, cách 2 điểm, tối đa 30 · Thắng 2 ván": the game rules a stage plays under. */
+export function stageRule(stage: FixtureStage): string {
+  const { target, cap } = gameRules(stage)
+  const rule = messages.fixtures.stageRule(target, cap)
+  return gamesToWinMatch(stage) === 2 ? `${rule} · ${messages.fixtures.bestOfThree}` : rule
+}
+
+/** A qualifying fixture whose two matches finished one each. */
+export function isDrawnFixture(snapshot: TournamentSnapshot, fixture: TeamFixture): boolean {
+  if (fixture.stage !== 'qualifying') return false
+  const matches = fixtureMatches(snapshot, fixture.id)
+  const tally = fixtureTally(matches)
+  return matches.length === 2 && matches.every((match) => match.state === 'completed') && tally.a === 1 && tally.b === 1
+}
+
+/** Team names joined for a sentence. */
+export function teamNames(snapshot: TournamentSnapshot, teamIds: readonly UUID[]): string {
+  return teamIds.map((teamId) => teamName(snapshot, teamId)).join(', ')
 }
 
 /** "Vòng loại · Trận 2": which contest a match belongs to, for lists and labels. */

@@ -10,7 +10,13 @@ describe('errorMessage', () => {
 
   it('translates a correction block raised by the server', () => {
     expect(errorMessage(new Error('placement-started'))).toContain('tranh hạng')
-    expect(errorMessage(new Error('decider-started'))).toContain('Trận quyết định')
+    expect(errorMessage(new Error('playoff-started'))).toContain('Trận tranh vé')
+  })
+
+  it('translates substitution and qualification failures', () => {
+    expect(errorMessage(new Error('A substitute is already playing'))).toBe('Người thay đang thi đấu ở trận khác.')
+    expect(errorMessage(new Error('Third place must finish before the final starts')))
+      .toBe('Tranh hạng ba phải kết thúc trước khi chung kết bắt đầu.')
   })
 
   it('tells an ownership conflict apart from a missing role', () => {

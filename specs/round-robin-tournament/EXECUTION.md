@@ -140,11 +140,12 @@ Consumes: Phase 3's mapped snapshot and mutation wrappers; Phase 2's `qualifying
 Fresh review: not required
 
 - [x] `(amended 2026-09-21)` `src/domain/progression.ts`: export `isQualifyingComplete()` and `resolvedFinalists()` (each finalist's basis: standings, playoff, or draw) for the provisional-standings state and the finalist-confirmation panel; tests in `progression.test.ts`
-- [ ] `src/features/tournament/StandingsTable.tsx`: round-robin table with match wins, points scored, points conceded, point difference; equal rank plus a marker for teams the criteria did not separate; the criterion that separated tied teams
-- [ ] `src/features/tournament/StandingsTable.tsx`: distinguish provisional standings, a required playoff, and confirmed finalists
-- [ ] `src/features/tournament/KnockoutBracket.tsx`: replace the group bracket with qualification playoffs, third place, and the final
-- [ ] `src/features/tournament/FixtureCard.tsx` and `MatchTicket.tsx`: render a drawn qualifying fixture, a single-match playoff, generic pairs, and per-stage game rules
-- [ ] `src/features/tournament/labels.ts`: drop `groupTone`; add stage labels for qualifying, qualification playoff, and placement fixtures
+- [x] `src/features/tournament/StandingsTable.tsx`: round-robin table with match wins, points scored, points conceded, point difference; equal rank plus a marker for teams the criteria did not separate; the criterion that separated tied teams
+- [x] `src/features/tournament/StandingsTable.tsx`: distinguish provisional standings, a required playoff, and confirmed finalists
+- [x] `src/features/tournament/KnockoutBracket.tsx`: replace the group bracket with qualification playoffs, third place, and the final
+- [x] `src/features/tournament/FixtureCard.tsx` and `MatchTicket.tsx`: render a drawn qualifying fixture, a single-match playoff, generic pairs, and per-stage game rules
+- [x] `src/features/tournament/labels.ts`: drop `groupTone`; add stage labels for qualifying, qualification playoff, and placement fixtures
+- [x] `(amended 2026-09-21)` `src/components/ui/select.tsx`: drop the unused `groupA`/`groupB` trigger tones with the group format
 - [ ] `src/features/organizer/LineupEditor.tsx`: four pairs per qualifying lineup (three mixed-seed plus the unrestricted playoff pair), with mixed-seed validation on pairs 1–3 only
 - [ ] `src/features/organizer/OrganizerPage.tsx`: finalist confirmation showing the proposed finalists and why each qualified; draw recording for playoff matchups
 - [ ] `src/features/organizer/ResultSchedule.tsx`: substitution control on an unstarted match, listing the team's four players (per PLAN.md → "Substitution")
@@ -152,8 +153,8 @@ Fresh review: not required
 - [ ] `src/features/scoring/scoring-state.ts` and `ScoreTracker.tsx`: per-stage targets and caps, BO1 outside the final
 - [ ] `src/features/tournament/TournamentPage.tsx`: team filter — a selector (no login) narrowing the schedule to one team's fixtures, showing opponent, stage and court; hide pairs until the lineup reveal (per PLAN.md → "Let any viewer filter the public schedule")
 - [ ] `src/features/tournament/TournamentPage.tsx`: publish the rules, ranking criteria, playoff formats, walkover treatment, and draw outcomes
-- [ ] `src/i18n/vi.ts`: Vietnamese copy for the new terms, using CONTEXT.md's canonical words (_Vòng loại_, _Trận tranh vé_, _Cuộc đối đầu xếp hạng_, _Hòa_, _Bốc thăm_, _Thay người_); remove group copy
-- [ ] `src/i18n/errors.ts`: messages for substitution rejections and the new correction blocks
+- [x] `src/i18n/vi.ts`: Vietnamese copy for the new terms, using CONTEXT.md's canonical words (_Vòng loại_, _Trận tranh vé_, _Cuộc đối đầu xếp hạng_, _Hòa_, _Bốc thăm_, _Thay người_); remove group copy
+- [x] `src/i18n/errors.ts`: messages for substitution rejections and the new correction blocks
 - [ ] Update `src/features/scoring/scoring-state.test.ts` and `src/features/tournament/document-title.test.ts`
 
 **Phase gate (hard):**
