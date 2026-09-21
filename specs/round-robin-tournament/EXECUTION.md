@@ -137,7 +137,7 @@ Everything a player or organizer sees, built on the mapped snapshot from Phase 3
 
 Consumes: Phase 3's mapped snapshot and mutation wrappers; Phase 2's `qualifyingStandings()` and `requiredPlayoff()`
 
-Fresh review: not required — re-evaluated 2026-09-21 against the actual diff: UI and copy only, no hard trigger
+Fresh review: required — upgraded 2026-09-21: the ported integration suites could not be run locally, so confidence is lower than usual
 
 - [x] `(amended 2026-09-21)` `src/domain/progression.ts`: export `isQualifyingComplete()` and `resolvedFinalists()` (each finalist's basis: standings, playoff, or draw) for the provisional-standings state and the finalist-confirmation panel; tests in `progression.test.ts`
 - [x] `src/features/tournament/StandingsTable.tsx`: round-robin table with match wins, points scored, points conceded, point difference; equal rank plus a marker for teams the criteria did not separate; the criterion that separated tied teams
