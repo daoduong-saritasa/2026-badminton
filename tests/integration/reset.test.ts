@@ -13,7 +13,7 @@ import {
 } from './local-supabase.ts'
 
 interface Snapshot {
-  fixtures: Array<{ id: string }>
+  fixtures: Array<{ id: string; stage: string }>
   games: unknown[]
   matches: Array<{ id: string; state: string; version: number }>
   players: Array<{ id: string }>
@@ -31,7 +31,6 @@ function rosterPayload(): Record<string, unknown> {
     tournamentName: 'Reset integration',
     teams: Array.from({ length: 4 }, (_, teamIndex) => ({
       name: `Team ${teamIndex + 1}`,
-      group: teamIndex < 2 ? 'A' : 'B',
       players: Array.from({ length: 4 }, (_, playerIndex) => ({
         name: `Player ${teamIndex + 1}-${playerIndex + 1}`,
         seed: playerIndex < 2 ? 1 : 2,
@@ -94,22 +93,24 @@ describe('team tournament maintenance reset', () => {
     expect(await state(organizer)).toEqual(target)
   })
 
-  it('clears games, ownership, handovers, and placement fixtures on progress reset', async () => {
+  it('clears games, ownership, handovers, and matches, and rebuilds the fixtures on progress reset', async () => {
     const organizer = await signInAnonymously()
     const referee = await signInAnonymously()
     await elevate(organizer)
     await elevate(referee, '1357')
     const created = await createTournament(organizer)
     if (!created.snapshot) throw new Error('Tournament is missing')
-    const fixtureId = created.snapshot.fixtures[0].id
+    const fixtureId = created.snapshot.fixtures.find((fixture) => fixture.stage === 'qualifying')?.id
+    if (!fixtureId) throw new Error('Qualifying fixture is missing')
     const players = created.snapshot.players.slice(0, 8).map((player) => player.id)
     const matchId = crypto.randomUUID()
-    const placementId = crypto.randomUUID()
+    const finalId = created.snapshot.fixtures.find((fixture) => fixture.stage === 'final')?.id
+    if (!finalId) throw new Error('Final fixture is missing')
     runSql(`
       insert into public.matches (
         id, fixture_id, match_number,
-        pair_a_seed1_player_id, pair_a_seed2_player_id,
-        pair_b_seed1_player_id, pair_b_seed2_player_id,
+        pair_a_player_1_id, pair_a_player_2_id,
+        pair_b_player_1_id, pair_b_player_2_id,
         court, state
       ) values (
         '${matchId}', '${fixtureId}', 1,
@@ -122,9 +123,11 @@ describe('team tournament maintenance reset', () => {
       values ('${matchId}', '${referee.sessionId}');
       insert into private.scoring_handovers (match_id, from_session_id, to_session_id)
       values ('${matchId}', '${organizer.sessionId}', '${referee.sessionId}');
-      insert into public.team_fixtures (id, tournament_id, stage)
-      values ('${placementId}', '${created.snapshot.tournament.id}', 'final');
-      update public.tournament set stage = 'knockouts', version = version + 1 where singleton;
+      update public.team_fixtures set team_a_id = '${created.snapshot.teams[0].id}', team_b_id = '${created.snapshot.teams[1].id}'
+      where id = '${finalId}';
+      update public.tournament
+      set stage = 'knockouts', finalists_confirmed_at = clock_timestamp(), version = version + 1
+      where singleton;
     `)
 
     const before = await state(organizer)
@@ -134,11 +137,14 @@ describe('team tournament maintenance reset', () => {
     expect(after.resetGeneration).toBe(1)
     expect(after.snapshot?.teams).toHaveLength(4)
     expect(after.snapshot?.players).toHaveLength(16)
-    expect(after.snapshot?.fixtures).toHaveLength(2)
-    expect(after.snapshot?.games).toEqual([])
-    expect(after.snapshot?.matches).toEqual([
-      expect.objectContaining({ id: matchId, state: 'unstarted' }),
+    expect(after.snapshot?.tournament.stage).toBe('setup')
+    expect(after.snapshot?.fixtures.map((fixture) => fixture.stage).sort()).toEqual([
+      'final', 'qualifying', 'qualifying', 'qualifying', 'qualifying', 'qualifying', 'qualifying', 'third-place',
     ])
+    expect(after.snapshot?.games).toEqual([])
+    expect(after.snapshot?.matches).toEqual([])
+    expect(runSql(`select count(*) from public.team_fixtures where stage in ('third-place', 'final') and team_a_id is not null;`)).toBe('0')
+    expect(runSql('select finalists_confirmed_at is null from public.tournament;')).toBe('t')
     expect(runSql('select count(*) from private.match_ownership;')).toBe('0')
     expect(runSql('select count(*) from private.scoring_handovers;')).toBe('0')
     expect((await rpc('get_staff_access', {}, organizer)).ok).toBe(true)
