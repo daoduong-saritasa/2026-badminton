@@ -5,7 +5,7 @@ import { messages } from '@/i18n/vi'
 const { rules } = messages.publicView
 
 /** Stage accents in playing order: qualifying, third place, final. */
-const stageAccents = ['bg-cyan/10', 'bg-orange/10', 'bg-navy/10'] as const
+const stageAccents = ['bg-gray-500/10', 'bg-cyan/10', 'bg-orange/10'] as const
 const rowKeys = ['who', 'fixture', 'match', 'pairs'] as const
 
 function SectionHeading({ children }: { children: string }) {
