@@ -8,10 +8,10 @@ gate run. Report the skip count alongside passes; never delete or weaken them.
 
 ## STATUS
 
-- Current phase: 2 — done
+- Current phase: 3 — in-progress
 - Phase 1 — Schema and SQL command surface: done-with-debt
 - Phase 2 — Domain model: done
-- Phase 3 — Data layer: pending
+- Phase 3 — Data layer: in-progress
 - Phase 4 — UI and copy: pending
 - Verification debt: `tests/integration/round-robin-phase1.test.ts` could not connect to the prohibited local Supabase stack; 1 suite failed in setup and 4 tests were skipped. Substitute evidence: `npm run typecheck` and `npm run lint` exit 0.
 
@@ -117,7 +117,7 @@ Fresh review: not required
 
 - [ ] `src/data/tournament.ts`: update the zod schemas and DTO mapping for the new stage values, `player_1_id`/`player_2_id`, the fourth lineup row, and dropped group fields
 - [ ] `src/data/tournament.ts`: add mutation wrappers for `substitute_players`, `record_draw`, `confirm_finalists`; rename the `start_group_play` wrapper to `startQualifying`
-- [ ] `src/data/impacts.ts` and `src/domain/impacts.ts`: extend correction-preview impacts for revoked finalist confirmation and cleared placement lineups
+- [x] `src/data/impacts.ts` and `src/domain/impacts.ts`: extend correction-preview impacts for revoked finalist confirmation and cleared placement lineups
 - [ ] Update `src/data/tournament.test.ts` and `src/data/impacts.test.ts` for the new shapes
 
 **Phase gate (hard):**

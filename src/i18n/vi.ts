@@ -332,8 +332,8 @@ export const messages = {
       'invalid-match-state':
         'Trạng thái trận đấu không cho phép sửa kết quả. Chỉ sửa được trận đã kết thúc.',
       'tournament-completed': 'Giải đấu đã kết thúc nên không sửa được kết quả.',
-      'decider-started':
-        'Trận quyết định đã bắt đầu nên không thể sửa kết quả làm cho trận này không còn cần thiết.',
+      'playoff-started':
+        'Trận tranh vé đã bắt đầu nên không thể sửa kết quả làm thay đổi trận tranh vé.',
       'placement-started':
         'Trận tranh hạng đã bắt đầu nên không thể sửa kết quả làm thay đổi đội đi tiếp.',
     },
