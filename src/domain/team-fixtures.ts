@@ -1,4 +1,4 @@
-import type { FixtureMatch, Score, TeamFixture, UUID } from './types'
+import type { FixtureMatch, FixtureStage, Score, TeamFixture, UUID } from './types'
 
 export type DeciderStatus = 'pending' | 'eligible' | 'unnecessary'
 
@@ -21,7 +21,18 @@ export function fixtureTally(matches: readonly FixtureMatch[]): Score {
   )
 }
 
-export function deciderStatus(matches: readonly FixtureMatch[]): DeciderStatus {
+/**
+ * Whether a placement fixture needs match 3. Qualifying and playoff fixtures
+ * have no decider, so they always report `'unnecessary'`.
+ */
+export function deciderStatus(
+  fixture: TeamFixture,
+  matches: readonly FixtureMatch[],
+): DeciderStatus {
+  if (!isPlacementStage(fixture.stage)) {
+    return 'unnecessary'
+  }
+
   const openers = ([1, 2] as const).map((matchNumber) =>
     matches.find((match) => match.matchNumber === matchNumber),
   )
@@ -42,6 +53,11 @@ export function deciderStatus(matches: readonly FixtureMatch[]): DeciderStatus {
   return tally.a === 1 && tally.b === 1 ? 'eligible' : 'unnecessary'
 }
 
+/**
+ * The team that won the fixture, or null while undecided. A qualification
+ * playoff is one match; any other fixture needs two match wins, so a drawn
+ * qualifying fixture (1–1) has no winner.
+ */
 export function fixtureWinnerTeamId(
   fixture: TeamFixture,
   matches: readonly FixtureMatch[],
@@ -49,12 +65,17 @@ export function fixtureWinnerTeamId(
   const tally = fixtureTally(
     matches.filter((match) => match.fixtureId === fixture.id),
   )
+  const needed = fixture.stage === 'qualification-playoff' ? 1 : 2
 
-  if (tally.a >= 2) {
+  if (tally.a >= needed) {
     return fixture.teamAId
   }
-  if (tally.b >= 2) {
+  if (tally.b >= needed) {
     return fixture.teamBId
   }
   return null
+}
+
+export function isPlacementStage(stage: FixtureStage): boolean {
+  return stage === 'third-place' || stage === 'final'
 }

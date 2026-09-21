@@ -1,5 +1,5 @@
 import type { FixtureMatch, Side, TournamentSnapshot } from '@/domain/types'
-import { matchGameTally } from '@/domain/scoring'
+import { gamesToWinMatch, matchGameTally } from '@/domain/scoring'
 import { Badge } from '@/components/ui/badge'
 import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
@@ -8,12 +8,12 @@ import { cn } from '@/lib/utils'
 import {
   fixtureLabel,
   fixtureOf,
-  groupTone,
   matchPair,
   openGame,
   pairPlayers,
   scoreText,
   sideTeamId,
+  stageRule,
   teamName,
 } from './labels'
 
@@ -29,8 +29,13 @@ function TicketSide({
   const fixture = fixtureOf(snapshot, match)
   const live = openGame(match)
   const tally = matchGameTally(match.games)
-  // A live game shows its points; anything else shows the games won.
-  const value = match.state === 'playing' && live ? live.score[side] : tally[side]
+  const singleGame = fixture !== undefined && gamesToWinMatch(fixture.stage) === 1
+  const lastGame = match.games.findLast((game) => game.confirmedAt !== null)
+  // A live game shows its points; a one-game match shows its game's points;
+  // a best-of-three shows the games won.
+  const value = match.state === 'playing' && live
+    ? live.score[side]
+    : singleGame && lastGame ? lastGame.score[side] : tally[side]
   return (
     <div className="flex min-w-0 flex-col items-center text-center">
       <p className="max-w-full [overflow-wrap:anywhere] text-[0.9375rem] font-medium tracking-[-0.027em]">
@@ -81,7 +86,7 @@ export function MatchTicket({
           <span
             className={cn(
               'shrink-0 rounded-pill px-2.5 py-1 text-[0.625rem] font-semibold',
-              fixture?.group ? groupTone(fixture.group) : 'bg-well text-muted-ink',
+              'bg-well text-muted-ink',
             )}
           >
             {fixtureLabel(fixture)}
@@ -97,16 +102,19 @@ export function MatchTicket({
         <TicketSide match={match} side="b" snapshot={snapshot} />
       </div>
       <div className="tear -mx-[1.625rem] -mb-[1.625rem] mt-[1.9375rem] px-[1.625rem] pt-5 pb-[1.1875rem]">
-        <small className="text-[0.625rem] text-muted-ink">{messages.common.matchNumber(match.matchNumber)}</small>
+        <small className="text-[0.625rem] text-muted-ink">
+          {messages.common.matchNumber(match.matchNumber)}
+          {fixture ? ` · ${stageRule(fixture.stage)}` : ''}
+        </small>
         <p className="mt-[7px] text-xs/[1.6]">
-          {match.state === 'playing' && live ? (
+          {match.state === 'playing' && live && fixture?.stage === 'final' ? (
             <span className="font-medium">
               {messages.ticket.gameTally(live.gameNumber, scoreText(matchGameTally(match.games)))}
             </span>
           ) : null}
           {nextLabel ? (
             <span className="text-muted-ink">
-              {match.state === 'playing' && live ? ' · ' : ''}{messages.ticket.upNext}: {nextLabel}
+              {match.state === 'playing' && live && fixture?.stage === 'final' ? ' · ' : ''}{messages.ticket.upNext}: {nextLabel}
             </span>
           ) : null}
         </p>

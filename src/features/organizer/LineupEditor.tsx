@@ -24,12 +24,38 @@ import { messages } from '@/i18n/vi'
 
 type LineupPairs = Lineup['pairs']
 
-const matchNumbers = [1, 2, 3] as const
-const emptyPair: LineupPair = { seed1PlayerId: '', seed2PlayerId: '' }
+const emptyPair: LineupPair = { player1Id: '', player2Id: '' }
+
+/**
+ * Which of the four stored pairs the organizer picks. The server stores four
+ * for every fixture, but a qualifying fixture never plays match 3 and a
+ * placement fixture never uses the playoff pair, so those rows are derived.
+ */
+function editableRows(fixture: TeamFixture): readonly (0 | 1 | 2 | 3)[] {
+  return fixture.stage === 'qualifying' ? [0, 1, 3] : [0, 1, 2]
+}
+
+/**
+ * Fills the rows the organizer does not pick. A qualifying fixture's match 3
+ * recombines the openers, which keeps it mixed-seed and distinct from both; a
+ * placement fixture's unused playoff row repeats match 1.
+ */
+function completePairs(fixture: TeamFixture, pairs: LineupPairs): LineupPairs {
+  const [first, second, third, playoff] = pairs
+  return fixture.stage === 'qualifying'
+    ? [first, second, { player1Id: first.player1Id, player2Id: second.player2Id }, playoff]
+    : [first, second, third, first]
+}
 
 function samePairs(left: LineupPairs, right: LineupPairs | undefined): boolean {
   return right !== undefined && left.every((pair, index) =>
-    pair.seed1PlayerId === right[index]?.seed1PlayerId && pair.seed2PlayerId === right[index]?.seed2PlayerId)
+    pair.player1Id === right[index]?.player1Id && pair.player2Id === right[index]?.player2Id)
+}
+
+/** A team declares one playoff pair; a new qualifying lineup starts from it. */
+function declaredPlayoffPair(snapshot: TournamentSnapshot, teamId: UUID): LineupPair {
+  const qualifyingIds = new Set(snapshot.fixtures.filter((fixture) => fixture.stage === 'qualifying').map((fixture) => fixture.id))
+  return snapshot.lineups.find((lineup) => lineup.teamId === teamId && qualifyingIds.has(lineup.fixtureId))?.pairs[3] ?? emptyPair
 }
 
 function TeamLineup({
@@ -38,27 +64,40 @@ function TeamLineup({
   teamId,
   resetGeneration,
   started,
+  fixtureConfirmed,
+  opponentSaved,
 }: {
   snapshot: TournamentSnapshot
   fixture: TeamFixture
   teamId: UUID
   resetGeneration: number
   started: boolean
+  /** Any lineup in the fixture is confirmed, which the server treats as a lock on both. */
+  fixtureConfirmed: boolean
+  opponentSaved: boolean
 }) {
   const saved = snapshot.lineups.find((lineup) => lineup.fixtureId === fixture.id && lineup.teamId === teamId)
-  const [pairs, setPairs] = useState<LineupPairs>(saved?.pairs ?? [emptyPair, emptyPair, emptyPair])
+  const [pairs, setPairs] = useState<LineupPairs>(() => saved?.pairs ?? [
+    emptyPair,
+    emptyPair,
+    emptyPair,
+    fixture.stage === 'qualifying' ? declaredPlayoffPair(snapshot, teamId) : emptyPair,
+  ])
   const [confirmOpen, setConfirmOpen] = useState(false)
   const name = teamName(snapshot, teamId)
   const confirmed = saved?.confirmedAt != null
-  const locked = started || confirmed
-  const dirty = !samePairs(pairs, saved?.pairs)
-  const issueCodes = [...new Set(validateLineup({ fixtureId: fixture.id, teamId, pairs, confirmedAt: null }, snapshot.players)
+  // A confirmed lineup locks both teams' pairs; only confirming remains open.
+  const locked = started || fixtureConfirmed
+  const complete = completePairs(fixture, pairs)
+  const dirty = !samePairs(complete, saved?.pairs)
+  const issueCodes = [...new Set(validateLineup({ fixtureId: fixture.id, teamId, pairs: complete, confirmedAt: null }, snapshot.players)
     .map((issue) => issue.code))]
-  const playersBySeed = (seed: Seed) => snapshot.players.filter((player) => player.teamId === teamId && player.seed === seed)
+  const teamPlayers = snapshot.players.filter((player) => player.teamId === teamId)
+  const playersBySeed = (seed: Seed) => teamPlayers.filter((player) => player.seed === seed)
 
   const envelope = () => ({ requestId: crypto.randomUUID(), resetGeneration, expectedVersion: fixture.version })
   const saveMutation = useMutation({
-    mutationFn: () => mutateTournament('save_lineup', { ...envelope(), payload: { fixtureId: fixture.id, teamId, pairs } }),
+    mutationFn: () => mutateTournament('save_lineup', { ...envelope(), payload: { fixtureId: fixture.id, teamId, pairs: complete } }),
   })
   const confirmMutation = useMutation({
     mutationFn: () => mutateTournament('confirm_lineup', { ...envelope(), payload: { fixtureId: fixture.id, teamId } }),
@@ -70,6 +109,19 @@ function TeamLineup({
       pairIndex === index ? { ...pair, [field]: playerId } : pair) as LineupPairs)
   }
 
+  const playerSelect = (index: number, field: keyof LineupPair, label: string, options: typeof teamPlayers) => (
+    <Select key={field} value={pairs[index]?.[field] ?? ''} disabled={locked} onValueChange={(value) => update(index, field, value)}>
+      <SelectTrigger className="w-full" aria-label={label}>
+        <SelectValue placeholder={messages.lineups.selectPlayer} />
+      </SelectTrigger>
+      <SelectContent>
+        {options.map((player) => (
+          <SelectItem value={player.id} key={player.id}>{player.name}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+
   return (
     <div className="rounded-field border border-hairline p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
@@ -79,24 +131,16 @@ function TeamLineup({
         </Badge>
       </div>
       <div className="space-y-2.5">
-        {matchNumbers.map((matchNumber, index) => (
-          <div className="grid grid-cols-[3.25rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2" key={matchNumber}>
-            <span className="text-[0.6875rem] text-muted-ink">{messages.common.matchNumber(matchNumber)}</span>
-            {([1, 2] as const).map((seed) => {
-              const field: keyof LineupPair = seed === 1 ? 'seed1PlayerId' : 'seed2PlayerId'
-              return (
-                <Select key={seed} value={pairs[index]?.[field] ?? ''} disabled={locked} onValueChange={(value) => update(index, field, value)}>
-                  <SelectTrigger className="w-full" aria-label={messages.lineups.seedFor(name, matchNumber, seed)}>
-                    <SelectValue placeholder={messages.lineups.selectPlayer} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {playersBySeed(seed).map((player) => (
-                      <SelectItem value={player.id} key={player.id}>{player.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )
-            })}
+        {editableRows(fixture).map((index) => (
+          <div className="grid grid-cols-[3.25rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2" key={index}>
+            <span className="text-[0.6875rem] text-muted-ink">
+              {index === 3 ? messages.lineups.playoffPair : messages.common.matchNumber(index + 1)}
+            </span>
+            {index === 3
+              ? (['player1Id', 'player2Id'] as const).map((field, slot) =>
+                playerSelect(index, field, messages.lineups.playoffPlayerFor(name, slot + 1), teamPlayers))
+              : ([1, 2] as const).map((seed) =>
+                playerSelect(index, seed === 1 ? 'player1Id' : 'player2Id', messages.lineups.seedFor(name, index + 1, seed), playersBySeed(seed)))}
           </div>
         ))}
       </div>
@@ -106,15 +150,23 @@ function TeamLineup({
         </ul>
       ) : null}
       {!locked && dirty && saved ? <p className="mt-2 text-[0.6875rem] text-muted-ink">{messages.lineups.unsaved}</p> : null}
-      {!locked ? (
+      {!started && !confirmed ? (
         <div className="mt-3 flex flex-wrap gap-2">
-          <Button size="sm" variant="outline" disabled={!dirty || issueCodes.length > 0 || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
-            {saveMutation.isPending ? messages.common.saving : messages.lineups.save}
-          </Button>
-          <Button size="sm" disabled={!saved || dirty || confirmMutation.isPending} onClick={() => setConfirmOpen(true)}>
+          {!locked ? (
+            <Button size="sm" variant="outline" disabled={!dirty || issueCodes.length > 0 || saveMutation.isPending} onClick={() => saveMutation.mutate()}>
+              {saveMutation.isPending ? messages.common.saving : messages.lineups.save}
+            </Button>
+          ) : null}
+          <Button size="sm" disabled={!saved || dirty || !opponentSaved || confirmMutation.isPending} onClick={() => setConfirmOpen(true)}>
             <CheckCircle2 /> {messages.lineups.confirm}
           </Button>
         </div>
+      ) : null}
+      {!started && !confirmed && saved && !opponentSaved ? (
+        <p className="mt-2 text-[0.6875rem] text-muted-ink">{messages.lineups.awaitingOpponent}</p>
+      ) : null}
+      {!started && !confirmed && fixtureConfirmed ? (
+        <p className="mt-2 text-[0.6875rem] text-muted-ink">{messages.lineups.lockedByConfirmation}</p>
       ) : null}
       {saveMutation.isError ? <p className="mt-2 text-sm text-destructive" role="alert">{errorMessage(saveMutation.error)}</p> : null}
       {confirmMutation.isError ? <p className="mt-2 text-sm text-destructive" role="alert">{errorMessage(confirmMutation.error)}</p> : null}
@@ -160,13 +212,20 @@ export function LineupEditor({
     onSuccess: () => setReopenOpen(false),
   })
   const teamIds = [fixture.teamAId, fixture.teamBId].filter((teamId): teamId is UUID => teamId !== null)
+  const awaitingFinalists = fixture.stage !== 'qualifying' && snapshot.tournament.finalistsConfirmedAt === null
+  const title = teamIds.length === 2
+    ? `${fixtureLabel(fixture)} · ${messages.common.versus(teamName(snapshot, teamIds[0]), teamName(snapshot, teamIds[1]))}`
+    : fixtureLabel(fixture)
+  const description = started
+    ? messages.lineups.locked
+    : fixture.stage === 'qualifying' ? messages.lineups.qualifyingDescription : messages.lineups.placementDescription
 
   return (
     <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold">{messages.lineups.heading(fixtureLabel(fixture))}</h3>
-          <p className="mt-1.5 text-[0.6875rem] text-muted-ink">{started ? messages.lineups.locked : messages.lineups.description}</p>
+          <h3 className="text-sm font-semibold [overflow-wrap:anywhere]">{messages.lineups.heading(title)}</h3>
+          <p className="mt-1.5 text-[0.6875rem] text-muted-ink">{description}</p>
         </div>
         {!started && anyConfirmed ? (
           <Button size="sm" variant="outline" disabled={reopenMutation.isPending} onClick={() => setReopenOpen(true)}>
@@ -174,7 +233,9 @@ export function LineupEditor({
           </Button>
         ) : null}
       </div>
-      {teamIds.length === 2 ? (
+      {awaitingFinalists ? (
+        <p className="mt-4 text-[0.8125rem] text-muted-ink">{messages.lineups.awaitingFinalists}</p>
+      ) : teamIds.length === 2 ? (
         <div className="mt-4 grid gap-4 md:grid-cols-2">
           {teamIds.map((teamId) => {
             const saved = snapshot.lineups.find((lineup) => lineup.fixtureId === fixture.id && lineup.teamId === teamId)
@@ -187,6 +248,9 @@ export function LineupEditor({
                 teamId={teamId}
                 resetGeneration={resetGeneration}
                 started={started}
+                fixtureConfirmed={anyConfirmed}
+                opponentSaved={snapshot.lineups.some((lineup) =>
+                  lineup.fixtureId === fixture.id && lineup.teamId !== teamId && teamIds.includes(lineup.teamId))}
               />
             )
           })}

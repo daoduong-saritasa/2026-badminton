@@ -8,11 +8,12 @@ import {
   fixtureLabel,
   fixtureMatches,
   fixtureScore,
-  groupTone,
+  isDrawnFixture,
   matchPair,
   matchResultText,
   pairPlayers,
   sideTeamId,
+  stageRule,
   teamName,
 } from './labels'
 
@@ -37,6 +38,8 @@ export function FixtureCard({
   const matches = fixture ? fixtureMatches(snapshot, fixture.id) : []
   const tally = fixture ? fixtureScore(snapshot, fixture.id) : { a: 0, b: 0 }
   const winnerId = fixture ? fixtureWinnerTeamId(fixture, matches) : null
+  const drawn = fixture ? isDrawnFixture(snapshot, fixture) : false
+  const stage = fixture?.stage ?? (final ? 'final' : undefined)
   const sides: Side[] = ['a', 'b']
 
   return (
@@ -46,14 +49,13 @@ export function FixtureCard({
         final ? 'bg-navy text-white shadow-final' : 'border border-line bg-white',
       )}
     >
-      <h3 className="mb-4 flex items-center gap-2.5 text-[0.9375rem] font-semibold">
-        {fixture?.group ? (
-          <span className={cn('grid size-[1.625rem] place-items-center rounded-chip text-[0.625rem] font-bold', groupTone(fixture.group))}>
-            {fixture.group}
-          </span>
-        ) : null}
+      <h3 className="flex items-center gap-2.5 text-[0.9375rem] font-semibold">
         {label ?? fixtureLabel(fixture)}
+        {drawn ? <span className="rounded-pill bg-well px-2 py-0.5 text-[0.625rem] font-semibold text-muted-ink">{messages.fixtures.drawn}</span> : null}
       </h3>
+      {stage ? (
+        <p className={cn('mt-1 mb-4 text-[0.625rem]', final ? 'text-navy-soft' : 'text-muted-ink')}>{stageRule(stage)}</p>
+      ) : <div className="mb-4" />}
       <div className="space-y-2">
         {sides.map((side) => {
           const teamId = sideTeamId(fixture, side)

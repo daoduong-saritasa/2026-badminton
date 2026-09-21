@@ -12,9 +12,11 @@ import {
 } from '@/features/tournament/labels'
 import { messages } from '@/i18n/vi'
 
+export type ResultAction = 'result' | 'substitute'
+
 export interface ResultScheduleProps {
   snapshot: TournamentSnapshot
-  onSelect: (matchId: UUID) => void
+  onSelect: (matchId: UUID, action: ResultAction) => void
 }
 
 function MatchRow({
@@ -26,8 +28,10 @@ function MatchRow({
   snapshot: TournamentSnapshot
   match: FixtureMatch
   actionLabel: string
-  onSelect: (matchId: UUID) => void
+  onSelect: (matchId: UUID, action: ResultAction) => void
 }) {
+  // Players can change until the match starts; the match needs its pairs first.
+  const substitutable = match.state === 'unstarted' && match.pairA !== null
   const fixture = fixtureOf(snapshot, match)
   return (
     <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-ink/5 px-3 py-2">
@@ -41,16 +45,24 @@ function MatchRow({
           {` · ${matchResultText(snapshot, match)}`}
         </span>
       </span>
-      <Button variant="outline" size="sm" onClick={() => onSelect(match.id)}>
-        {actionLabel}
-      </Button>
+      <span className="flex gap-2">
+        {substitutable ? (
+          <Button variant="outline" size="sm" onClick={() => onSelect(match.id, 'substitute')}>
+            {messages.results.substitute}
+          </Button>
+        ) : null}
+        <Button variant="outline" size="sm" onClick={() => onSelect(match.id, 'result')}>
+          {actionLabel}
+        </Button>
+      </span>
     </li>
   )
 }
 
 /**
- * An open match can only be awarded as a walkover; live scores belong to the
- * referee. A completed match stays reachable so its result can be corrected.
+ * An open match can only be awarded as a walkover or, before it starts, have
+ * its players substituted; live scores belong to the referee. A completed match
+ * stays reachable so its result can be corrected.
  */
 export function ResultSchedule({ snapshot, onSelect }: ResultScheduleProps) {
   const { open, completed } = useMemo(() => ({

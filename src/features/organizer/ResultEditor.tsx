@@ -3,9 +3,9 @@ import { useMutation } from '@tanstack/react-query'
 
 import { previewResultCorrection } from '@/data/impacts'
 import { mutateTournament } from '@/data/tournament'
-import { correctedMatchWinner, gameRules } from '@/domain/scoring'
+import { correctedMatchWinner, gameRules, gamesToWinMatch } from '@/domain/scoring'
 import type { MutationImpact } from '@/domain/impacts'
-import type { Score, Side, TournamentSnapshot, UUID } from '@/domain/types'
+import type { LineupPair, Score, Side, TournamentSnapshot, UUID } from '@/domain/types'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -33,11 +33,13 @@ import {
 import { errorMessage } from '@/i18n/errors'
 import { messages } from '@/i18n/vi'
 import { ImpactPreview } from './ImpactPreview'
+import type { ResultAction } from './ResultSchedule'
 
 export interface ResultEditorProps {
   snapshot: TournamentSnapshot
   resetGeneration: number
   matchId: UUID
+  action: ResultAction
   onClose: () => void
 }
 
@@ -104,17 +106,110 @@ function WalkoverForm({ snapshot, resetGeneration, matchId, onClose }: ResultEdi
   )
 }
 
+/**
+ * Replaces one side's players for this match only. The two server safeguards
+ * are the only rules: two distinct teammates, neither already playing.
+ */
+function SubstitutionForm({ snapshot, resetGeneration, matchId, onClose }: ResultEditorProps) {
+  const match = snapshot.matches.find((candidate) => candidate.id === matchId)
+  const fixture = match ? fixtureOf(snapshot, match) : undefined
+  const currentPair = (side: Side): LineupPair => (side === 'a' ? match?.pairA : match?.pairB) ?? { player1Id: '', player2Id: '' }
+  const [side, setSide] = useState<Side>('a')
+  const [pair, setPair] = useState<LineupPair>(() => currentPair('a'))
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const mutation = useMutation({
+    mutationFn: () => {
+      if (!match) throw new Error(messages.results.matchGone)
+      return mutateTournament('substitute_players', {
+        requestId: crypto.randomUUID(),
+        resetGeneration,
+        expectedVersion: match.version,
+        payload: { matchId, side, ...pair },
+      })
+    },
+    onSuccess: () => {
+      setConfirmOpen(false)
+      onClose()
+    },
+  })
+  const teamId = sideTeamId(fixture, side)
+  const roster = snapshot.players.filter((player) => player.teamId === teamId)
+  const samePlayer = pair.player1Id !== '' && pair.player1Id === pair.player2Id
+  const unchanged = pair.player1Id === currentPair(side).player1Id && pair.player2Id === currentPair(side).player2Id
+  const ready = pair.player1Id !== '' && pair.player2Id !== '' && !samePlayer && !unchanged
+
+  return (
+    <>
+      <div className="space-y-3">
+        <div className="space-y-2">
+          <Label htmlFor="substitute-team">{messages.results.substituteTeam}</Label>
+          <Select value={side} onValueChange={(value) => { setSide(value as Side); setPair(currentPair(value as Side)) }}>
+            <SelectTrigger id="substitute-team" className="w-full"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              {(['a', 'b'] as const).map((option) => (
+                <SelectItem value={option} key={option}>{teamName(snapshot, sideTeamId(fixture, option))}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {(['player1Id', 'player2Id'] as const).map((field, index) => (
+          <div className="space-y-2" key={field}>
+            <Label htmlFor={`substitute-${field}`}>{messages.results.substitutePlayer(index + 1)}</Label>
+            <Select value={pair[field]} onValueChange={(value) => setPair((current) => ({ ...current, [field]: value }))}>
+              <SelectTrigger id={`substitute-${field}`} className="w-full"><SelectValue placeholder={messages.lineups.selectPlayer} /></SelectTrigger>
+              <SelectContent>
+                {roster.map((player) => (
+                  <SelectItem value={player.id} key={player.id}>
+                    {player.name} · {messages.common.seed(player.seed)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        ))}
+        {samePlayer ? <p className="text-[0.6875rem] text-destructive">{messages.results.substituteSamePlayer}</p> : null}
+      </div>
+      {mutation.isError ? <p className="text-sm text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
+      <DialogFooter>
+        <Button variant="outline" onClick={onClose}>{messages.common.cancel}</Button>
+        <Button disabled={!ready || mutation.isPending} onClick={() => setConfirmOpen(true)}>{messages.results.substitute}</Button>
+      </DialogFooter>
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{messages.results.confirmSubstituteTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {messages.results.substituteConsequence(teamName(snapshot, teamId), pairPlayers(snapshot, pair))}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction disabled={mutation.isPending || !ready} onClick={() => mutation.mutate()}>
+              {mutation.isPending ? messages.common.saving : messages.results.confirmSubstitute}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
+  )
+}
+
 // A preview describes one exact result revision, so it must not outlive it. It
 // is stored with the revision it was built from and goes stale during render,
 // rather than being destroyed by a remount: a remount on every scored point
 // would wipe the typed games mid-review.
 function CorrectionForm({ snapshot, resetGeneration, matchId, onClose }: ResultEditorProps) {
   const match = snapshot.matches.find((candidate) => candidate.id === matchId)
-  const stage = (match ? fixtureOf(snapshot, match)?.stage : undefined) ?? 'group'
+  const stage = (match ? fixtureOf(snapshot, match)?.stage : undefined) ?? 'qualifying'
+  // A final is best of three; every other match is a single game.
+  const bestOfThree = gamesToWinMatch(stage) === 2
+  const minimumGames = bestOfThree ? 2 : 1
   const [games, setGames] = useState<GameDraft[]>(() => {
     const recorded = match ? confirmedGames(match) : []
-    const drafts = recorded.map((game) => ({ a: String(game.score.a), b: String(game.score.b) }))
-    return drafts.length >= 2 ? drafts : [{ a: '', b: '' }, { a: '', b: '' }]
+    const drafts = recorded
+      .map((game) => ({ a: String(game.score.a), b: String(game.score.b) }))
+      .slice(0, bestOfThree ? 3 : 1)
+    return drafts.length >= minimumGames ? drafts : Array.from({ length: minimumGames }, () => ({ a: '', b: '' }))
   })
   const [reviewed, setReviewed] = useState<{ impact: MutationImpact; revision: number } | null>(null)
 
@@ -179,13 +274,13 @@ function CorrectionForm({ snapshot, resetGeneration, matchId, onClose }: ResultE
         ))}
         <div className="flex flex-wrap items-center justify-between gap-2">
           <p className={winnerSide ? 'text-[0.6875rem] text-muted-ink' : 'text-[0.6875rem] text-destructive'}>
-            {messages.results.scoreHint(target, cap)}
+            {messages.results.scoreHint(target, cap, bestOfThree)}
           </p>
-          {games.length === 2 ? (
+          {bestOfThree && games.length === 2 ? (
             <Button size="sm" variant="ghost" onClick={() => setGames((current) => [...current, { a: '', b: '' }])}>{messages.results.addGame}</Button>
-          ) : (
+          ) : bestOfThree ? (
             <Button size="sm" variant="ghost" onClick={() => setGames((current) => current.slice(0, 2))}>{messages.results.removeGame}</Button>
-          )}
+          ) : null}
         </div>
       </div>
 
@@ -241,14 +336,15 @@ export function ResultEditor(props: ResultEditorProps) {
   }
 
   const isCorrection = match.state === 'completed'
+  const isSubstitution = !isCorrection && props.action === 'substitute' && match.state === 'unstarted'
   const fixture = fixtureOf(snapshot, match)
+  const title = isCorrection ? messages.results.correctTitle : isSubstitution ? messages.results.substituteTitle : messages.results.walkoverTitle
+  const intro = isCorrection ? messages.results.correctionIntro : isSubstitution ? messages.results.substituteIntro : messages.results.walkoverIntro
   return (
     <>
       <DialogHeader className="pr-6">
-        <DialogTitle>{isCorrection ? messages.results.correctTitle : messages.results.walkoverTitle}</DialogTitle>
-        <DialogDescription>
-          {isCorrection ? messages.results.correctionIntro : messages.results.walkoverIntro}
-        </DialogDescription>
+        <DialogTitle>{title}</DialogTitle>
+        <DialogDescription>{intro}</DialogDescription>
       </DialogHeader>
 
       <div className="min-w-0 rounded-field bg-well px-3.5 py-2.5">
@@ -258,7 +354,7 @@ export function ResultEditor(props: ResultEditorProps) {
         <p className="mt-0.5 text-[0.6875rem] text-muted-ink">{matchLabel(snapshot, match)}</p>
       </div>
 
-      {isCorrection ? <CorrectionForm {...props} /> : <WalkoverForm {...props} />}
+      {isCorrection ? <CorrectionForm {...props} /> : isSubstitution ? <SubstitutionForm {...props} /> : <WalkoverForm {...props} />}
     </>
   )
 }

@@ -4,7 +4,7 @@ import { ArrowLeft, Play, RefreshCw, RotateCcw, ShieldAlert } from 'lucide-react
 
 import { canScore } from '@/data/staff'
 import { fetchTournament, mutateTournament } from '@/data/tournament'
-import { isGameWon, matchGameTally } from '@/domain/scoring'
+import { gamesToWinMatch, isGameWon, matchGameTally } from '@/domain/scoring'
 import type { FixtureMatch, Game, Side, TournamentSnapshot, UUID } from '@/domain/types'
 import {
   reduceScoring,
@@ -32,6 +32,7 @@ import {
   pairPlayers,
   scoreText,
   sideTeamId,
+  stageRule,
   teamName,
 } from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
@@ -75,7 +76,7 @@ function liveGame(match: FixtureMatch): Game {
 }
 
 function stageOf(snapshot: TournamentSnapshot, match: FixtureMatch) {
-  return fixtureOf(snapshot, match)?.stage ?? 'group'
+  return fixtureOf(snapshot, match)?.stage ?? 'qualifying'
 }
 
 function createInitialState(snapshot: TournamentSnapshot, match: PlayingMatch, resetGeneration: number, hasOwnership: boolean): IdleScoringState {
@@ -299,7 +300,9 @@ function ScoringSurface({
         </div>
         <span className="hidden text-right text-xs font-semibold sm:block">
           {match.court ? messages.common.court(match.court) : '–'}
-          <span className="block font-normal text-muted-ink">{messages.scoring.gameStatus(state.gameNumber, scoreText(tally))}</span>
+          <span className="block font-normal text-muted-ink">
+            {gamesToWinMatch(state.stage) === 2 ? messages.scoring.gameStatus(state.gameNumber, scoreText(tally)) : stageRule(state.stage)}
+          </span>
         </span>
       </div>
 
@@ -323,7 +326,8 @@ function ScoringSurface({
               {formatNumber(state.score[side])}
             </strong>
             <small className="text-[0.625rem] opacity-75">
-              {teamName(snapshot, sideTeamId(fixture, side))} · {formatNumber(tally[side])}
+              {teamName(snapshot, sideTeamId(fixture, side))}
+              {gamesToWinMatch(state.stage) === 2 ? ` · ${formatNumber(tally[side])}` : ''}
             </small>
           </button>
         ))}
@@ -427,7 +431,10 @@ function MatchPicker({
         </span>
         {isPlaying(match) ? (
           <span className="mt-1 block text-[0.6875rem] text-muted-ink">
-            {messages.scoring.gameStatus(liveGame(match).gameNumber, scoreText(matchGameTally(match.games)))} · {scoreText(liveGame(match).score)}
+            {fixtureOf(snapshot, match)?.stage === 'final'
+              ? `${messages.scoring.gameStatus(liveGame(match).gameNumber, scoreText(matchGameTally(match.games)))} · `
+              : ''}
+            {scoreText(liveGame(match).score)}
           </span>
         ) : null}
       </span>

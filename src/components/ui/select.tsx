@@ -34,9 +34,6 @@ function SelectValue({
 /*
  * The trigger matches Input exactly — same height, radius, padding and focus
  * treatment — so a form row mixing the two reads as one control strip.
- *
- * `tone` carries group colour, so a mis-assigned pair is visible without
- * reading the label.
  */
 const selectTriggerVariants = cva(
   "flex w-fit items-center justify-between gap-2 rounded-field border text-[0.8125rem] font-medium whitespace-nowrap transition-colors outline-none select-none focus-visible:border-navy focus-visible:ring-[3px] focus-visible:ring-mist disabled:cursor-not-allowed disabled:border-hairline disabled:bg-well disabled:text-muted-ink aria-invalid:border-destructive data-placeholder:font-normal data-placeholder:text-muted-ink/70 data-[size=default]:h-11 data-[size=default]:py-3 data-[size=default]:pr-3 data-[size=default]:pl-3.5 data-[size=sm]:h-10 data-[size=sm]:py-2.5 data-[size=sm]:pr-2.5 data-[size=sm]:pl-3 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
@@ -45,8 +42,6 @@ const selectTriggerVariants = cva(
       tone: {
         default: "border-line bg-white text-ink",
         ghost: "border-transparent bg-transparent text-ink hover:bg-well",
-        groupA: "border-transparent bg-mist text-navy",
-        groupB: "border-transparent bg-ice text-ink",
       },
     },
     defaultVariants: {

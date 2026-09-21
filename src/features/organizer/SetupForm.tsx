@@ -5,7 +5,6 @@ import { AlertTriangle } from 'lucide-react'
 import { mutateTournament } from '@/data/tournament'
 import { validateRoster } from '@/domain/roster'
 import type {
-  Group,
   RosterInput,
   RosterTeamInput,
   Team,
@@ -26,7 +25,6 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { errorMessage } from '@/i18n/errors'
 import { messages } from '@/i18n/vi'
 
@@ -34,10 +32,9 @@ type SetupIssue = keyof typeof messages.setup.issues
 
 const seedsBySlot = [1, 1, 2, 2] as const
 
-function blankTeam(index: number): RosterTeamInput {
+function blankTeam(): RosterTeamInput {
   return {
     name: '',
-    group: index < 2 ? 'A' : 'B',
     players: [
       { name: '', seed: 1 },
       { name: '', seed: 1 },
@@ -51,7 +48,7 @@ function rosterFromSnapshot(snapshot: TournamentSnapshot | null): RosterInput {
   if (snapshot === null || snapshot.teams.length === 0) {
     return {
       tournamentName: snapshot?.tournament.name ?? '',
-      teams: Array.from({ length: 4 }, (_, index) => blankTeam(index)),
+      teams: Array.from({ length: 4 }, () => blankTeam()),
     }
   }
   return {
@@ -64,7 +61,7 @@ function rosterFromSnapshot(snapshot: TournamentSnapshot | null): RosterInput {
         name: players[index]?.name ?? '',
         seed,
       })) as RosterTeamInput['players']
-      return { name: team.name, group: team.group, players: slots }
+      return { name: team.name, players: slots }
     }),
   }
 }
@@ -74,7 +71,7 @@ function rosterFromSnapshot(snapshot: TournamentSnapshot | null): RosterInput {
  * player a positional one. Names are checked here because the rule cannot see them.
  */
 function rosterIssues(roster: RosterInput): SetupIssue[] {
-  const teams: Team[] = roster.teams.map((team, index) => ({ id: `team-${index}`, name: team.name, group: team.group }))
+  const teams: Team[] = roster.teams.map((team, index) => ({ id: `team-${index}`, name: team.name }))
   const players: TeamPlayer[] = roster.teams.flatMap((team, teamIndex) =>
     team.players.map((player, playerIndex) => ({
       id: `player-${teamIndex}-${playerIndex}`,
@@ -167,31 +164,12 @@ export function SetupForm({ snapshot, resetGeneration }: { snapshot: TournamentS
           {roster.teams.map((team, teamIndex) => (
             <fieldset key={teamIndex} className="rounded-field border border-hairline p-4" disabled={locked}>
               <legend className="sr-only">{messages.setup.teamLegend(teamIndex + 1)}</legend>
-              <div className="grid gap-2.5 sm:grid-cols-[minmax(0,1fr)_9rem]">
-                <Input
-                  aria-label={messages.setup.teamNameLabel(teamIndex + 1)}
-                  placeholder={messages.setup.teamNamePlaceholder(teamIndex + 1)}
-                  value={team.name}
-                  onChange={(event) => updateTeam(teamIndex, (current) => ({ ...current, name: event.target.value }))}
-                />
-                <Select
-                  value={team.group}
-                  disabled={locked}
-                  onValueChange={(value) => updateTeam(teamIndex, (current) => ({ ...current, group: value as Group }))}
-                >
-                  <SelectTrigger
-                    className="w-full"
-                    tone={team.group === 'A' ? 'groupA' : 'groupB'}
-                    aria-label={messages.setup.groupFor(teamIndex + 1)}
-                  >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="A">{messages.common.group('A')}</SelectItem>
-                    <SelectItem value="B">{messages.common.group('B')}</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Input
+                aria-label={messages.setup.teamNameLabel(teamIndex + 1)}
+                placeholder={messages.setup.teamNamePlaceholder(teamIndex + 1)}
+                value={team.name}
+                onChange={(event) => updateTeam(teamIndex, (current) => ({ ...current, name: event.target.value }))}
+              />
               {team.players.map((player, playerIndex) => (
                 <div className="mt-2.5 grid grid-cols-[4.5rem_minmax(0,1fr)] items-center gap-2.5" key={playerIndex}>
                   <span className="text-[0.625rem] text-muted-ink">{messages.common.seed(player.seed)}</span>
