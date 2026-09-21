@@ -85,8 +85,8 @@ Fresh review: not required
 
 - [x] `src/domain/types.ts`: replace `Group`/`TournamentStage` `'groups'`, retype `FixtureStage`, drop `Team.group` and `TeamFixture.group`, rename `LineupPair` fields, widen `Lineup.pairs` to four, add `TeamStanding` and `PlayoffRequirement`
 - [x] `src/domain/scoring.ts`: `gameRules(stage)` returns 21/30 for `qualifying`, `third-place`, `final` and 11/15 for `qualification-playoff`; add `gamesToWinMatch(stage)` returning 2 for `final`, 1 otherwise
-- [ ] `src/domain/roster.ts`: drop `group-split` from `RosterIssueCode` and its check; validate declared lineups as mixed-seed pairs 1–3 using all four players once, and pair 4 (playoff) as any two distinct teammates; keep `decider-repeats-opening-pair`
-- [ ] `src/domain/roster.ts`: add `validateQualifyingRotation(lineups, roster)` enforcing both disjoint mixed-seed arrangements across a team's three qualifying fixtures (per PLAN.md → "Qualifying pairs must mix seeds")
+- [x] `src/domain/roster.ts`: drop `group-split` from `RosterIssueCode` and its check; validate declared lineups as mixed-seed pairs 1–3 using all four players once, and pair 4 (playoff) as any two distinct teammates; keep `decider-repeats-opening-pair`
+- [x] `src/domain/roster.ts`: add `validateQualifyingRotation(lineups, roster)` enforcing both disjoint mixed-seed arrangements across a team's three qualifying fixtures (per PLAN.md → "Qualifying pairs must mix seeds")
 - [ ] New `src/domain/standings.ts`: `qualifyingStandings()` applying the five ranking criteria over the fixed original tied set, excluding walkovers from point totals, and marking teams the criteria did not separate
 - [ ] New `src/domain/standings.ts`: `requiredPlayoff()` returning the two-, three-, or four-team playoff shape, or null
 - [ ] `src/domain/team-fixtures.ts`: `fixtureWinnerTeamId()` handles a drawn qualifying fixture (1–1, no winner) and a single-match playoff fixture; `deciderStatus()` applies to placement fixtures only
