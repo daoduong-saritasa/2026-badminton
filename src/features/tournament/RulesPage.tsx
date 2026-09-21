@@ -15,7 +15,7 @@ function SectionHeading({ children }: { children: string }) {
 function RuleCard({ heading, children }: { heading: string; children: ReactNode }) {
   return (
     <section className="rounded-card border border-ink/5 bg-white p-5 text-sm/[1.65] shadow-card">
-      <h3 className="mb-3 text-[0.9375rem] font-semibold">{heading}</h3>
+      <h2 className="mb-3 text-[0.9375rem] font-semibold">{heading}</h2>
       {children}
     </section>
   )
@@ -39,6 +39,11 @@ export function RulesPage() {
 
       <div>
         <SectionHeading>{rules.formatHeading}</SectionHeading>
+        <p className="mb-4 text-sm/[1.65]">{rules.teamRule}</p>
+        <div className="mb-6 rounded-field border border-navy/15 bg-white p-4 text-sm/[1.65]">
+          <p className="font-semibold">{rules.gameRule}</p>
+          <p className="mt-1 text-muted-ink">{rules.gameExamples}</p>
+        </div>
         <ol className="grid gap-6 md:grid-cols-3">
           {rules.stages.map((stage, index) => (
             <li className={`rounded-card border border-ink/5 shadow-card ${stageAccents[index]}`} key={stage.name}>
@@ -51,7 +56,7 @@ export function RulesPage() {
                   {rowKeys.map((key) => (
                     <div key={key}>
                       <dt className="text-[0.6875rem] font-semibold text-muted-ink">{rules.rowLabels[key]}</dt>
-                      <dd className="mt-0.5">{stage[key]}</dd>
+                      <dd className="mt-0.5">{key === 'match' ? <strong className="font-semibold">{stage[key]}</strong> : stage[key]}</dd>
                     </div>
                   ))}
                 </dl>
@@ -59,7 +64,6 @@ export function RulesPage() {
             </li>
           ))}
         </ol>
-        <p className="mt-4 text-xs text-muted-ink">{rules.gameRule}</p>
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
@@ -72,12 +76,14 @@ export function RulesPage() {
           <ol className="list-decimal space-y-1 pl-5">
             {rules.ranking.map((item) => <li key={item}>{item}</li>)}
           </ol>
-          <p className="mt-3 text-xs text-muted-ink">{rules.rankingNote}</p>
+          <p className="mt-3 text-sm text-muted-ink">{rules.rankingNote}</p>
         </RuleCard>
         <RuleCard heading={rules.playoffHeading}>
+          <p className="mb-3">{rules.playoffIntro}</p>
           <ul className="list-disc space-y-1.5 pl-5">
             {rules.playoffs.map((item) => <li key={item}>{item}</li>)}
           </ul>
+          <p className="mt-3">{rules.playoffRepeat}</p>
         </RuleCard>
         <RuleCard heading={rules.walkoverHeading}>
           <p>{rules.walkover}</p>
