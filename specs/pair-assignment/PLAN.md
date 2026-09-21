@@ -21,7 +21,7 @@ free third-place decider only make sense without predeclared pairs.
 `specs/round-robin-tournament/PLAN.md` remains the record of the round-robin
 format. This plan supersedes these parts of it and leaves the rest in force,
 including qualifying ranking criteria, qualification playoff formats and
-triggers, supervised draws, walkovers, finalist confirmation, result
+triggers, the four-team matchup draw, walkovers, finalist confirmation, result
 correction boundaries, stage gates, and manual scheduling:
 
 - Every rule about declared lineups: lineup confirmation, lock, reveal, and
@@ -36,6 +36,8 @@ correction boundaries, stage gates, and manual scheduling:
 - The "Deferred discussion" item on the final deciding pair's seeds, which
   this plan resolves.
 - The playing-time estimate for third place.
+- The supervised draw that resolves a three-team mini round robin still tied
+  after its ranking criteria.
 
 ## Confirmed decisions
 
@@ -43,8 +45,8 @@ correction boundaries, stage gates, and manual scheduling:
 
 - Qualifying is unchanged in shape: four teams, six fixtures, each fixture two
   simultaneous matches on two courts. Each match is one game to 21, win by two,
-  capped at 30. A match win counts one, a loss zero. Ranking criteria and
-  tie resolution are unchanged.
+  capped at 30. A match win counts one, a loss zero. Ranking criteria are
+  unchanged; tie resolution changes only as described below.
 - Every qualifying pair combines one seed 1 and one seed 2 player, and each of
   a team's four players plays exactly once per fixture. Each player therefore
   plays exactly three qualifying matches; the app enforces the per-fixture
@@ -65,6 +67,14 @@ correction boundaries, stage gates, and manual scheduling:
   players through the existing rule against one player in two concurrent
   matches.
 - Third place finishes before the final starts. This gate is unchanged.
+
+- Advancement is never decided by lot. If a three-team mini round robin
+  leaves teams tied after match wins, point difference, and points scored,
+  the teams still tied play on: two teams play one playoff match, three teams
+  replay the mini round robin, until a result separates them. Each extra match
+  uses the playoff format and costs about six minutes; a replay is expected to
+  be rare. The four-team tie keeps its supervised matchup draw, because both
+  winners advance and the draw decides only opponents.
 
 ### Pair assignment
 
@@ -122,8 +132,27 @@ correction boundaries, stage gates, and manual scheduling:
 - Public pages show only saved pairs. Before assignment, a match shows that its
   pairs are not yet assigned. Publish no remaining-matches information.
 - Rename UI copy from _Đội hình_ to the glossary terms _Xếp cặp_ and
-  _Ngoại lệ_ where it refers to pair assignment and rule exceptions. Update
-  the published rules to the new format.
+  _Ngoại lệ_ where it refers to pair assignment and rule exceptions.
+
+### Published rules page
+
+- Publish the rules as a standalone page at `/rules`, shared with players as a
+  plain link. It shows only the rules: no tournament data, tab bar, staff
+  access, or link back to the tournament. It ships ahead of the rest of this
+  plan so the format can be announced before play.
+- Lay the format out as one card per stage (qualifying, third place, final),
+  each answering the same four questions in the same order: who plays, how the
+  fixture is decided, how each match is scored, and the pairing rule. Follow
+  with pair assignment, qualifying ranking, qualification playoffs, and
+  walkovers.
+- Word the ranking criteria so the head-to-head ones read as head-to-head:
+  total qualifying match wins, match wins in head-to-head matches, point
+  difference in head-to-head matches, point difference across qualifying.
+- Remove the collapsible rules from the public match list; the rules page
+  replaces it. Draw outcomes stay on the placement view.
+- Until the rest of this plan ships, the page and the footer scoring line
+  describe the new format while the app still enforces the old one. Nothing
+  has been played, so this is acceptable only before play starts.
 
 ### Migration
 
@@ -160,3 +189,7 @@ correction boundaries, stage gates, and manual scheduling:
   validation for referees must be authoritative server-side.
 - Whether the lineup tables are dropped or left unused, subject to the
   migration decision that their data is deleted.
+- How play-on rounds are modeled. The round-robin plan fixed the playoff
+  fixture count by tie size (one, three, or two fixtures); a still-tied mini
+  round robin now needs further playoff fixtures created on demand, possibly
+  more than once, and the ranking must read only the latest round.

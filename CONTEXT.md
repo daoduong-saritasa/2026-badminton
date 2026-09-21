@@ -52,8 +52,9 @@ A qualifying fixture that ends level, each team winning one match. Only
 qualifying fixtures can be drawn.
 
 **Supervised draw** (_Bốc thăm_):
-Deciding advancement or a matchup by drawing lots in front of the participants,
-used only when playing on would not separate the teams.
+Deciding a playoff matchup by drawing lots in front of the participants, used
+only when all four teams are tied. Advancement is never drawn; teams still tied
+play on until a result separates them.
 
 **Pair assignment** (_Xếp cặp_):
 Setting which two players represent a team in one match, done by a referee or
