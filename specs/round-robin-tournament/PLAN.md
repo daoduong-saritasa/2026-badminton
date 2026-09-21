@@ -1,6 +1,10 @@
 # Round-robin team tournament
 
-Status: approved. Ready for execution planning via the spec-plan skill.
+Status: executed. Partly superseded by `specs/pair-assignment/PLAN.md`,
+whose "Relationship to the round-robin plan" section lists every rule here that
+no longer applies: declared lineups, the qualifying rotation, predeclared
+playoff and deciding pairs, the third-place format, substitution, and the
+supervised draw that resolved a three-team mini round robin.
 
 ## Purpose and scope
 

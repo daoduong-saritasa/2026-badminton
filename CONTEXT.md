@@ -20,8 +20,9 @@ contains two matches and may end level; a placement fixture goes to the first
 team to win two matches.
 
 **Match** (_Trận_):
-A doubles contest between two pairs, decided by a single game except in the
-final, where the first pair to win two games takes the match.
+A doubles contest between two pairs. Qualifying and qualification playoff
+matches are decided by a single game; in a placement fixture, the first pair to
+win two games takes the match.
 
 **Game** (_Ván_):
 One points-scored contest within a match, played to the target and cap for its
@@ -51,18 +52,26 @@ A qualifying fixture that ends level, each team winning one match. Only
 qualifying fixtures can be drawn.
 
 **Supervised draw** (_Bốc thăm_):
-Deciding advancement or a matchup by drawing lots in front of the participants,
-used only when playing on would not separate the teams.
+Deciding a playoff matchup by drawing lots in front of the participants, used
+only when all four teams are tied. Advancement is never drawn; teams still tied
+play on until a result separates them.
 
-**Substitution** (_Thay người_):
-Replacing a player in one match with a teammate from the same four-player
-roster, when the declared player cannot play. It changes that match only and
-leaves later declared lineups intact. _Avoid_: "lineup override".
+**Pair assignment** (_Xếp cặp_):
+Setting which two players represent a team in one match, done by a referee or
+the organizer after the team names them and before the match starts. Pairs are
+never declared in advance. _Avoid_: "lineup", "đội hình", "substitution",
+"thay người".
+
+**Rule exception** (_Ngoại lệ_):
+A pair assignment by the organizer that breaks the pairing rule of its stage,
+such as a same-seed pair in qualifying when a player is absent. Only the
+organizer can make one.
 
 **Seed** (_Hạt giống_):
 A player's classification, 1 or 2. It describes the player, not a team's
-position in a draw. A declared pair normally combines one player of each seed;
-qualification playoff pairs and substitutions may combine any two teammates.
+position in a draw. A pair combines one player of each seed in qualifying
+matches and the first two third-place matches; the third-place decider, every
+final match, and qualification playoff pairs may combine any two teammates.
 
 **Rank** (_Thứ hạng_):
 A team's position in the competition standings. Distinct from a seed.
@@ -82,7 +91,7 @@ recalculates what follows from it, unlike a reset, which clears every result.
 
 **Reset progress** (_Đặt lại tiến trình_):
 A tournament reset that clears play progress and returns to editable setup,
-while retaining the tournament name, players, pairs, groups, and court count.
+while retaining the tournament name, teams, players, seeds, and court count.
 Fixtures and their court assignments and playing order are also retained.
 
 **Reset all** (_Đặt lại toàn bộ_):

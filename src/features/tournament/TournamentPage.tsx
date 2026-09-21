@@ -1,11 +1,9 @@
 import { useState } from 'react'
-import { ChevronDown, Info } from 'lucide-react'
 
 import type { Court, FixtureMatch, Side, TeamFixture, TournamentSnapshot, UUID } from '@/domain/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { messages } from '@/i18n/vi'
 
-import { DrawOutcomeList } from './KnockoutBracket'
 import {
   fixtureLabel,
   fixtureMatches,
@@ -119,43 +117,6 @@ function TeamSchedule({ snapshot, teamId }: { snapshot: TournamentSnapshot; team
   )
 }
 
-/** The rules players need before play, and any draw that has decided something. */
-function PublishedRules({ snapshot }: { snapshot: TournamentSnapshot }) {
-  const { rules } = messages.publicView
-  const section = (heading: string, items: readonly string[], ordered = false) => {
-    const List = ordered ? 'ol' : 'ul'
-    return (
-      <div>
-        <h4 className="text-xs font-semibold text-muted-ink">{heading}</h4>
-        <List className={ordered ? 'mt-2 list-decimal space-y-1 pl-5' : 'mt-2 list-disc space-y-1 pl-5'}>
-          {items.map((item) => <li key={item}>{item}</li>)}
-        </List>
-      </div>
-    )
-  }
-  return (
-    <details className="group rounded-card border border-ink/5 bg-white shadow-card">
-      <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 px-5 py-4 text-sm font-semibold marker:hidden">
-        <span className="flex items-center gap-2.5"><Info className="size-4 text-navy" />{rules.heading}</span>
-        <ChevronDown className="size-4 text-muted-ink transition-transform group-open:rotate-180" aria-hidden="true" />
-      </summary>
-      <div className="space-y-5 border-t border-hairline px-5 py-5 text-sm/[1.65]">
-        {section(rules.scoringHeading, rules.scoring)}
-        <div>
-          {section(rules.rankingHeading, rules.ranking, true)}
-          <p className="mt-2 text-xs text-muted-ink">{rules.rankingNote}</p>
-        </div>
-        {section(rules.playoffHeading, rules.playoffs)}
-        <div>
-          <h4 className="text-xs font-semibold text-muted-ink">{rules.walkoverHeading}</h4>
-          <p className="mt-2">{rules.walkover}</p>
-        </div>
-        <DrawOutcomeList snapshot={snapshot} />
-      </div>
-    </details>
-  )
-}
-
 export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
   const [teamFilter, setTeamFilter] = useState<UUID | 'all'>('all')
   const selectedTeamId = snapshot.teams.some((team) => team.id === teamFilter) ? teamFilter : null
@@ -192,7 +153,6 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
       <section className="view-enter space-y-[2.125rem]">
         {filter}
         <TeamSchedule snapshot={snapshot} teamId={selectedTeamId} />
-        <PublishedRules snapshot={snapshot} />
       </section>
     )
   }
@@ -246,7 +206,6 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
           </ol>
         </div>
       ) : null}
-      <PublishedRules snapshot={snapshot} />
     </section>
   )
 }
