@@ -3,8 +3,7 @@ import { deciderStatus, fixtureTally } from '@/domain/team-fixtures'
 import type {
   FixtureMatch,
   FixtureStage,
-  Lineup,
-  LineupPair,
+  Pair,
   Score,
   Side,
   TeamFixture,
@@ -23,7 +22,7 @@ export function playerName(snapshot: TournamentSnapshot, playerId: UUID): string
   return snapshot.players.find((player) => player.id === playerId)?.name ?? messages.common.unknownPlayer
 }
 
-export function pairPlayers(snapshot: TournamentSnapshot, pair: LineupPair | null): string {
+export function pairPlayers(snapshot: TournamentSnapshot, pair: Pair | null): string {
   if (pair === null) return messages.common.pairPending
   return messages.common.pair(playerName(snapshot, pair.player1Id), playerName(snapshot, pair.player2Id))
 }
@@ -116,24 +115,29 @@ export function isDeciderEligible(snapshot: TournamentSnapshot, match: FixtureMa
   return fixture !== undefined && deciderStatus(fixture, fixtureMatches(snapshot, match.fixtureId)) === 'eligible'
 }
 
-/**
- * Lineups both teams confirmed. An organizer's snapshot also carries drafts,
- * which a public view must not show as if they were published.
- */
-export function revealedLineups(snapshot: TournamentSnapshot, fixture: TeamFixture): Lineup[] {
-  const lineups = snapshot.lineups.filter(
-    (lineup) => lineup.fixtureId === fixture.id && lineup.confirmedAt !== null,
-  )
-  return lineups.length === 2 ? lineups : []
+/** A match side's saved pair; null until staff assign it. */
+export function matchPair(match: FixtureMatch, side: Side): Pair | null {
+  return side === 'a' ? match.pairA : match.pairB
 }
 
-/** A match's pairs, or the revealed lineup's pairs before the match row carries them. */
-export function matchPair(snapshot: TournamentSnapshot, match: FixtureMatch, side: Side): LineupPair | null {
-  const pair = side === 'a' ? match.pairA : match.pairB
-  if (pair !== null) return pair
-  const fixture = fixtureOf(snapshot, match)
-  const teamId = sideTeamId(fixture, side)
-  if (!fixture || teamId === null) return null
-  const lineup = revealedLineups(snapshot, fixture).find((candidate) => candidate.teamId === teamId)
-  return lineup?.pairs[match.matchNumber - 1] ?? null
+/**
+ * Unstarted matches staff can prepare now: both teams known, the decider
+ * eligible, and placement matches opened by finalist confirmation.
+ */
+export function upcomingMatches(snapshot: TournamentSnapshot): FixtureMatch[] {
+  if (snapshot.tournament.stage === 'setup') return []
+  return snapshot.matches.filter((match) => {
+    const fixture = fixtureOf(snapshot, match)
+    const placement = fixture?.stage === 'third-place' || fixture?.stage === 'final'
+    return match.state === 'unstarted'
+      && fixture?.teamAId != null
+      && fixture.teamBId != null
+      && (!placement || snapshot.tournament.finalistsConfirmedAt !== null)
+      && isDeciderEligible(snapshot, match)
+  })
+}
+
+/** Ready to start: a court and both saved pairs. */
+export function isStartable(match: FixtureMatch): boolean {
+  return match.court !== null && match.pairA !== null && match.pairB !== null
 }

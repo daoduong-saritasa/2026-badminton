@@ -1,17 +1,18 @@
 import { useEffect, useReducer, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Play, RefreshCw, RotateCcw, ShieldAlert } from 'lucide-react'
+import { ArrowLeft, Play, RefreshCw, RotateCcw, ShieldAlert, Users } from 'lucide-react'
 
 import { canScore } from '@/data/staff'
 import { fetchTournament, mutateTournament } from '@/data/tournament'
 import { gamesToWinMatch, isGameWon, matchGameTally } from '@/domain/scoring'
-import type { FixtureMatch, Game, Side, TournamentSnapshot, UUID } from '@/domain/types'
+import type { FixtureMatch, Game, Side, StaffRole, TournamentSnapshot, UUID } from '@/domain/types'
 import {
   reduceScoring,
   type IdleScoringState,
   type PendingPoint,
   type SaveFailureReason,
 } from './scoring-state'
+import { PairAssignmentForm } from './PairAssignmentForm'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -23,9 +24,10 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
+import { Dialog, DialogContent } from '@/components/ui/dialog'
 import {
   fixtureOf,
-  isDeciderEligible,
+  isStartable,
   matchLabel,
   matchPair,
   openGame,
@@ -34,6 +36,7 @@ import {
   sideTeamId,
   stageRule,
   teamName,
+  upcomingMatches,
 } from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
 import { formatNumber } from '@/i18n/format'
@@ -57,16 +60,6 @@ type PlayingMatch = FixtureMatch & { state: 'playing' }
 
 function isPlaying(match: FixtureMatch): match is PlayingMatch {
   return match.state === 'playing'
-}
-
-/** Ready for a referee to start: court assigned, pairs revealed, decider eligible. */
-function startableMatches(snapshot: TournamentSnapshot): FixtureMatch[] {
-  return snapshot.matches.filter((match) =>
-    match.state === 'unstarted'
-    && match.court !== null
-    && match.pairA !== null
-    && isDeciderEligible(snapshot, match),
-  )
 }
 
 const emptyGame: Game = { gameNumber: 1, score: { a: 0, b: 0 }, confirmedAt: null }
@@ -316,11 +309,11 @@ function ScoringSurface({
               side === 'a' ? 'border-navy-soft bg-mist text-navy' : 'border-peach-line bg-peach text-ink',
             )}
             disabled={disabled}
-            aria-label={messages.scoring.addPoint(pairPlayers(snapshot, matchPair(snapshot, match, side)))}
+            aria-label={messages.scoring.addPoint(pairPlayers(snapshot, matchPair(match, side)))}
             onClick={() => handlePoint(side)}
           >
             <span className="max-w-full [overflow-wrap:anywhere] text-[clamp(0.9375rem,2.4vw,1.625rem)]/[1.35] font-semibold tracking-[-0.023em]">
-              {pairPlayers(snapshot, matchPair(snapshot, match, side))}
+              {pairPlayers(snapshot, matchPair(match, side))}
             </span>
             <strong className="numeric self-center pr-[0.07em] text-[clamp(5rem,28dvh,16rem)] font-bold leading-none tracking-[-0.08em]">
               {formatNumber(state.score[side])}
@@ -394,18 +387,23 @@ function ScoringSurface({
 function MatchPicker({
   snapshot,
   resetGeneration,
+  role,
   onSelect,
   onExit,
 }: {
   snapshot: TournamentSnapshot
   resetGeneration: number
+  role: StaffRole
   onSelect: (matchId: UUID) => void
   onExit: () => void
 }) {
   const playing = snapshot.matches.filter(isPlaying)
-  const startable = startableMatches(snapshot)
+  const upcoming = upcomingMatches(snapshot)
   const [startMatchId, setStartMatchId] = useState<UUID | null>(null)
-  const startMatch = startable.find((match) => match.id === startMatchId)
+  const startMatch = upcoming.find((match) => match.id === startMatchId && isStartable(match))
+  // The match outlives `assignOpen` so the dialog keeps its content while closing.
+  const [assignMatchId, setAssignMatchId] = useState<UUID | null>(null)
+  const [assignOpen, setAssignOpen] = useState(false)
 
   const startMutation = useMutation({
     mutationFn: (match: FixtureMatch) => mutateTournament('start_match', {
@@ -427,11 +425,11 @@ function MatchPicker({
           {match.court ? messages.common.court(match.court) : '–'} · {matchLabel(snapshot, match)}
         </span>
         <span className="mt-1 block text-[0.8125rem] font-medium [overflow-wrap:anywhere]">
-          {messages.common.versus(pairPlayers(snapshot, matchPair(snapshot, match, 'a')), pairPlayers(snapshot, matchPair(snapshot, match, 'b')))}
+          {messages.common.versus(pairPlayers(snapshot, matchPair(match, 'a')), pairPlayers(snapshot, matchPair(match, 'b')))}
         </span>
         {isPlaying(match) ? (
           <span className="mt-1 block text-[0.6875rem] text-muted-ink">
-            {fixtureOf(snapshot, match)?.stage === 'final'
+            {gamesToWinMatch(stageOf(snapshot, match)) === 2
               ? `${messages.scoring.gameStatus(liveGame(match).gameNumber, scoreText(matchGameTally(match.games)))} · `
               : ''}
             {scoreText(liveGame(match).score)}
@@ -458,18 +456,30 @@ function MatchPicker({
       ) : null}
       <section className="rounded-card border border-ink/5 bg-white px-5 py-2 shadow-card">
         <h3 className="pt-3 text-sm font-semibold">{messages.scoring.startHeading}</h3>
-        {startable.length === 0 ? (
+        {upcoming.length === 0 ? (
           <p className="py-4 text-[0.8125rem] text-muted-ink">{messages.scoring.noMatch}</p>
         ) : (
           <ul>
-            {startable.map((match) => row(match, (
-              <Button variant="outline" disabled={startMutation.isPending} onClick={() => setStartMatchId(match.id)}>
-                <Play /> {messages.scoring.start}
-              </Button>
+            {upcoming.map((match) => row(match, (
+              <span className="flex flex-wrap gap-2">
+                <Button variant="outline" onClick={() => { setAssignMatchId(match.id); setAssignOpen(true) }}>
+                  <Users /> {messages.pairAssignment.open}
+                </Button>
+                <Button variant="outline" disabled={!isStartable(match) || startMutation.isPending} onClick={() => setStartMatchId(match.id)}>
+                  <Play /> {messages.scoring.start}
+                </Button>
+              </span>
             )))}
           </ul>
         )}
       </section>
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
+          {assignMatchId ? (
+            <PairAssignmentForm snapshot={snapshot} matchId={assignMatchId} role={role} resetGeneration={resetGeneration} />
+          ) : null}
+        </DialogContent>
+      </Dialog>
       {startMutation.isError ? <p className="text-sm text-destructive" role="alert">{errorMessage(startMutation.error)}</p> : null}
 
       <AlertDialog open={startMatch !== undefined} onOpenChange={(open) => { if (!open) setStartMatchId(null) }}>
@@ -495,7 +505,7 @@ function MatchPicker({
   )
 }
 
-export function ScoreTracker({ snapshot, resetGeneration, onExit }: { snapshot: TournamentSnapshot; resetGeneration: number; onExit: () => void }) {
+export function ScoreTracker({ snapshot, resetGeneration, role, onExit }: { snapshot: TournamentSnapshot; resetGeneration: number; role: StaffRole; onExit: () => void }) {
   const [matchId, setMatchId] = useState<UUID | null>(null)
   const match = snapshot.matches.find((candidate): candidate is PlayingMatch => candidate.id === matchId && isPlaying(candidate))
   const ownershipQuery = useQuery({
@@ -507,7 +517,7 @@ export function ScoreTracker({ snapshot, resetGeneration, onExit }: { snapshot: 
 
   // A completed match leaves the playing set, which returns here to the picker.
   if (!match) {
-    return <MatchPicker snapshot={snapshot} resetGeneration={resetGeneration} onSelect={setMatchId} onExit={onExit} />
+    return <MatchPicker snapshot={snapshot} resetGeneration={resetGeneration} role={role} onSelect={setMatchId} onExit={onExit} />
   }
 
   if (ownershipQuery.isPending) {

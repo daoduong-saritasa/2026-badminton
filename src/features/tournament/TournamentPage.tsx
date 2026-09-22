@@ -46,9 +46,8 @@ function StageChip({ snapshot, match }: { snapshot: TournamentSnapshot; match: F
 }
 
 /**
- * One team's fixtures in playing order. Pairs come only from match rows, which
- * the server creates once lineups are revealed, so the filter never shows a
- * pair before the reveal.
+ * One team's fixtures in playing order. Each match shows its saved pairs, or
+ * that a side is not assigned yet.
  */
 function TeamSchedule({ snapshot, teamId }: { snapshot: TournamentSnapshot; teamId: UUID }) {
   const fixtures = snapshot.fixtures.filter((fixture) => fixture.teamAId === teamId || fixture.teamBId === teamId)
