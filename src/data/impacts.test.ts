@@ -12,10 +12,13 @@ const tournamentId = '00000000-0000-4000-8000-000000000010'
 const teamId = '00000000-0000-4000-8000-000000000013'
 const matchId = '00000000-0000-4000-8000-000000000015'
 const finalId = '00000000-0000-4000-8000-000000000016'
+const finalMatchId = '00000000-0000-4000-8000-000000000018'
 const otherTeamId = '00000000-0000-4000-8000-000000000017'
 const playerIds = [
   '00000000-0000-4000-8000-000000000021',
   '00000000-0000-4000-8000-000000000022',
+  '00000000-0000-4000-8000-000000000023',
+  '00000000-0000-4000-8000-000000000024',
 ]
 
 const proposal = {
@@ -25,18 +28,27 @@ const proposal = {
   games: [{ a: 21, b: 10 }],
 }
 
-function placementSnapshot(version: number, confirmedAt: string | null, lineupTeamIds: string[]) {
-  const pair = { player1Id: playerIds[0], player2Id: playerIds[1] }
+/** A final whose first match has pairs saved on the given sides. */
+function placementSnapshot(version: number, confirmedAt: string | null, pairedSides: Array<'a' | 'b'>) {
+  const paired = (side: 'a' | 'b', index: number) => (pairedSides.includes(side) ? playerIds[index] : null)
   return {
     ...snapshot(version),
     tournament: { ...snapshot(version).tournament, finalists_confirmed_at: confirmedAt },
-    fixtures: [{ id: finalId, stage: 'final', team_a_id: teamId, team_b_id: otherTeamId, version: 1 }],
-    lineups: lineupTeamIds.map((lineupTeamId) => ({
-      fixtureId: finalId,
-      teamId: lineupTeamId,
-      pairs: [pair, pair, pair, pair],
-      confirmedAt: null,
-    })),
+    fixtures: [{ id: finalId, stage: 'final', team_a_id: teamId, team_b_id: otherTeamId, playoff_round_id: null, version: 1 }],
+    matches: [{
+      id: finalMatchId,
+      fixture_id: finalId,
+      match_number: 1,
+      pair_a_player_1_id: paired('a', 0),
+      pair_a_player_2_id: paired('a', 1),
+      pair_b_player_1_id: paired('b', 2),
+      pair_b_player_2_id: paired('b', 3),
+      court: null,
+      state: 'unstarted',
+      result_kind: null,
+      winner_side: null,
+      version: 1,
+    }],
   }
 }
 
@@ -50,14 +62,14 @@ function snapshot(version: number) {
       version,
       result_revision: version,
       finalists_confirmed_at: null,
-      qualification_draw_winner_ids: null,
+      current_playoff_round_id: null,
     },
     teams: [{ id: teamId, name: 'Team' }],
     players: [],
     fixtures: [],
     matches: [],
     games: [],
-    lineups: [],
+    playoff_rounds: [],
   }
 }
 
@@ -105,10 +117,10 @@ describe('impact previews', () => {
     }
   })
 
-  it('reports a revoked finalist confirmation and cleared placement lineups', async () => {
+  it('reports a revoked finalist confirmation and cleared placement pairs by match and side', async () => {
     rpc.mockResolvedValue({
       data: impact({
-        before: placementSnapshot(4, '2026-09-21T02:00:00Z', [teamId, otherTeamId]),
+        before: placementSnapshot(4, '2026-09-21T02:00:00Z', ['a', 'b']),
         after: placementSnapshot(4, null, []),
       }),
       error: null,
@@ -116,20 +128,20 @@ describe('impact previews', () => {
 
     expect(impactConsequences(await previewResultCorrection(proposal, 0))).toEqual({
       finalistConfirmationRevoked: true,
-      clearedPlacementLineups: [
-        { fixtureId: finalId, teamId },
-        { fixtureId: finalId, teamId: otherTeamId },
+      clearedPlacementPairs: [
+        { matchId: finalMatchId, side: 'a' },
+        { matchId: finalMatchId, side: 'b' },
       ],
     })
   })
 
   it('reports no consequences when participants are preserved, and none for a blocked impact', async () => {
-    const preserved = placementSnapshot(4, '2026-09-21T02:00:00Z', [teamId])
+    const preserved = placementSnapshot(4, '2026-09-21T02:00:00Z', ['a'])
     rpc.mockResolvedValue({ data: impact({ before: preserved, after: preserved }), error: null })
 
     expect(impactConsequences(await previewResultCorrection(proposal, 0))).toEqual({
       finalistConfirmationRevoked: false,
-      clearedPlacementLineups: [],
+      clearedPlacementPairs: [],
     })
 
     rpc.mockResolvedValue({ data: impact({ blockedReason: 'placement-started', after: null }), error: null })

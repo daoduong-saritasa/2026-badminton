@@ -63,13 +63,13 @@ function snapshot(
       version: 1,
       resultRevision: 1,
       finalistsConfirmedAt: null,
-      qualificationDrawWinnerIds: null,
+      currentPlayoffRoundId: null,
     },
     teams: [{ id: 'a', name: 'A' }, { id: 'b', name: 'B' }],
     players,
     fixtures,
     matches,
-    lineups: [],
+    playoffRounds: [],
   }
 }
 
