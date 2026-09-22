@@ -1,14 +1,19 @@
 import type { FixtureStage, Game, Score, Side } from './types'
 
 export function gameRules(stage: FixtureStage): { target: number; cap: number } {
-  return stage === 'qualification-playoff'
-    ? { target: 11, cap: 15 }
-    : { target: 21, cap: 30 }
+  switch (stage) {
+    case 'qualification-playoff':
+      return { target: 11, cap: 15 }
+    case 'third-place':
+      return { target: 15, cap: 21 }
+    default:
+      return { target: 21, cap: 30 }
+  }
 }
 
-/** Final matches are best of three games; every other match is one game. */
+/** Placement matches are best of three games; every other match is one game. */
 export function gamesToWinMatch(stage: FixtureStage): 1 | 2 {
-  return stage === 'final' ? 2 : 1
+  return stage === 'final' || stage === 'third-place' ? 2 : 1
 }
 
 export function isGameWon(score: Score, stage: FixtureStage): boolean {
