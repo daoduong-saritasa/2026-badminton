@@ -5,8 +5,8 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — Pairing and playoff-round domain rules: in-progress
+- Current phase: 1 — done
+- Phase 1 — Pairing and playoff-round domain rules: done
 - Phase 2 — Database and application cutover: pending
 - Verification debt: none
 
@@ -34,8 +34,8 @@ Fresh review: not required
 - [x] Create `src/domain/playoff-rounds.test.ts` covering a fully tied replay, a two-team continuation for one remaining place, a fixed finalist carried across multiple rounds, exclusion of previous-round scores, incomplete rounds, four-team matchup winners, and walkovers counting wins without artificial points.
 
 **Phase gate (hard):**
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed files>` with changed-file arguments derived from the phase diff; record any Supabase setup failures as environment debt using the substitute evidence described above.
+- [x] Run `npm run typecheck` project-wide.
+- [x] Run `npm run test:related -- <changed files>` with changed-file arguments derived from the phase diff; record any Supabase setup failures as environment debt using the substitute evidence described above. Passed 2 files and 22 tests; no integration suite entered the reverse-dependency closure.
 
 **Review checklist (user, at PR review):**
 - [ ] Review the pairing cases: qualifying permits either arrangement repeatedly; third-place opening matches require mixed seeds; placement deciders, finals, and playoffs allow any two teammates.
