@@ -43,11 +43,14 @@ describe('staff authorization', () => {
         "  has_table_privilege('anon', 'private.staff_config', 'select'),",
         "  has_table_privilege('authenticated', 'private.mutation_log', 'select'),",
         "  has_table_privilege('anon', 'private.maintenance_state', 'select'),",
-        "  has_table_privilege('authenticated', 'public.tournament_generation', 'select')",
+        "  has_table_privilege('authenticated', 'public.tournament_generation', 'select'),",
+        "  has_table_privilege('anon', 'public.qualification_playoff_rounds', 'select'),",
+        "  has_table_privilege('authenticated', 'public.qualification_playoff_rounds', 'insert'),",
+        "  has_table_privilege('authenticated', 'public.qualification_playoff_rounds', 'update')",
         ');',
       ].join('\n'),
     )
-    expect(privileges).toBe('false,false,false,false,false,true')
+    expect(privileges).toBe('false,false,false,false,false,true,true,false,false')
   })
 
   it('rejects expired and explicitly revoked grants', async () => {
@@ -133,17 +136,25 @@ describe('staff authorization', () => {
     expect([401, 403]).toContain(preview.status)
   })
 
-  it('allows both roles through scorer authorization', async () => {
+  it('allows both roles through scorer authorization, including pair assignment', async () => {
     for (const pin of ['2468', '1357']) {
       const session = await signInAnonymously()
       await elevate(session, pin)
-      const response = await rpc(
-        'start_match',
-        mutation(0, { matchId: crypto.randomUUID() }),
-        session,
-      )
+      for (const operation of ['start_match', 'assign_pair']) {
+        const response = await rpc(
+          operation,
+          mutation(0, {
+            matchId: crypto.randomUUID(),
+            side: 'a',
+            player1Id: crypto.randomUUID(),
+            player2Id: crypto.randomUUID(),
+            ruleException: false,
+          }),
+          session,
+        )
 
-      expect([401, 403]).not.toContain(response.status)
+        expect([401, 403]).not.toContain(response.status)
+      }
     }
   })
 
