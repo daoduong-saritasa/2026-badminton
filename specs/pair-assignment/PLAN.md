@@ -183,13 +183,26 @@ correction boundaries, stage gates, and manual scheduling:
   subject to the enforcement rules above. Organizer permissions add rule
   exceptions.
 
-## Open for execution planning
+## Execution planning decisions
 
-- How rule exceptions are authorized at the database boundary, given that
-  validation for referees must be authoritative server-side.
-- Whether the lineup tables are dropped or left unused, subject to the
-  migration decision that their data is deleted.
-- How play-on rounds are modeled. The round-robin plan fixed the playoff
-  fixture count by tie size (one, three, or two fixtures); a still-tied mini
-  round robin now needs further playoff fixtures created on demand, possibly
-  more than once, and the ranking must read only the latest round.
+Confirmed by the user on 2026-09-22:
+
+- Use one pair-assignment RPC with an explicit rule-exception flag. The
+  database verifies organizer authority before accepting that flag; referees
+  cannot bypass server-side validation. The two non-overridable safeguards
+  remain enforced for everyone.
+- Drop obsolete lineup tables and RPCs in the migration, rather than keeping
+  unused structures. Delete their data as specified under "Migration".
+- Model qualification playoffs as numbered rounds. Preserve previous results,
+  rank only the latest round's participants, and automatically create another
+  round when a completed round leaves advancement unresolved. Carry forward
+  teams that already qualified and the number of remaining final places.
+
+## Implementation already merged
+
+The standalone rules page and revised published format were merged into
+`main` in PR #25 (merge commit `9a0db33`). `src/main.tsx` serves `/rules`
+through `src/features/tournament/RulesPage.tsx`; `src/i18n/vi.ts` carries the
+rules and footer copy. Execution retains and reviews this work rather than
+creating another rules-page phase. The remaining application cutover must
+finish before play starts.
