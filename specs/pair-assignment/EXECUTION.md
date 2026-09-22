@@ -7,7 +7,7 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 - Current phase: 2 — done-with-debt
 - Phase 1 — Pairing and playoff-round domain rules: done (PR #26 open)
-- Phase 2 — Database and application cutover: done-with-debt (not pushed)
+- Phase 2 — Database and application cutover: done-with-debt (PR #27 open)
 - Verification debt: Phase 2 `test:related` integration suites (auth, impacts, pair-assignment, reset, round-robin-phase1, tournament) have never run; local Supabase is prohibited. The migration `202609220001_pair_assignment.sql` was applied by the user on 2026-09-22 and succeeded (target database not stated); its RPC behavior remains unexercised by the suites. Substitute: typecheck, 157 non-database tests in the full suite, build, SQL review, fresh review.
 
 The rules-page work is already merged in `9a0db33`; retain it and review it in Phase 2. Neither remaining phase authorizes production deployment. Phase 2 removes a database contract and its client together; deploy them together before play starts. Reverting code cannot recover deleted lineup data.
