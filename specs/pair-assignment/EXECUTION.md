@@ -31,7 +31,7 @@ Fresh review: not required
 - [x] Implement `qualifyingPairings` as the two disjoint mixed-seed arrangements for a valid four-player roster; choosing a pair saves only the selected match side, not its complementary pair or the other match.
 - [x] Create `src/domain/pair-assignment.test.ts` covering both arrangements, repeated arrangements across qualifying fixtures, saved sibling-pair reuse, same-seed exceptions, unrestricted deciders/finals/playoffs, wrong-team players, duplicate players, and players in progress on any court.
 - [x] Create `src/domain/playoff-rounds.ts` with `PlayoffRound`, `PlayoffRoundOutcome`, and `resolvePlayoffRound`: return null before all round matches resolve; rank three-team rounds by wins, point difference, then points scored; return another round only for teams tied across the advancement cutoff, carrying fixed finalists and remaining places; resolve two-team and four-team rounds from match winners.
-- [ ] Create `src/domain/playoff-rounds.test.ts` covering a fully tied replay, a two-team continuation for one remaining place, a fixed finalist carried across multiple rounds, exclusion of previous-round scores, incomplete rounds, four-team matchup winners, and walkovers counting wins without artificial points.
+- [x] Create `src/domain/playoff-rounds.test.ts` covering a fully tied replay, a two-team continuation for one remaining place, a fixed finalist carried across multiple rounds, exclusion of previous-round scores, incomplete rounds, four-team matchup winners, and walkovers counting wins without artificial points.
 
 **Phase gate (hard):**
 - [ ] Run `npm run typecheck` project-wide.
