@@ -314,6 +314,20 @@ begin
       set team_a_id = team_a, team_b_id = team_b, playoff_round_id = round_id,
           version = version + 1, updated_at = clock_timestamp()
       where id = slot_id;
+      -- A reused slot starts clean whatever happened to it while released;
+      -- only its court carries over.
+      delete from public.match_games as game
+      using public.matches as match
+      where game.match_id = match.id and match.fixture_id = slot_id;
+      delete from private.match_ownership as ownership
+      using public.matches as match
+      where ownership.match_id = match.id and match.fixture_id = slot_id;
+      update public.matches
+      set state = 'unstarted', result_kind = null, winner_side = null,
+          pair_a_player_1_id = null, pair_a_player_2_id = null,
+          pair_b_player_1_id = null, pair_b_player_2_id = null,
+          version = version + 1, updated_at = clock_timestamp()
+      where fixture_id = slot_id;
     end if;
 
     if team_a is not null then
@@ -1061,7 +1075,7 @@ begin
     update public.matches
     set state = 'completed', result_kind = 'played',
         winner_side = case when wins_a = games_to_win then 'a' else 'b' end,
-        court = null, version = version + 1, updated_at = clock_timestamp()
+        version = version + 1, updated_at = clock_timestamp()
     where id = target_match.id returning version into next_match_version;
     delete from private.match_ownership where match_id = target_match.id;
     perform private.finish_fixture_if_decided(target_match.fixture_id);
@@ -1076,6 +1090,164 @@ begin
   return private.receipt(
     p_request_id, next_tournament_version, target_match.id, next_match_version
   );
+end;
+$$;
+
+-- Courts stay on a match once it finishes, so progress reset can return the
+-- schedule intact; occupancy only ever counts playing matches.
+create or replace function private.finish_fixture_if_decided(p_fixture_id uuid)
+returns void
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  fixture public.team_fixtures%rowtype;
+  tally record;
+  needed_wins integer;
+begin
+  select * into strict fixture from public.team_fixtures where id = p_fixture_id;
+  select * into tally from private.fixture_tally(p_fixture_id);
+  needed_wins := case when fixture.stage in ('qualifying', 'qualification-playoff') then 1 else 2 end;
+
+  if fixture.stage = 'qualifying' then
+    if (select count(*) from public.matches
+        where fixture_id = fixture.id and state = 'completed') = 2 then
+      perform private.populate_placement_fixtures();
+    end if;
+    return;
+  end if;
+
+  if greatest(tally.wins_a, tally.wins_b) < needed_wins then return; end if;
+
+  if fixture.stage in ('third-place', 'final') then
+    update public.matches
+    set state = 'unnecessary', version = version + 1,
+        updated_at = clock_timestamp()
+    where fixture_id = p_fixture_id and match_number = 3 and state = 'unstarted';
+  end if;
+
+  if fixture.stage = 'qualification-playoff' then
+    perform private.populate_placement_fixtures();
+  elsif (
+    select count(*)
+    from public.team_fixtures as placement
+    where placement.tournament_id = fixture.tournament_id
+      and placement.stage in ('third-place', 'final')
+      and private.fixture_winner_team_id(placement.id) is not null
+  ) = 2 then
+    update public.tournament
+    set stage = 'completed', version = version + 1,
+        result_revision = result_revision + 1,
+        updated_at = clock_timestamp()
+    where id = fixture.tournament_id and stage <> 'completed';
+  end if;
+end;
+$$;
+
+-- A walkover needs both teams: a released playoff slot has none and must not
+-- carry a result into the round that reuses it.
+create or replace function private.team_mark_walkover(
+  p_request_id uuid,
+  p_expected_version integer,
+  p_payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  target_match public.matches%rowtype;
+  fixture public.team_fixtures%rowtype;
+  side text := p_payload ->> 'winnerSide';
+  tally record;
+  next_match_version integer;
+  next_tournament_version integer;
+begin
+  select * into strict target_match from public.matches
+  where id = (p_payload ->> 'matchId')::uuid for update;
+  select * into strict fixture from public.team_fixtures where id = target_match.fixture_id;
+  if target_match.version <> p_expected_version then
+    raise exception 'Match version conflict' using errcode = '40001';
+  end if;
+  if fixture.team_a_id is null or fixture.team_b_id is null then
+    raise exception 'Fixture participants are not assigned' using errcode = '55000';
+  end if;
+  if target_match.state not in ('unstarted', 'playing') or side not in ('a', 'b')
+    or exists (
+      select 1 from public.match_games
+      where match_id = target_match.id
+        and (score_a <> 0 or score_b <> 0 or confirmed_at is not null)
+    ) then
+    raise exception 'Walkover requires an unscored match and one winner' using errcode = '55000';
+  end if;
+  if target_match.match_number = 3 then
+    select * into tally from private.fixture_tally(target_match.fixture_id);
+    if tally.wins_a <> 1 or tally.wins_b <> 1
+      or (select count(*) from public.matches
+          where fixture_id = target_match.fixture_id and match_number in (1, 2)
+            and state = 'completed') <> 2 then
+      raise exception 'Decider is not eligible' using errcode = '55000';
+    end if;
+  end if;
+  delete from public.match_games where match_id = target_match.id;
+  delete from private.match_ownership where match_id = target_match.id;
+  update public.matches
+  set state = 'completed', result_kind = 'walkover', winner_side = side,
+      version = version + 1, updated_at = clock_timestamp()
+  where id = target_match.id returning version into next_match_version;
+  perform private.finish_fixture_if_decided(target_match.fixture_id);
+  next_tournament_version := private.bump_team_tournament();
+  return private.receipt(
+    p_request_id, next_tournament_version, target_match.id, next_match_version
+  );
+end;
+$$;
+
+create or replace function private.team_assign_courts(
+  p_request_id uuid,
+  p_expected_version integer,
+  p_payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = ''
+as $$
+declare
+  tournament_row public.tournament%rowtype;
+  assignment jsonb;
+  next_version integer;
+begin
+  select * into strict tournament_row from public.tournament where singleton for update;
+  if tournament_row.version <> p_expected_version then
+    raise exception 'Tournament version conflict' using errcode = '40001';
+  end if;
+  if jsonb_typeof(p_payload -> 'assignments') <> 'array' then
+    raise exception 'Invalid court assignments' using errcode = '22023';
+  end if;
+  for assignment in select value from jsonb_array_elements(p_payload -> 'assignments')
+  loop
+    if (assignment ->> 'court')::integer not in (1, 2) then
+      raise exception 'Court must be 1 or 2' using errcode = '22023';
+    end if;
+    update public.matches as match
+    set court = (assignment ->> 'court')::smallint,
+        version = match.version + 1,
+        updated_at = clock_timestamp()
+    from public.team_fixtures as fixture
+    where match.id = (assignment ->> 'matchId')::uuid
+      and match.state = 'unstarted'
+      and fixture.id = match.fixture_id
+      and fixture.team_a_id is not null
+      and fixture.team_b_id is not null;
+    if not found then
+      raise exception 'Only unstarted matches can be assigned' using errcode = '55000';
+    end if;
+  end loop;
+  next_version := private.bump_team_tournament();
+  return private.receipt(p_request_id, next_version);
 end;
 $$;
 
@@ -1140,7 +1312,7 @@ begin
   delete from private.match_ownership where match_id = target_match.id;
   update public.matches
   set state = 'completed', result_kind = 'played', winner_side = p_winner_side,
-      court = null, version = version + 1, updated_at = clock_timestamp()
+      version = version + 1, updated_at = clock_timestamp()
   where id = target_match.id returning version into next_match_version;
   perform private.finish_fixture_if_decided(target_match.fixture_id);
   perform private.populate_placement_fixtures();
@@ -1236,7 +1408,7 @@ begin
       and placement.stage in ('third-place', 'final');
     update public.matches as placement_match
     set state = 'unstarted', result_kind = null, winner_side = null,
-        court = null, version = version + 1, updated_at = clock_timestamp()
+        version = version + 1, updated_at = clock_timestamp()
     from public.team_fixtures as placement
     where placement_match.fixture_id = placement.id
       and placement.tournament_id = fixture.tournament_id

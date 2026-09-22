@@ -191,6 +191,30 @@ describe('team tournament maintenance reset', () => {
     expect(runSql(`select count(*) from public.matches as match join public.team_fixtures as fixture on fixture.id = match.fixture_id where fixture.stage = 'qualifying';`)).toBe('12')
   })
 
+  it('keeps the court of a match that finished through play', async () => {
+    const organizer = await signInAnonymously()
+    await elevate(organizer)
+    const created = await createTournament(organizer)
+    const started = await rpc('start_qualifying', mutation(created.snapshot?.tournament.version ?? -1, {}), organizer)
+    expect(started.ok).toBe(true)
+    let current = await state(organizer)
+    const [match] = current.snapshot?.matches ?? []
+    if (!match || !current.snapshot) throw new Error('Qualifying match is missing')
+    expect((await rpc('assign_courts', mutation(current.snapshot.tournament.version, {
+      assignments: [{ matchId: match.id, court: 2 }],
+    }), organizer)).ok).toBe(true)
+    current = await state(organizer)
+    const scheduled = current.snapshot?.matches.find((candidate) => candidate.id === match.id)
+    expect((await rpc('mark_walkover', mutation(scheduled?.version ?? -1, { matchId: match.id, winnerSide: 'a' }), organizer)).ok)
+      .toBe(true)
+    expect(runSql(`select state || ':' || court from public.matches where id = '${match.id}';`)).toBe('completed:2')
+
+    const before = await state(organizer)
+    expect((await rpc('set_reset_enabled', { p_enabled: true })).ok).toBe(true)
+    expect((await rpc('reset_tournament', resetBody(before, 'progress'))).ok).toBe(true)
+    expect(runSql(`select state || ':' || court from public.matches where id = '${match.id}';`)).toBe('unstarted:2')
+  })
+
   it('clears the new model on all reset, preserves audit/access, and replays safely', async () => {
     const organizer = await signInAnonymously()
     await elevate(organizer)

@@ -209,6 +209,51 @@ describe('round-robin phase 1 SQL boundaries', () => {
       select current_playoff_round_id = '${seeded.firstRoundId}'
       from public.tournament where id = '${seeded.tournamentId}';
     `)).toBe('t')
+    // Nothing can record a result on the released slot while it waits.
+    const releasedMatch = runSql(`
+      select match.id from public.matches as match
+      join public.team_fixtures as fixture on fixture.id = match.fixture_id
+      where fixture.tournament_id = '${seeded.tournamentId}'
+        and fixture.stage = 'qualification-playoff' and fixture.playoff_round_id is null;
+    `)
+    expect(() => runSql(`
+      select private.team_mark_walkover(
+        '${crypto.randomUUID()}',
+        (select version from public.matches where id = '${releasedMatch}'),
+        jsonb_build_object('matchId', '${releasedMatch}', 'winnerSide', 'a')
+      );
+    `)).toThrow('Fixture participants are not assigned')
+  })
+
+  it('gives a reused playoff slot a clean match', () => {
+    const seeded = seedThreeTeamRound()
+    runSql('select private.populate_placement_fixtures();')
+    runSql(`
+      select private.apply_team_correction(
+        '${seeded.playoffMatchToCorrect}', 'a', '[{"a":11,"b":9}]'::jsonb
+      );
+    `)
+    // Simulate a stale result left on the released slot, then restore the tie.
+    runSql(`
+      update public.matches as match
+      set state = 'completed', result_kind = 'walkover', winner_side = 'a', court = 1
+      from public.team_fixtures as fixture
+      where fixture.id = match.fixture_id
+        and fixture.tournament_id = '${seeded.tournamentId}'
+        and fixture.stage = 'qualification-playoff' and fixture.playoff_round_id is null;
+      select private.apply_team_correction(
+        '${seeded.playoffMatchToCorrect}', 'a', '[{"a":12,"b":10}]'::jsonb
+      );
+    `)
+
+    expect(secondRound(seeded.tournamentId)).not.toBe('')
+    expect(runSql(`
+      select match.state || ':' || coalesce(match.winner_side, '-') || ':' || match.court
+      from public.matches as match
+      join public.team_fixtures as fixture on fixture.id = match.fixture_id
+      join public.qualification_playoff_rounds as round on round.id = fixture.playoff_round_id
+      where round.tournament_id = '${seeded.tournamentId}' and round.round_number = 2;
+    `)).toBe('unstarted:-:1')
   })
 
   it('preserves placement pairs when a qualifying correction cannot change participants', () => {
