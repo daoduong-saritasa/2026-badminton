@@ -8,7 +8,7 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 - Current phase: 2 — done-with-debt
 - Phase 1 — Pairing and playoff-round domain rules: done (PR #26 open)
 - Phase 2 — Database and application cutover: done-with-debt (not pushed)
-- Verification debt: Phase 2 `test:related` integration suites (auth, impacts, pair-assignment, reset, round-robin-phase1, tournament) and the migration `202609220001_pair_assignment.sql` have never run; local Supabase is prohibited. Substitute: typecheck, 133 non-database tests, SQL review, fresh review.
+- Verification debt: Phase 2 `test:related` integration suites (auth, impacts, pair-assignment, reset, round-robin-phase1, tournament) and the migration `202609220001_pair_assignment.sql` have never run; local Supabase is prohibited. Substitute: typecheck, 157 non-database tests in the full suite, build, SQL review, fresh review.
 
 The rules-page work is already merged in `9a0db33`; retain it and review it in Phase 2. Neither remaining phase authorizes production deployment. Phase 2 removes a database contract and its client together; deploy them together before play starts. Reverting code cannot recover deleted lineup data.
 
@@ -95,5 +95,5 @@ Fresh review: required — authorization, persistent-data migration, destructive
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] Run `npm run test` over the accumulated spec; expect prohibited local-Supabase setup failures, record passed/skipped counts and failed suites, and defer the blocked portion with typecheck, non-database tests, and SQL review as substitute evidence.
-- [ ] Run `npm run build` to verify the integrated application and retained standalone rules entry point.
+- [~] Run `npm run test` over the accumulated spec; expect prohibited local-Supabase setup failures, record passed/skipped counts and failed suites, and defer the blocked portion with typecheck, non-database tests, and SQL review as substitute evidence. Exit 1: 14 files and 157 tests passed, 41 skipped; failed in setup ("Local Supabase is unavailable"): `tests/integration/{auth,impacts,pair-assignment,reset,round-robin-phase1,tournament}.test.ts`.
+- [x] Run `npm run build` to verify the integrated application and retained standalone rules entry point. Exit 0 (existing chunk-size warning only).
