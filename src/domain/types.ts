@@ -51,14 +51,29 @@ export interface TeamPlayer extends Player {
   teamId: UUID
 }
 
+export type Pair = {
+  player1Id: UUID
+  player2Id: UUID
+}
+
+export type PairingRule = 'mixed-seed' | 'free'
+
+export interface PairAssignmentIssue {
+  code:
+    | 'unknown-player'
+    | 'wrong-team'
+    | 'duplicate-player'
+    | 'player-playing'
+    | 'same-seed'
+    | 'qualifying-player-reused'
+  overridable: boolean
+}
+
 /**
  * Two teammates playing one match. Seed rules live in validation: declared
  * pairs 1–3 mix seeds, while the playoff pair and substitutions do not.
  */
-export interface LineupPair {
-  player1Id: UUID
-  player2Id: UUID
-}
+export type LineupPair = Pair
 
 export interface Lineup {
   fixtureId: UUID

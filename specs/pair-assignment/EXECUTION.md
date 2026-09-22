@@ -5,8 +5,8 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — Pairing and playoff-round domain rules: pending
+- Current phase: 1 — in-progress
+- Phase 1 — Pairing and playoff-round domain rules: in-progress
 - Phase 2 — Database and application cutover: pending
 - Verification debt: none
 
@@ -26,7 +26,7 @@ Produces: `PlayoffRound = { id: UUID; roundNumber: number; teamIds: UUID[]; fixe
 
 Fresh review: not required
 
-- [ ] Add `Pair`, `PairingRule`, and `PairAssignmentIssue` to `src/domain/types.ts`; keep existing consumers compiling until Phase 2 removes `Lineup` and `LineupPair`.
+- [x] Add `Pair`, `PairingRule`, and `PairAssignmentIssue` to `src/domain/types.ts`; keep existing consumers compiling until Phase 2 removes `Lineup` and `LineupPair`.
 - [ ] Create `src/domain/pair-assignment.ts` with the three exported helpers above: require two teammates; distinguish overridable seed/qualifying-reuse violations from duplicate-player, unknown-player, wrong-team, and playing-player violations; compare qualifying assignments with the other match in that fixture; require mixed seeds only in qualifying and third-place matches 1–2.
 - [ ] Implement `qualifyingPairings` as the two disjoint mixed-seed arrangements for a valid four-player roster; choosing a pair saves only the selected match side, not its complementary pair or the other match.
 - [ ] Create `src/domain/pair-assignment.test.ts` covering both arrangements, repeated arrangements across qualifying fixtures, saved sibling-pair reuse, same-seed exceptions, unrestricted deciders/finals/playoffs, wrong-team players, duplicate players, and players in progress on any court.
