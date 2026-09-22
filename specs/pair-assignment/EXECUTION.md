@@ -5,10 +5,10 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 ## STATUS
 
-- Current phase: 2 — in-progress
+- Current phase: 2 — done-with-debt
 - Phase 1 — Pairing and playoff-round domain rules: done (PR #26 open)
-- Phase 2 — Database and application cutover: in-progress
-- Verification debt: none
+- Phase 2 — Database and application cutover: done-with-debt (not pushed)
+- Verification debt: Phase 2 `test:related` integration suites (auth, impacts, pair-assignment, reset, round-robin-phase1, tournament) and the migration `202609220001_pair_assignment.sql` have never run; local Supabase is prohibited. Substitute: typecheck, 133 non-database tests, SQL review, fresh review.
 
 The rules-page work is already merged in `9a0db33`; retain it and review it in Phase 2. Neither remaining phase authorizes production deployment. Phase 2 removes a database contract and its client together; deploy them together before play starts. Reverting code cannot recover deleted lineup data.
 
@@ -78,8 +78,8 @@ Fresh review: required — authorization, persistent-data migration, destructive
 - [x] `(amended 2026-09-22)` Fresh review: keep a match's court when it completes (`team_confirm_game`, `apply_team_correction`, `team_mark_walkover`, `finish_fixture_if_decided` in `202609220001_pair_assignment.sql`) so progress reset retains courts after real play; cover it through `mark_walkover` in `tests/integration/reset.test.ts`.
 - [x] `(amended 2026-09-22)` Fresh review: reject walkovers and court assignment on fixtures without both teams, and reset a reused playoff slot's match in `private.create_playoff_round`; cover both in `tests/integration/round-robin-phase1.test.ts`.
 **Phase gate (hard):**
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed files>` with changed-file arguments derived from the phase diff; record Supabase setup failures as environment debt with non-database results, typecheck, and SQL review as substitute evidence.
+- [x] Run `npm run typecheck` project-wide.
+- [~] Run `npm run test:related -- <changed files>` with changed-file arguments derived from the phase diff; record Supabase setup failures as environment debt with non-database results, typecheck, and SQL review as substitute evidence. Exit 1: 10 files and 133 tests passed, 41 skipped; the six `tests/integration/*.test.ts` files fail in setup with "Local Supabase is unavailable". Substitute evidence: `npm run typecheck` exit 0, non-database tests passing, SQL review, and a fresh review plus re-review with no remaining findings.
 
 **Review checklist (user, at PR review):**
 - [ ] As referee, assign one side and see it immediately on a public page; save the other side, start, and verify assignments become fixed; same-seed qualifying pairs and qualifying player reuse are rejected.
