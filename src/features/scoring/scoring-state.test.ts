@@ -437,7 +437,9 @@ describe('reduceScoring', () => {
     ['qualifying', { a: 20, b: 19 }, 'a', 'reviewing', { a: 21, b: 19 }],
     ['qualifying', { a: 20, b: 20 }, 'a', 'idle', { a: 21, b: 20 }],
     ['qualifying', { a: 29, b: 29 }, 'b', 'reviewing', { a: 29, b: 30 }],
-    ['third-place', { a: 20, b: 19 }, 'a', 'reviewing', { a: 21, b: 19 }],
+    ['third-place', { a: 14, b: 13 }, 'a', 'reviewing', { a: 15, b: 13 }],
+    ['third-place', { a: 14, b: 14 }, 'a', 'idle', { a: 15, b: 14 }],
+    ['third-place', { a: 20, b: 20 }, 'a', 'reviewing', { a: 21, b: 20 }],
     ['qualification-playoff', { a: 14, b: 14 }, 'a', 'reviewing', { a: 15, b: 14 }],
     ['qualification-playoff', { a: 12, b: 12 }, 'b', 'idle', { a: 12, b: 13 }],
   ] as const)('applies the %s target and cap from %o', (stage, score, side, status, next) => {

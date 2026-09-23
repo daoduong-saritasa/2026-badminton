@@ -76,7 +76,13 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
   const corrected = matchById(after, matchId)
   const fixtures = after.fixtures.filter((fixture) => fixture.stage === 'qualifying' || fixture.stage === 'qualification-playoff')
   const consequences = impactConsequences(impact)
-  const clearedTeamIds = consequences?.clearedPlacementLineups.map(({ teamId }) => teamId) ?? []
+  const clearedPairs = consequences?.clearedPlacementPairs.flatMap(({ matchId: clearedMatchId, side }) => {
+    const match = matchById(before, clearedMatchId)
+    const fixture = before.fixtures.find((candidate) => candidate.id === match?.fixtureId)
+    return match && fixture
+      ? [`${matchLabel(before, match)} · ${teamName(before, sideTeamId(fixture, side))}`]
+      : []
+  }) ?? []
 
   return (
     <div className="max-h-[50dvh] space-y-4 overflow-y-auto pr-1">
@@ -134,14 +140,14 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
         />
       </section>
 
-      {consequences && (consequences.finalistConfirmationRevoked || clearedTeamIds.length > 0) ? (
+      {consequences && (consequences.finalistConfirmationRevoked || clearedPairs.length > 0) ? (
         <section>
           <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.impact.consequencesHeading}</h4>
           <ul className="mt-1.5 space-y-1 text-[0.75rem]">
             {consequences.finalistConfirmationRevoked ? <li>{messages.impact.finalistsRevoked}</li> : null}
-            {clearedTeamIds.length > 0 ? (
-              <li>{messages.impact.lineupsCleared(clearedTeamIds.map((teamId) => teamName(before, teamId)).join(', '))}</li>
-            ) : null}
+            {clearedPairs.map((label) => (
+              <li key={label}>{messages.impact.pairCleared(label)}</li>
+            ))}
           </ul>
         </section>
       ) : null}

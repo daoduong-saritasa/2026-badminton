@@ -9,6 +9,7 @@ import {
   resolvedFinalists,
   type ProgressionState,
 } from './progression'
+import type { PlayoffRound } from './playoff-rounds'
 import type {
   FixtureMatch,
   FixtureStage,
@@ -33,7 +34,7 @@ const tournament: Tournament = {
   version: 1,
   resultRevision: 1,
   finalistsConfirmedAt: null,
-  qualificationDrawWinnerIds: null,
+  currentPlayoffRoundId: null,
 }
 
 function fixture(
@@ -103,13 +104,50 @@ const threeWayTie = [
   ...won(f24, 'b'),
 ]
 
+function round(
+  roundNumber: number,
+  teamIds: string[],
+  fixedFinalistIds: string[],
+  availablePlaces: 1 | 2,
+  fixtures: TeamFixture[],
+): PlayoffRound {
+  return {
+    id: `round-${roundNumber}`,
+    roundNumber,
+    teamIds,
+    fixedFinalistIds,
+    availablePlaces,
+    fixtureIds: fixtures.map(({ id }) => id),
+  }
+}
+
 function state(
   matches: FixtureMatch[],
   fixtures: TeamFixture[] = [...qualifying, third, final],
   overrides: Partial<Tournament> = {},
+  playoffRounds: PlayoffRound[] = [],
 ): ProgressionState {
-  return { tournament: { ...tournament, ...overrides }, teams, fixtures, matches }
+  return { tournament: { ...tournament, ...overrides }, teams, fixtures, matches, playoffRounds }
 }
+
+/** Round 1 of the three-way tie for the last place, and its three fixtures. */
+const p23 = fixture('qualification-playoff', 't2', 't3')
+const p24 = fixture('qualification-playoff', 't2', 't4')
+const p34 = fixture('qualification-playoff', 't3', 't4')
+const firstRound = round(1, ['t2', 't3', 't4'], ['t1'], 1, [p23, p24, p34])
+
+/** Each team wins once by the same margin, so round 1 separates nobody. */
+const cycle = [
+  match(p23, 1, 'a', 'completed', { a: 11, b: 9 }),
+  match(p34, 1, 'a', 'completed', { a: 11, b: 9 }),
+  match(p24, 1, 'b', 'completed', { a: 9, b: 11 }),
+]
+
+/** Round 2 replays the tie; its results alone decide it. */
+const q23 = fixture('qualification-playoff', 't2', 't3', '-r2')
+const q24 = fixture('qualification-playoff', 't2', 't4', '-r2')
+const q34 = fixture('qualification-playoff', 't3', 't4', '-r2')
+const secondRound = round(2, ['t2', 't3', 't4'], ['t1'], 1, [q23, q24, q34])
 
 describe('placementParticipants', () => {
   it('sends the top two to the final and the rest to third place, provisional until confirmed', () => {
@@ -156,38 +194,42 @@ describe('placementParticipants', () => {
     ]
     const playoff = fixture('qualification-playoff', 't2', 't3')
     const fixtures = [...qualifying, playoff, third, final]
+    const rounds = [round(1, ['t2', 't3'], ['t1'], 1, [playoff])]
 
-    expect(placementParticipants(state(matches, fixtures))).toBeNull()
+    expect(placementParticipants(state(matches, fixtures, {}, rounds))).toBeNull()
     expect(
-      placementParticipants(state([...matches, match(playoff, 1, 'b')], fixtures)),
+      placementParticipants(state([...matches, match(playoff, 1, 'b')], fixtures, {}, rounds)),
     ).toMatchObject({ finalTeamIds: ['t1', 't3'], thirdPlaceTeamIds: ['t2', 't4'] })
   })
 
-  it('uses a stored supervised draw only when a three-team playoff stays tied', () => {
-    const p23 = fixture('qualification-playoff', 't2', 't3')
-    const p24 = fixture('qualification-playoff', 't2', 't4')
-    const p34 = fixture('qualification-playoff', 't3', 't4')
-    const fixtures = [...qualifying, p23, p24, p34, third, final]
-    const cycle = [
-      match(p23, 1, 'a', 'completed', { a: 11, b: 9 }),
-      match(p34, 1, 'a', 'completed', { a: 11, b: 9 }),
-      match(p24, 1, 'b', 'completed', { a: 9, b: 11 }),
-    ]
-    const matches = [...threeWayTie, ...cycle]
+  it('waits while a stored round does not match the current results', () => {
+    const playoff = fixture('qualification-playoff', 't2', 't3')
+    const stale = [round(1, ['t2', 't4'], ['t1'], 1, [playoff])]
 
-    expect(placementParticipants(state(matches, fixtures))).toBeNull()
     expect(
-      placementParticipants(state(matches, fixtures, { qualificationDrawWinnerIds: ['t4'] })),
-    ).toMatchObject({ finalTeamIds: ['t1', 't4'], thirdPlaceTeamIds: ['t2', 't3'] })
-    expect(
-      placementParticipants(state(matches, fixtures, { qualificationDrawWinnerIds: ['t1'] })),
+      placementParticipants(state([...threeWayTie, match(playoff, 1, 'a')], [...qualifying, playoff, third, final], {}, stale)),
     ).toBeNull()
   })
 
-  it('advances the three-team playoff leader without a draw', () => {
-    const p23 = fixture('qualification-playoff', 't2', 't3')
-    const p24 = fixture('qualification-playoff', 't2', 't4')
-    const p34 = fixture('qualification-playoff', 't3', 't4')
+  it('plays on when a three-team round stays tied, ranking only the new round', () => {
+    const fixtures = [...qualifying, p23, p24, p34, q23, q24, q34, third, final]
+    const matches = [...threeWayTie, ...cycle]
+
+    expect(placementParticipants(state(matches, fixtures, {}, [firstRound]))).toBeNull()
+    expect(placementParticipants(state(matches, fixtures, {}, [firstRound, secondRound]))).toBeNull()
+
+    // t4 sweeps round 2; round 1 had it level with the others.
+    const replay = [
+      match(q23, 1, 'a', 'completed', { a: 11, b: 9 }),
+      match(q24, 1, 'b', 'completed', { a: 3, b: 11 }),
+      match(q34, 1, 'b', 'completed', { a: 3, b: 11 }),
+    ]
+    expect(
+      placementParticipants(state([...matches, ...replay], fixtures, {}, [firstRound, secondRound])),
+    ).toMatchObject({ finalTeamIds: ['t1', 't4'], thirdPlaceTeamIds: ['t2', 't3'] })
+  })
+
+  it('advances the three-team playoff leader', () => {
     const fixtures = [...qualifying, p23, p24, p34, third, final]
     const matches = [
       ...threeWayTie,
@@ -196,7 +238,7 @@ describe('placementParticipants', () => {
       match(p24, 1, 'a', 'completed', { a: 11, b: 5 }),
     ]
 
-    expect(placementParticipants(state(matches, fixtures))).toMatchObject({
+    expect(placementParticipants(state(matches, fixtures, {}, [firstRound]))).toMatchObject({
       finalTeamIds: ['t1', 't3'],
     })
   })
@@ -208,34 +250,19 @@ describe('resolvedFinalists', () => {
     expect(isQualifyingComplete(state(separated))).toBe(true)
   })
 
-  it('credits finalists to the standings, a playoff, or a supervised draw', () => {
+  it('credits finalists to the standings or a playoff', () => {
     expect(resolvedFinalists(state(separated))).toEqual([
       { teamId: 't1', basis: 'standings' },
       { teamId: 't2', basis: 'standings' },
     ])
 
-    const p23 = fixture('qualification-playoff', 't2', 't3')
-    const p24 = fixture('qualification-playoff', 't2', 't4')
-    const p34 = fixture('qualification-playoff', 't3', 't4')
     const fixtures = [...qualifying, p23, p24, p34, third, final]
-    const cycle = [
-      match(p23, 1, 'a', 'completed', { a: 11, b: 9 }),
-      match(p34, 1, 'a', 'completed', { a: 11, b: 9 }),
-      match(p24, 1, 'b', 'completed', { a: 9, b: 11 }),
-    ]
-    expect(
-      resolvedFinalists(state([...threeWayTie, ...cycle], fixtures, { qualificationDrawWinnerIds: ['t4'] })),
-    ).toEqual([
-      { teamId: 't1', basis: 'standings' },
-      { teamId: 't4', basis: 'draw' },
-    ])
-
     const decisive = [
       match(p23, 1, 'b', 'completed', { a: 5, b: 11 }),
       match(p34, 1, 'a', 'completed', { a: 11, b: 5 }),
       match(p24, 1, 'a', 'completed', { a: 11, b: 5 }),
     ]
-    expect(resolvedFinalists(state([...threeWayTie, ...decisive], fixtures))).toEqual([
+    expect(resolvedFinalists(state([...threeWayTie, ...decisive], fixtures, {}, [firstRound]))).toEqual([
       { teamId: 't1', basis: 'standings' },
       { teamId: 't3', basis: 'playoff' },
     ])
@@ -273,12 +300,33 @@ describe('correctionBlockCode', () => {
     ]
     const playoff = fixture('qualification-playoff', 't2', 't3')
     const fixtures = [...qualifying, playoff, third, final]
+    const rounds = [round(1, ['t2', 't3'], ['t1'], 1, [playoff])]
     const playing = match(playoff, 1, null, 'playing')
     const resolved = [...playoffTie.filter(({ fixtureId }) => fixtureId !== f23.id), ...won(f23, 'a')]
 
     expect(
-      correctionBlockCode(state([...playoffTie, playing], fixtures), [...resolved, playing]),
+      correctionBlockCode(state([...playoffTie, playing], fixtures, {}, rounds), [...resolved, playing]),
     ).toBe('playoff-started')
+  })
+
+  it('blocks a playoff correction that changes a started continuation round', () => {
+    const fixtures = [...qualifying, p23, p24, p34, q23, q24, q34, third, final]
+    const current = [...threeWayTie, ...cycle, match(q23, 1, null, 'playing')]
+    // t2 now beats t4 in round 1, winning it outright and ending the replay.
+    const proposed = [
+      ...threeWayTie,
+      ...cycle.filter(({ fixtureId }) => fixtureId !== p24.id),
+      match(p24, 1, 'a', 'completed', { a: 11, b: 9 }),
+      match(q23, 1, null, 'playing'),
+    ]
+    const rounds = [firstRound, secondRound]
+
+    expect(correctionBlockCode(state(current, fixtures, {}, rounds), proposed)).toBe('playoff-started')
+
+    // Before round 2 starts, the same correction only rebuilds it.
+    const unstarted = [...threeWayTie, ...cycle]
+    const unstartedProposal = proposed.filter(({ fixtureId }) => fixtureId !== q23.id)
+    expect(correctionBlockCode(state(unstarted, fixtures, {}, rounds), unstartedProposal)).toBeNull()
   })
 
   it('blocks changed placement participants after a placement match starts', () => {

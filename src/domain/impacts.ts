@@ -1,5 +1,5 @@
 import { isPlacementStage } from './team-fixtures'
-import type { TournamentSnapshot, UUID } from './types'
+import type { Side, TournamentSnapshot, UUID } from './types'
 
 /** The codes `private.team_correction_block_code()` can return. */
 export const impactBlockCodes = [
@@ -34,17 +34,17 @@ export interface MutationImpact {
   after: TournamentSnapshot | null
 }
 
-export interface ClearedLineup {
-  fixtureId: UUID
-  teamId: UUID
+export interface ClearedPair {
+  matchId: UUID
+  side: Side
 }
 
 /** What an applied correction would undo beyond the match results themselves. */
 export interface ImpactConsequences {
   /** The organizer must confirm the finalists again. */
   finalistConfirmationRevoked: boolean
-  /** Placement lineups the correction deletes; those teams submit fresh ones. */
-  clearedPlacementLineups: ClearedLineup[]
+  /** Saved placement pairs the correction clears; staff assign them again. */
+  clearedPlacementPairs: ClearedPair[]
 }
 
 /**
@@ -63,21 +63,22 @@ export function impactConsequences(impact: MutationImpact): ImpactConsequences |
       .filter((fixture) => isPlacementStage(fixture.stage))
       .map((fixture) => fixture.id),
   )
-  const clearedPlacementLineups = before.lineups
-    .filter(
-      (lineup) =>
-        placementFixtureIds.has(lineup.fixtureId) &&
-        !after.lineups.some(
-          (candidate) =>
-            candidate.fixtureId === lineup.fixtureId && candidate.teamId === lineup.teamId,
-        ),
-    )
-    .map(({ fixtureId, teamId }) => ({ fixtureId, teamId }))
+  const clearedPlacementPairs = before.matches
+    .filter((match) => placementFixtureIds.has(match.fixtureId))
+    .flatMap((match) => {
+      const projected = after.matches.find((candidate) => candidate.id === match.id)
+      return (['a', 'b'] as const)
+        .filter((side) => {
+          const key = side === 'a' ? 'pairA' : 'pairB'
+          return match[key] !== null && (projected?.[key] ?? null) === null
+        })
+        .map((side) => ({ matchId: match.id, side }))
+    })
 
   return {
     finalistConfirmationRevoked:
       before.tournament.finalistsConfirmedAt !== null &&
       after.tournament.finalistsConfirmedAt === null,
-    clearedPlacementLineups,
+    clearedPlacementPairs,
   }
 }

@@ -4,20 +4,21 @@ import {
   CalendarRange,
   CheckCircle2,
   ChevronRight,
-  ClipboardList,
   Flag,
   LayoutDashboard,
   ListChecks,
   Play,
+  Repeat,
   Shuffle,
   Trophy,
   Users,
 } from 'lucide-react'
 
 import { mutateTournament } from '@/data/tournament'
+import type { CommandPayloads } from '@/domain/commands'
+import type { PlayoffRound } from '@/domain/playoff-rounds'
 import { resolvedFinalists, type FinalistBasis } from '@/domain/progression'
-import { validateQualifyingRotation } from '@/domain/roster'
-import { qualificationCutoff, qualifyingStandings, requiredPlayoff, threeTeamPlayoffOutcome } from '@/domain/standings'
+import { qualifyingStandings } from '@/domain/standings'
 import type { Court, FixtureMatch, TournamentSnapshot, UUID } from '@/domain/types'
 import {
   AlertDialog,
@@ -32,22 +33,24 @@ import {
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { PairAssignmentForm } from '@/features/scoring/PairAssignmentForm'
 import {
   fixtureMatches,
-  fixtureLabel,
   fixtureOf,
   isDeciderEligible,
+  isStartable,
   matchLabel,
+  matchPair,
   sideTeamId,
   teamName,
   teamNames,
+  upcomingMatches,
 } from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
 import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
-import { LineupEditor } from './LineupEditor'
 import { ResultEditor } from './ResultEditor'
-import { ResultSchedule, type ResultAction } from './ResultSchedule'
+import { ResultSchedule } from './ResultSchedule'
 import { SetupForm } from './SetupForm'
 
 const courts: readonly Court[] = [1, 2]
@@ -65,11 +68,11 @@ function ResultsSection({
 }) {
   // The match outlives `open` so the dialog keeps its content while it animates
   // closed; `session` remounts the editor so reopening never shows a stale draft.
-  const [editing, setEditing] = useState<{ matchId: UUID; action: ResultAction; session: number } | null>(null)
+  const [editing, setEditing] = useState<{ matchId: UUID; session: number } | null>(null)
   const [open, setOpen] = useState(false)
 
-  const select = (matchId: UUID, action: ResultAction) => {
-    setEditing((previous) => ({ matchId, action, session: (previous?.session ?? 0) + 1 }))
+  const select = (matchId: UUID) => {
+    setEditing((previous) => ({ matchId, session: (previous?.session ?? 0) + 1 }))
     setOpen(true)
   }
 
@@ -84,7 +87,6 @@ function ResultsSection({
               snapshot={snapshot}
               resetGeneration={resetGeneration}
               matchId={editing.matchId}
-              action={editing.action}
               onClose={() => setOpen(false)}
             />
           ) : null}
@@ -125,9 +127,11 @@ function teams(snapshot: TournamentSnapshot, match: FixtureMatch): string {
 }
 
 function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot: TournamentSnapshot; resetGeneration: number; onStartScoring: () => void }) {
-  const waiting = snapshot.matches.filter((match) =>
-    match.state === 'unstarted' && match.pairA !== null && isDeciderEligible(snapshot, match))
+  const waiting = upcomingMatches(snapshot)
   const [drafts, setDrafts] = useState<Record<UUID, Court>>({})
+  // The match outlives `assignOpen` so the dialog keeps its content while closing.
+  const [assignMatchId, setAssignMatchId] = useState<UUID | null>(null)
+  const [assignOpen, setAssignOpen] = useState(false)
   const [confirmAssignments, setConfirmAssignments] = useState(false)
   const [startMatchId, setStartMatchId] = useState<UUID | null>(null)
   const assignments = waiting.flatMap((match) => {
@@ -173,23 +177,31 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
       {waiting.length > 0 ? (
         <div
           aria-hidden="true"
-          className="mt-6 mb-2 hidden gap-2.5 px-[0.9375rem] text-[0.625rem] text-muted-ink md:grid md:grid-cols-[minmax(0,1fr)_9rem_6.5rem]"
+          className="mt-6 mb-2 hidden gap-2.5 px-[0.9375rem] text-[0.625rem] text-muted-ink md:grid md:grid-cols-[minmax(0,1fr)_9rem_7rem_6.5rem]"
         >
           <span>{messages.organizer.schedule.match}</span>
           <span>{messages.organizer.schedule.court}</span>
+          <span />
           <span />
         </div>
       ) : null}
       <div className="space-y-3">
         {waiting.map((match) => {
           const court = drafts[match.id] ?? match.court
+          const fixture = fixtureOf(snapshot, match)
+          const pendingSides = (['a', 'b'] as const).filter((side) => matchPair(match, side) === null)
           return (
-            <div className="grid gap-2.5 rounded-field border border-hairline p-3.5 md:grid-cols-[minmax(0,1fr)_9rem_6.5rem] md:items-center" key={match.id}>
+            <div className="grid gap-2.5 rounded-field border border-hairline p-3.5 md:grid-cols-[minmax(0,1fr)_9rem_7rem_6.5rem] md:items-center" key={match.id}>
               <span className="flex min-w-0 flex-wrap items-center gap-2.5">
                 <span className="shrink-0 rounded-pill bg-well px-2 py-0.5 text-[0.625rem] font-semibold text-muted-ink">
                   {matchLabel(snapshot, match)}
                 </span>
                 <span className="min-w-0 [overflow-wrap:anywhere] text-[0.8125rem] font-medium">{teams(snapshot, match)}</span>
+                {pendingSides.length > 0 ? (
+                  <span className="basis-full text-[0.6875rem] text-muted-ink">
+                    {pendingSides.map((side) => messages.pairAssignment.sidePending(teamName(snapshot, sideTeamId(fixture, side)))).join(' · ')}
+                  </span>
+                ) : null}
               </span>
               <Select
                 value={court === null ? '' : String(court)}
@@ -202,7 +214,10 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
                   {courts.map((option) => <SelectItem value={String(option)} key={option}>{messages.common.court(option)}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Button variant="outline" className="w-full" disabled={match.court === null || startMutation.isPending} onClick={() => setStartMatchId(match.id)}>
+              <Button variant="outline" className="w-full" onClick={() => { setAssignMatchId(match.id); setAssignOpen(true) }}>
+                <Users /> {messages.pairAssignment.open}
+              </Button>
+              <Button variant="outline" className="w-full" disabled={!isStartable(match) || startMutation.isPending} onClick={() => setStartMatchId(match.id)}>
                 <Play /> {messages.organizer.schedule.startShort}
               </Button>
             </div>
@@ -218,6 +233,13 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
       {assignmentMutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{errorMessage(assignmentMutation.error)}</p> : null}
       {startMutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{errorMessage(startMutation.error)}</p> : null}
 
+      <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
+          {assignMatchId ? (
+            <PairAssignmentForm snapshot={snapshot} matchId={assignMatchId} role="organizer" resetGeneration={resetGeneration} />
+          ) : null}
+        </DialogContent>
+      </Dialog>
       <AlertDialog open={confirmAssignments} onOpenChange={setConfirmAssignments}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -252,15 +274,9 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
 
 function StartQualifying({ snapshot, resetGeneration }: { snapshot: TournamentSnapshot; resetGeneration: number }) {
   const [confirmOpen, setConfirmOpen] = useState(false)
-  const qualifyingFixtureIds = new Set(snapshot.fixtures.filter((fixture) => fixture.stage === 'qualifying').map((fixture) => fixture.id))
-  const qualifyingLineups = snapshot.lineups.filter((lineup) => qualifyingFixtureIds.has(lineup.fixtureId))
-  // The rotation is checked once, against the declared lineups, when they lock.
-  const rotationTeamIds = qualifyingLineups.length === 12
-    ? validateQualifyingRotation(qualifyingLineups, snapshot.players).map((issue) => issue.teamId)
-    : []
-  const ready = qualifyingFixtureIds.size === 6
-    && qualifyingLineups.filter((lineup) => lineup.confirmedAt !== null).length === 12
-    && rotationTeamIds.length === 0
+  const ready = snapshot.fixtures.filter((fixture) => fixture.stage === 'qualifying').length === 6
+    && snapshot.teams.length === 4
+    && snapshot.players.length === 16
   const mutation = useMutation({
     mutationFn: () => mutateTournament('start_qualifying', {
       requestId: crypto.randomUUID(),
@@ -275,11 +291,6 @@ function StartQualifying({ snapshot, resetGeneration }: { snapshot: TournamentSn
     <section className="rounded-card bg-navy p-6 text-white shadow-final">
       <h3 className="text-sm font-semibold">{messages.organizer.qualifying.heading}</h3>
       <p className="mt-1.5 text-[0.6875rem] text-navy-soft">{messages.organizer.qualifying.description}</p>
-      {rotationTeamIds.length > 0 ? (
-        <p className="mt-2 text-[0.6875rem] font-semibold text-white" role="alert">
-          {messages.organizer.qualifying.rotationMissing(teamNames(snapshot, rotationTeamIds))}
-        </p>
-      ) : null}
       <Button className="mt-4 bg-white text-navy hover:bg-navy-soft" disabled={!ready || mutation.isPending} onClick={() => setConfirmOpen(true)}>
         <Flag /> {messages.organizer.qualifying.review}
       </Button>
@@ -360,48 +371,36 @@ function FinalistConfirmation({ snapshot, resetGeneration }: { snapshot: Tournam
   )
 }
 
-type DrawPayload =
-  | { matchups: Array<{ fixtureId: UUID; teamAId: UUID; teamBId: UUID }> }
-  | { advancingTeamIds: UUID[] }
+type DrawPayload = CommandPayloads['record_draw']
+
+/** The current playoff round, or null when qualification needs none. */
+function currentRound(snapshot: TournamentSnapshot): PlayoffRound | null {
+  return snapshot.playoffRounds.find((round) => round.id === snapshot.tournament.currentPlayoffRoundId) ?? null
+}
 
 /**
- * What the organizer can draw now: the two matchups of a four-team tie while
- * no playoff match is being played (re-drawing discards played results), or
- * the teams a finished three-team playoff left tied. Null when no draw decides
- * anything.
+ * The two matchups of a four-team playoff round, while none of its matches is
+ * being played and placement play has not started. Re-drawing discards played
+ * results. Null when no draw decides anything; advancement is never drawn.
  */
 function drawNeeded(snapshot: TournamentSnapshot) {
   const placementStarted = snapshot.fixtures
     .filter((fixture) => fixture.stage === 'third-place' || fixture.stage === 'final')
     .some((fixture) => fixtureMatches(snapshot, fixture.id).some((match) => match.state !== 'unstarted'))
-  const playoffs = snapshot.fixtures.filter((fixture) => fixture.stage === 'qualification-playoff')
-  const playoffMatches = playoffs.flatMap((fixture) => fixtureMatches(snapshot, fixture.id))
-  const standings = qualifyingStandings(snapshot.fixtures, snapshot.matches, snapshot.teams)
-  const playoff = requiredPlayoff(standings)
-  if (placementStarted || !playoff) return null
-
-  if (playoff.format === 'four-team' && playoffs.length === 2 && playoffMatches.every((match) => match.state !== 'playing')) {
-    return {
-      kind: 'matchups' as const,
-      tiedTeamIds: playoff.tiedTeamIds,
-      fixtureIds: playoffs.map((fixture) => fixture.id),
-      discardsResults: playoffMatches.some((match) => match.state === 'completed'),
-    }
+  const round = currentRound(snapshot)
+  if (placementStarted || !round || round.teamIds.length !== 4 || round.fixtureIds.length !== 2) return null
+  const roundMatches = round.fixtureIds.flatMap((fixtureId) => fixtureMatches(snapshot, fixtureId))
+  if (roundMatches.some((match) => match.state === 'playing')) return null
+  return {
+    tiedTeamIds: round.teamIds,
+    fixtureIds: round.fixtureIds,
+    discardsResults: roundMatches.some((match) => match.state === 'completed'),
   }
-  const cutoff = qualificationCutoff(standings)
-  if (playoff.format === 'three-team' && cutoff && playoffMatches.length === 3 && playoffMatches.every((match) => match.state === 'completed')) {
-    const outcome = threeTeamPlayoffOutcome(playoffs, snapshot.matches, cutoff.tiedTeamIds, cutoff.availablePlaces)
-    if (outcome && outcome.drawSlots > 0) {
-      return { kind: 'advancement' as const, candidateIds: outcome.drawCandidateIds, slots: outcome.drawSlots }
-    }
-  }
-  return null
 }
 
 function DrawRecording({ snapshot, resetGeneration }: { snapshot: TournamentSnapshot; resetGeneration: number }) {
   const needed = drawNeeded(snapshot)
   const [opponentId, setOpponentId] = useState<UUID | ''>('')
-  const [chosen, setChosen] = useState<UUID[]>([])
   const [confirmOpen, setConfirmOpen] = useState(false)
   const mutation = useMutation({
     mutationFn: (payload: DrawPayload) => mutateTournament('record_draw', {
@@ -416,73 +415,43 @@ function DrawRecording({ snapshot, resetGeneration }: { snapshot: TournamentSnap
 
   let payload: DrawPayload | null = null
   let summary = ''
-  let form: React.ReactNode
-  if (needed.kind === 'matchups') {
-    const [anchorId, ...others] = needed.tiedTeamIds
-    const rest = others.filter((teamId) => teamId !== opponentId)
-    if (anchorId && opponentId && rest.length === 2 && needed.fixtureIds.length === 2) {
-      payload = {
-        matchups: [
-          { fixtureId: needed.fixtureIds[0], teamAId: anchorId, teamBId: opponentId },
-          { fixtureId: needed.fixtureIds[1], teamAId: rest[0], teamBId: rest[1] },
-        ],
-      }
-      summary = [[anchorId, opponentId], rest]
-        .map(([a, b]) => messages.common.versus(teamName(snapshot, a), teamName(snapshot, b)))
-        .join(' · ')
+  const [anchorId, ...others] = needed.tiedTeamIds
+  const rest = others.filter((teamId) => teamId !== opponentId)
+  if (anchorId && opponentId && rest.length === 2 && needed.fixtureIds.length === 2) {
+    payload = {
+      matchups: [
+        { fixtureId: needed.fixtureIds[0], teamAId: anchorId, teamBId: opponentId },
+        { fixtureId: needed.fixtureIds[1], teamAId: rest[0], teamBId: rest[1] },
+      ],
     }
-    form = (
-      <div className="mt-4 space-y-2">
-        <Select value={opponentId} onValueChange={(value) => setOpponentId(value)}>
-          <SelectTrigger className="w-full" aria-label={messages.organizer.draw.opponentOf(teamName(snapshot, anchorId ?? null))}>
-            <SelectValue placeholder={messages.organizer.draw.opponentOf(teamName(snapshot, anchorId ?? null))} />
-          </SelectTrigger>
-          <SelectContent>
-            {others.map((teamId) => <SelectItem value={teamId} key={teamId}>{teamName(snapshot, teamId)}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        {rest.length === 2 && opponentId ? (
-          <p className="text-[0.6875rem] text-muted-ink">
-            {messages.organizer.draw.otherMatchup(messages.common.versus(teamName(snapshot, rest[0]), teamName(snapshot, rest[1])))}
-          </p>
-        ) : null}
-      </div>
-    )
-  } else {
-    if (chosen.length === needed.slots) {
-      payload = { advancingTeamIds: chosen }
-      summary = teamNames(snapshot, chosen)
-    }
-    const toggle = (teamId: UUID) => setChosen((current) => current.includes(teamId)
-      ? current.filter((id) => id !== teamId)
-      : [...current, teamId].slice(-needed.slots))
-    form = (
-      <div className="mt-4 flex flex-wrap gap-2">
-        {needed.candidateIds.map((teamId) => (
-          <Button
-            key={teamId}
-            size="sm"
-            variant={chosen.includes(teamId) ? 'default' : 'outline'}
-            aria-pressed={chosen.includes(teamId)}
-            onClick={() => toggle(teamId)}
-          >
-            {teamName(snapshot, teamId)}
-          </Button>
-        ))}
-      </div>
-    )
+    summary = [[anchorId, opponentId], rest]
+      .map(([a, b]) => messages.common.versus(teamName(snapshot, a), teamName(snapshot, b)))
+      .join(' · ')
   }
+  const form = (
+    <div className="mt-4 space-y-2">
+      <Select value={opponentId} onValueChange={(value) => setOpponentId(value)}>
+        <SelectTrigger className="w-full" aria-label={messages.organizer.draw.opponentOf(teamName(snapshot, anchorId ?? null))}>
+          <SelectValue placeholder={messages.organizer.draw.opponentOf(teamName(snapshot, anchorId ?? null))} />
+        </SelectTrigger>
+        <SelectContent>
+          {others.map((teamId) => <SelectItem value={teamId} key={teamId}>{teamName(snapshot, teamId)}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      {rest.length === 2 && opponentId ? (
+        <p className="text-[0.6875rem] text-muted-ink">
+          {messages.organizer.draw.otherMatchup(messages.common.versus(teamName(snapshot, rest[0]), teamName(snapshot, rest[1])))}
+        </p>
+      ) : null}
+    </div>
+  )
 
   return (
     <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h3 className="text-sm font-semibold">
-            {needed.kind === 'matchups' ? messages.organizer.draw.matchupHeading : messages.organizer.draw.advancementHeading}
-          </h3>
-          <p className="mt-1.5 text-[0.6875rem]/[1.6] text-muted-ink">
-            {needed.kind === 'matchups' ? messages.organizer.draw.matchupDescription : messages.organizer.draw.advancementDescription(needed.slots)}
-          </p>
+          <h3 className="text-sm font-semibold">{messages.organizer.draw.matchupHeading}</h3>
+          <p className="mt-1.5 text-[0.6875rem]/[1.6] text-muted-ink">{messages.organizer.draw.matchupDescription}</p>
         </div>
         <Shuffle className="size-5 text-muted-ink" />
       </div>
@@ -497,7 +466,7 @@ function DrawRecording({ snapshot, resetGeneration }: { snapshot: TournamentSnap
             <AlertDialogTitle>{messages.organizer.draw.title}</AlertDialogTitle>
             <AlertDialogDescription>
               {messages.organizer.draw.recorded(summary)} {messages.organizer.draw.body}
-              {needed.kind === 'matchups' && needed.discardsResults ? ` ${messages.organizer.draw.discardsResults}` : ''}
+              {needed.discardsResults ? ` ${messages.organizer.draw.discardsResults}` : ''}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
@@ -512,109 +481,58 @@ function DrawRecording({ snapshot, resetGeneration }: { snapshot: TournamentSnap
   )
 }
 
-type OrganizerSection = 'overview' | 'teams' | 'lineups' | 'matches' | 'results'
-
-function LineupsWorkspace({
-  snapshot,
-  fixtures,
-  resetGeneration,
-}: {
-  snapshot: TournamentSnapshot
-  fixtures: TournamentSnapshot['fixtures']
-  resetGeneration: number
-}) {
-  const [selectedFixtureId, setSelectedFixtureId] = useState<UUID | null>(null)
-  const selectedFixture = fixtures.find((fixture) => fixture.id === selectedFixtureId)
-  if (selectedFixture) {
-    return (
-      <div className="space-y-4">
-        <Button variant="ghost" className="-ml-3 text-muted-ink" onClick={() => setSelectedFixtureId(null)}>
-          {messages.organizer.lineupsWorkspace.back}
-        </Button>
-        <LineupEditor
-          key={`lineup-${resetGeneration}-${selectedFixture.id}`}
-          snapshot={snapshot}
-          fixture={selectedFixture}
-          resetGeneration={resetGeneration}
-        />
-      </div>
-    )
-  }
-
+/**
+ * Where qualification playoffs stand. A continuation round says why the tied
+ * teams play on; there is nothing to draw.
+ */
+function PlayoffRoundStatus({ snapshot }: { snapshot: TournamentSnapshot }) {
+  const round = currentRound(snapshot)
+  if (!round || resolvedFinalists(snapshot)) return null
   return (
-    <section className="rounded-card border border-ink/5 bg-white p-5 shadow-card sm:p-6">
-      <h3 className="text-base font-semibold">{messages.organizer.lineupsWorkspace.heading}</h3>
-      <p className="mt-1.5 max-w-2xl text-sm/[1.6] text-muted-ink">{messages.organizer.lineupsWorkspace.description}</p>
-      <ul className="mt-5 divide-y divide-hairline">
-        {fixtures.map((fixture) => {
-          const fixtureLineups = snapshot.lineups.filter((lineup) => lineup.fixtureId === fixture.id)
-          const confirmed = fixtureLineups.filter((lineup) => lineup.confirmedAt !== null).length
-          const started = fixtureMatches(snapshot, fixture.id).some((match) => match.state !== 'unstarted')
-          const teamsKnown = fixture.teamAId !== null && fixture.teamBId !== null
-          const status = !teamsKnown
-            ? messages.organizer.lineupsWorkspace.awaitingTeams
-            : started
-              ? messages.organizer.lineupsWorkspace.locked
-              : confirmed > 0
-                ? messages.organizer.lineupsWorkspace.confirmed(confirmed)
-                : fixtureLineups.length > 0
-                  ? messages.organizer.lineupsWorkspace.saved(fixtureLineups.length)
-                  : messages.organizer.lineupsWorkspace.notStarted
-          return (
-            <li key={fixture.id}>
-              <button
-                type="button"
-                className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-4 py-4 text-left"
-                onClick={() => setSelectedFixtureId(fixture.id)}
-              >
-                <span className="min-w-0">
-                  <span className="block text-sm font-semibold">{fixtureLabel(fixture)}</span>
-                  <span className="mt-1 block truncate text-xs text-muted-ink">
-                    {messages.common.versus(teamName(snapshot, fixture.teamAId), teamName(snapshot, fixture.teamBId))}
-                  </span>
-                </span>
-                <span className="flex items-center gap-2 text-xs font-medium text-muted-ink">
-                  {status}<ChevronRight className="size-4" aria-hidden="true" />
-                </span>
-              </button>
-            </li>
-          )
-        })}
-      </ul>
+    <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h3 className="text-sm font-semibold">{messages.organizer.playoffRound.heading(round.roundNumber)}</h3>
+          <p className="mt-1.5 text-[0.6875rem]/[1.6] text-muted-ink">
+            {round.roundNumber > 1
+              ? messages.organizer.playoffRound.playOn(teamNames(snapshot, round.teamIds), round.availablePlaces)
+              : messages.organizer.playoffRound.inProgress(teamNames(snapshot, round.teamIds), round.availablePlaces)}
+          </p>
+          {round.fixedFinalistIds.length > 0 ? (
+            <p className="mt-1 text-[0.6875rem]/[1.6] text-muted-ink">
+              {messages.organizer.playoffRound.qualified(teamNames(snapshot, round.fixedFinalistIds))}
+            </p>
+          ) : null}
+        </div>
+        <Repeat className="size-5 text-muted-ink" />
+      </div>
     </section>
   )
 }
 
+type OrganizerSection = 'overview' | 'teams' | 'matches' | 'results'
+
 function OrganizerOverview({
   snapshot,
   resetGeneration,
-  lineupFixtures,
   onNavigate,
 }: {
   snapshot: TournamentSnapshot
   resetGeneration: number
-  lineupFixtures: TournamentSnapshot['fixtures']
   onNavigate: (section: OrganizerSection) => void
 }) {
   const inSetup = snapshot.tournament.stage === 'setup'
-  const expectedLineups = lineupFixtures.reduce((total, fixture) =>
-    total + Number(fixture.teamAId !== null) + Number(fixture.teamBId !== null), 0)
-  const confirmedLineups = snapshot.lineups.filter((lineup) =>
-    lineup.confirmedAt !== null && lineupFixtures.some((fixture) => fixture.id === lineup.fixtureId)).length
   const eligibleMatches = snapshot.matches.filter((match) => isDeciderEligible(snapshot, match))
   const scheduledMatches = eligibleMatches.filter((match) => match.court !== null).length
   const completedMatches = eligibleMatches.filter((match) => match.state === 'completed').length
   const teamsReady = snapshot.teams.length === 4 && snapshot.players.length === 16
   const next = !teamsReady
     ? { section: 'teams' as const, text: messages.organizer.overview.setupTeams }
-    : confirmedLineups < expectedLineups
-      ? { section: 'lineups' as const, text: messages.organizer.overview.setupLineups }
-      : inSetup
-        ? { section: null, text: messages.organizer.overview.readyToStart }
-        : { section: 'matches' as const, text: messages.organizer.overview.manageMatches }
+    : inSetup
+      ? { section: null, text: messages.organizer.overview.readyToStart }
+      : { section: 'matches' as const, text: messages.organizer.overview.manageMatches }
   const metrics = [
     { label: messages.organizer.overview.teams, value: `${snapshot.teams.length}/4`, section: 'teams' as const, icon: Users },
-    { label: messages.organizer.overview.lineups, value: `${confirmedLineups}/${expectedLineups}`, section: 'lineups' as const, icon: ClipboardList },
     ...(!inSetup ? [
       { label: messages.organizer.overview.scheduled, value: String(scheduledMatches), section: 'matches' as const, icon: ListChecks },
       { label: messages.organizer.overview.completed, value: String(completedMatches), section: 'results' as const, icon: Trophy },
@@ -654,6 +572,7 @@ function OrganizerOverview({
       </div>
 
       {inSetup && snapshot.fixtures.length > 0 ? <StartQualifying snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
+      {!inSetup ? <PlayoffRoundStatus snapshot={snapshot} /> : null}
       {!inSetup ? <DrawRecording key={`draw-${resetGeneration}-${snapshot.tournament.resultRevision}`} snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
       {!inSetup ? <FinalistConfirmation snapshot={snapshot} resetGeneration={resetGeneration} /> : null}
     </div>
@@ -664,13 +583,9 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
   const [selectedSection, setSelectedSection] = useState<OrganizerSection>('overview')
   const inSetup = snapshot.tournament.stage === 'setup'
   const section = inSetup && (selectedSection === 'matches' || selectedSection === 'results') ? 'overview' : selectedSection
-  const lineupFixtures = snapshot.fixtures.filter((fixture) =>
-    fixture.stage !== 'qualification-playoff'
-    && (fixture.stage === 'qualifying' || fixture.teamAId !== null))
   const navigation = [
     { value: 'overview' as const, label: messages.organizer.navigation.overview, icon: LayoutDashboard },
     { value: 'teams' as const, label: messages.organizer.navigation.teams, icon: Users },
-    { value: 'lineups' as const, label: messages.organizer.navigation.lineups, icon: ClipboardList },
     ...(!inSetup ? [
       { value: 'matches' as const, label: messages.organizer.navigation.matches, icon: CalendarRange },
       { value: 'results' as const, label: messages.organizer.navigation.results, icon: Trophy },
@@ -680,13 +595,10 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
   let content: React.ReactNode
   switch (section) {
     case 'overview':
-      content = <OrganizerOverview snapshot={snapshot} resetGeneration={resetGeneration} lineupFixtures={lineupFixtures} onNavigate={setSelectedSection} />
+      content = <OrganizerOverview snapshot={snapshot} resetGeneration={resetGeneration} onNavigate={setSelectedSection} />
       break
     case 'teams':
       content = <SetupForm key={`setup-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} />
-      break
-    case 'lineups':
-      content = <LineupsWorkspace snapshot={snapshot} fixtures={lineupFixtures} resetGeneration={resetGeneration} />
       break
     case 'matches':
       content = <CourtSchedule snapshot={snapshot} resetGeneration={resetGeneration} onStartScoring={onStartScoring} />

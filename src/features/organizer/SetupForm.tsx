@@ -96,7 +96,8 @@ export function SetupForm({ snapshot, resetGeneration }: { snapshot: TournamentS
   const [attemptedSubmit, setAttemptedSubmit] = useState(false)
   const [confirmationOpen, setConfirmationOpen] = useState(false)
   const locked = snapshot !== null && snapshot.tournament.stage !== 'setup'
-  const hasLineups = (snapshot?.lineups.length ?? 0) > 0
+  // Saving rebuilds every fixture, so retained matches and courts are lost.
+  const hasSchedule = (snapshot?.matches.length ?? 0) > 0
   const issues = rosterIssues(roster)
 
   const saveMutation = useMutation({
@@ -134,7 +135,7 @@ export function SetupForm({ snapshot, resetGeneration }: { snapshot: TournamentS
     event.preventDefault()
     setAttemptedSubmit(true)
     if (issues.length > 0 || locked) return
-    if (hasLineups) setConfirmationOpen(true)
+    if (hasSchedule) setConfirmationOpen(true)
     else saveMutation.mutate()
   }
 

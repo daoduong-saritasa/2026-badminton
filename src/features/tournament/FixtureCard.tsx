@@ -88,7 +88,7 @@ export function FixtureCard({
                 <span className={final ? 'text-navy-soft' : 'text-muted-ink'}>{matchResultText(snapshot, match)}</span>
               </span>
               <span className={cn('[overflow-wrap:anywhere]', final ? 'text-white/65' : 'text-muted-ink')}>
-                {messages.common.versus(pairPlayers(snapshot, matchPair(snapshot, match, 'a')), pairPlayers(snapshot, matchPair(snapshot, match, 'b')))}
+                {messages.common.versus(pairPlayers(snapshot, matchPair(match, 'a')), pairPlayers(snapshot, matchPair(match, 'b')))}
               </span>
             </li>
           ))}

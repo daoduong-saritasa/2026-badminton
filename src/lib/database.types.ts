@@ -1,5 +1,5 @@
-// Schema-derived fallback maintained while the local Supabase container is unavailable.
-// Regenerate from the running local schema before clearing the verification debt.
+// Maintained by hand from supabase/migrations; the local Supabase stack is not
+// used in this project, so this file is never generated.
 
 export type Json =
   | string
@@ -34,7 +34,7 @@ export type Database = {
           finalists_confirmed_at: string | null
           id: string
           name: string
-          qualification_draw_winner_ids: string[] | null
+          current_playoff_round_id: string | null
           result_revision: number
           setup_locked_at: string | null
           singleton: boolean
@@ -47,7 +47,7 @@ export type Database = {
           finalists_confirmed_at?: string | null
           id?: string
           name: string
-          qualification_draw_winner_ids?: string[] | null
+          current_playoff_round_id?: string | null
           result_revision?: number
           setup_locked_at?: string | null
           singleton?: boolean
@@ -60,7 +60,7 @@ export type Database = {
           finalists_confirmed_at?: string | null
           id?: string
           name?: string
-          qualification_draw_winner_ids?: string[] | null
+          current_playoff_round_id?: string | null
           result_revision?: number
           setup_locked_at?: string | null
           singleton?: boolean
@@ -107,6 +107,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          playoff_round_id: string | null
           stage: FixtureStage
           team_a_id: string | null
           team_b_id: string | null
@@ -117,6 +118,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          playoff_round_id?: string | null
           stage: FixtureStage
           team_a_id?: string | null
           team_b_id?: string | null
@@ -127,12 +129,43 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          playoff_round_id?: string | null
           stage?: FixtureStage
           team_a_id?: string | null
           team_b_id?: string | null
           tournament_id?: string
           updated_at?: string
           version?: number
+        }
+        Relationships: []
+      }
+      qualification_playoff_rounds: {
+        Row: {
+          available_places: number
+          created_at: string
+          fixed_finalist_ids: string[]
+          id: string
+          round_number: number
+          team_ids: string[]
+          tournament_id: string
+        }
+        Insert: {
+          available_places: number
+          created_at?: string
+          fixed_finalist_ids?: string[]
+          id?: string
+          round_number: number
+          team_ids: string[]
+          tournament_id: string
+        }
+        Update: {
+          available_places?: number
+          created_at?: string
+          fixed_finalist_ids?: string[]
+          id?: string
+          round_number?: number
+          team_ids?: string[]
+          tournament_id?: string
         }
         Relationships: []
       }
@@ -225,9 +258,9 @@ export type Database = {
     Functions: {
       add_point: MutationFunction
       assign_courts: MutationFunction
+      assign_pair: MutationFunction
       confirm_game: MutationFunction
       confirm_finalists: MutationFunction
-      confirm_lineup: MutationFunction
       correct_result: MutationFunction
       exchange_staff_pin: {
         Args: { p_bucket: string; p_pin: string; p_session_id: string; p_user_id: string }
@@ -246,7 +279,6 @@ export type Database = {
       mark_walkover: MutationFunction
       preview_result_correction: MutationFunction
       record_draw: MutationFunction
-      reopen_lineups: MutationFunction
       revoke_staff_access: { Args: Record<PropertyKey, never>; Returns: undefined }
       rotate_staff_pin_for_session: {
         Args: {
@@ -257,7 +289,6 @@ export type Database = {
         }
         Returns: Json
       }
-      save_lineup: MutationFunction
       save_roster: MutationFunction
       set_reset_enabled: { Args: { p_enabled: boolean }; Returns: undefined }
       reset_tournament: {
@@ -274,7 +305,6 @@ export type Database = {
       start_qualifying: MutationFunction
       start_group_play: MutationFunction
       start_match: MutationFunction
-      substitute_players: MutationFunction
       take_over: MutationFunction
       undo_point: MutationFunction
     }

@@ -24,23 +24,17 @@ const serverMessages: Record<string, string> = {
   'Invalid player': 'Có người chơi không hợp lệ.',
   'Roster is locked after qualifying starts': 'Không thể sửa danh sách đội sau khi vòng loại bắt đầu.',
 
-  // Lineups and qualifying
-  'Lineup cannot be changed':
-    'Không thể sửa đội hình này. Cuộc đối đầu đã bắt đầu hoặc đã có đội xác nhận; hãy mở lại đội hình nếu cần sửa.',
-  'Lineup players must be distinct teammates': 'Mỗi cặp phải gồm hai người chơi khác nhau của đội này.',
-  'Declared match pairs must mix seeds': 'Cặp của trận 1, 2 và 3 phải gồm một hạt giống 1 và một hạt giống 2.',
-  'A team must declare one consistent playoff pair': 'Cặp tranh vé của một đội phải giống nhau ở cả ba cuộc đối đầu vòng loại.',
-  'Placement lineups require confirmed finalists': 'Đội hình tranh hạng chỉ mở sau khi đội vào chung kết được xác nhận.',
-  'Decider pair must differ from both opening pairs': 'Cặp trận 3 phải khác cặp trận 1 và trận 2.',
-  'Opening pairs must use all four players exactly once': 'Trận 1 và trận 2 phải dùng đủ bốn người chơi, mỗi người một lần.',
-  'A complete four-pair lineup is required': 'Cần lưu đủ bốn cặp trước khi xác nhận đội hình.',
-  'Lineups are locked after a fixture starts': 'Không thể mở lại đội hình sau khi cuộc đối đầu đã bắt đầu.',
-  'Both lineups must be confirmed': 'Cả hai đội cần xác nhận đội hình.',
-  'Both four-pair lineups must be confirmed': 'Cả hai đội cần xác nhận đủ bốn cặp.',
-  'Both predeclared playoff pairs must be confirmed': 'Cả hai đội cần có cặp tranh vé đã xác nhận.',
+  // Pair assignment and qualifying
+  'Invalid pair assignment': 'Thông tin xếp cặp không hợp lệ.',
+  'Pairs are fixed after the match starts': 'Trận đã bắt đầu nên cặp không đổi được.',
+  'Pair assignment is not open for this match':
+    'Chưa xếp cặp được cho trận này. Trận tranh hạng chỉ mở sau khi đội vào chung kết được xác nhận.',
+  'A pair requires two distinct players': 'Một cặp phải gồm hai người khác nhau.',
+  'Pair players must belong to the team': 'Người chơi phải thuộc đội này.',
+  'Pair must mix seeds': 'Trận này cần một hạt giống 1 và một hạt giống 2.',
+  'Player already plays in this fixture': 'Có người đã được xếp ở trận còn lại của cuộc đối đầu.',
   'Fixture participants are not assigned': 'Cuộc đối đầu chưa xác định đủ hai đội.',
-  'All qualifying lineups and playoff pairs must be confirmed':
-    'Cần đủ mười hai đội hình vòng loại và cặp tranh vé đã xác nhận.',
+  'Qualifying requires four complete teams': 'Cần đủ bốn đội, mỗi đội bốn người, trước khi bắt đầu vòng loại.',
 
   // Qualification
   'Finalists are not resolved': 'Chưa xác định được đội vào chung kết.',
@@ -49,22 +43,13 @@ const serverMessages: Record<string, string> = {
   'A four-team draw requires two complete matchups': 'Bốc thăm bốn đội cần đủ hai cặp đấu.',
   'Qualification-playoff matchups do not match the unresolved tie':
     'Các cặp đấu không khớp với nhóm đội đang bằng nhau.',
-  'Advancement draw requires a completed three-team playoff': 'Chỉ bốc thăm đội đi tiếp sau khi trận tranh vé ba đội kết thúc.',
-  'Advancement draw does not match the unresolved playoff tie':
-    'Đội được chọn không khớp với nhóm đội còn bằng nhau sau trận tranh vé.',
   'Draws are locked after placement play starts': 'Không thể đổi kết quả bốc thăm sau khi tranh hạng bắt đầu.',
-
-  // Substitution
-  'Only an unstarted match can be substituted': 'Chỉ thay người được cho trận chưa bắt đầu.',
-  'Substitution requires two distinct players': 'Hai người chơi phải khác nhau.',
-  'Substitutes must belong to the fixture team': 'Người thay phải thuộc đội đang thi đấu.',
-  'A substitute is already playing': 'Người thay đang thi đấu ở trận khác.',
 
   // Courts and match start
   'Invalid court assignments': 'Xếp sân không hợp lệ.',
   'Court must be 1 or 2': 'Chỉ có sân 1 và sân 2.',
   'Only unstarted matches can be assigned': 'Chỉ xếp được sân cho trận chưa bắt đầu.',
-  'Match is not ready to start': 'Trận đấu chưa sẵn sàng: cần xếp sân và hai đội hình đã xác nhận.',
+  'Match is not ready to start': 'Trận đấu chưa sẵn sàng: cần xếp sân và cặp của cả hai đội.',
   'Court is occupied': 'Sân này đang có trận khác thi đấu.',
   'A player is already playing': 'Có người chơi đang thi đấu ở trận khác.',
   'Decider is not eligible': 'Trận 3 chỉ diễn ra khi hai trận đầu đã có kết quả 1–1.',
@@ -84,7 +69,7 @@ const serverMessages: Record<string, string> = {
   // Results
   'Walkover requires an unscored match and one winner': 'Chỉ xử thắng được trận chưa ghi điểm nào.',
   'Corrected result has the wrong number of games':
-    'Số ván không đúng: trận chung kết cần hai hoặc ba ván, các trận khác một ván.',
+    'Số ván không đúng: trận tranh hạng ba và chung kết cần hai hoặc ba ván, các trận khác một ván.',
   'Corrected games contain an invalid score or an extra game': 'Có ván không hợp lệ hoặc ván thừa sau khi trận đã phân định.',
   'Corrected winner does not match the games': 'Cặp thắng không khớp với tỉ số các ván.',
   'playoff-started': 'Trận tranh vé đã bắt đầu nên không thể sửa kết quả làm thay đổi trận tranh vé.',

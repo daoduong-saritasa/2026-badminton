@@ -1,3 +1,5 @@
+import type { PlayoffRound } from './playoff-rounds'
+
 export type UUID = string
 
 export type Side = 'a' | 'b'
@@ -29,11 +31,8 @@ export interface Tournament {
   resultRevision: number
   /** Set when the organizer confirms the finalists; cleared when they change. */
   finalistsConfirmedAt: string | null
-  /**
-   * The teams a three-team playoff sends to the final once a supervised draw
-   * settles its remaining tie: the automatic qualifiers plus the drawn teams.
-   */
-  qualificationDrawWinnerIds: UUID[] | null
+  /** The latest qualification playoff round, or null when none is needed. */
+  currentPlayoffRoundId: UUID | null
 }
 
 export interface Player {
@@ -51,21 +50,22 @@ export interface TeamPlayer extends Player {
   teamId: UUID
 }
 
-/**
- * Two teammates playing one match. Seed rules live in validation: declared
- * pairs 1–3 mix seeds, while the playoff pair and substitutions do not.
- */
-export interface LineupPair {
+export type Pair = {
   player1Id: UUID
   player2Id: UUID
 }
 
-export interface Lineup {
-  fixtureId: UUID
-  teamId: UUID
-  /** Matches 1–3, then the predeclared qualification playoff pair. */
-  pairs: [LineupPair, LineupPair, LineupPair, LineupPair]
-  confirmedAt: string | null
+export type PairingRule = 'mixed-seed' | 'free'
+
+export interface PairAssignmentIssue {
+  code:
+    | 'unknown-player'
+    | 'wrong-team'
+    | 'duplicate-player'
+    | 'player-playing'
+    | 'same-seed'
+    | 'qualifying-player-reused'
+  overridable: boolean
 }
 
 export type FixtureStage =
@@ -130,9 +130,9 @@ export interface FixtureMatch {
   id: UUID
   fixtureId: UUID
   matchNumber: 1 | 2 | 3
-  /** Null until both lineups are confirmed and revealed. */
-  pairA: LineupPair | null
-  pairB: LineupPair | null
+  /** Each side is null until staff assign its pair; public once saved. */
+  pairA: Pair | null
+  pairB: Pair | null
   court: Court | null
   state: FixtureMatchState
   resultKind: MatchResultKind | null
@@ -149,7 +149,7 @@ export interface TournamentSnapshot {
   players: TeamPlayer[]
   fixtures: TeamFixture[]
   matches: FixtureMatch[]
-  lineups: Lineup[]
+  playoffRounds: PlayoffRound[]
 }
 
 export interface TournamentState {

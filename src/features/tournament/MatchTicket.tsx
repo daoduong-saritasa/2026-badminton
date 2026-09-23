@@ -42,7 +42,7 @@ function TicketSide({
         {teamName(snapshot, sideTeamId(fixture, side))}
       </p>
       <p className="mt-1 max-w-full [overflow-wrap:anywhere] text-[0.6875rem] text-muted-ink">
-        {pairPlayers(snapshot, matchPair(snapshot, match, side))}
+        {pairPlayers(snapshot, matchPair(match, side))}
       </p>
       <strong
         className={cn(

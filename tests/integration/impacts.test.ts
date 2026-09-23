@@ -56,13 +56,11 @@ interface SeededRoundRobin {
 
 /**
  * A complete qualifying stage decided by walkovers, so no points count.
- * `winners` names each fixture's two match winners by side. `populate` assigns
- * the placement fixtures from the standings; a tied seed skips it, because
- * the playoff it would create needs predeclared pairs.
+ * `winners` names each fixture's two match winners by side. Progression then
+ * assigns the placement fixtures, or creates playoff round 1 for a tie.
  */
 function seedRoundRobin(
   winners: Record<'ab' | 'ac' | 'ad' | 'bc' | 'bd' | 'cd', [Side, Side]>,
-  populate = true,
 ): SeededRoundRobin {
   const tournamentId = crypto.randomUUID()
   const teams = { a: crypto.randomUUID(), b: crypto.randomUUID(), c: crypto.randomUUID(), d: crypto.randomUUID() }
@@ -95,7 +93,7 @@ function seedRoundRobin(
       ('${finalFixtureId}', '${tournamentId}', 'final', null, null);
     insert into public.matches (id, fixture_id, match_number, state, result_kind, winner_side) values
       ${rows.flatMap((row) => row.matches).join(',\n      ')};
-    ${populate ? 'select private.populate_placement_fixtures();' : ''}
+    select private.populate_placement_fixtures();
   `)
   return { finalFixtureId, matchIds, teams, tournamentId }
 }
@@ -115,8 +113,8 @@ function seedSeparatedStandings(): SeededRoundRobin {
   })
 }
 
-/** Confirms the finalists and gives the final a confirmed lineup row. */
-function confirmFinalistsWithLineup(seeded: SeededRoundRobin): void {
+/** Confirms the finalists and saves team A's pair on final match 1. */
+function confirmFinalistsWithPair(seeded: SeededRoundRobin): void {
   const [player1, player2] = [crypto.randomUUID(), crypto.randomUUID()]
   runSql(`
     update public.tournament set finalists_confirmed_at = clock_timestamp(), stage = 'knockouts'
@@ -124,8 +122,23 @@ function confirmFinalistsWithLineup(seeded: SeededRoundRobin): void {
     insert into public.players (id, team_id, name, seed) values
       ('${player1}', '${seeded.teams.a}', 'A1', 1),
       ('${player2}', '${seeded.teams.a}', 'A2', 2);
-    insert into private.lineups (fixture_id, team_id, match_number, player_1_id, player_2_id, confirmed_at)
-    values ('${seeded.finalFixtureId}', '${seeded.teams.a}', 1, '${player1}', '${player2}', clock_timestamp());
+    insert into public.matches (
+      fixture_id, match_number,
+      pair_a_player_1_id, pair_a_player_2_id, pair_b_player_1_id, pair_b_player_2_id
+    )
+    select id, 1,
+      case when team_a_id = '${seeded.teams.a}' then '${player1}'::uuid end,
+      case when team_a_id = '${seeded.teams.a}' then '${player2}'::uuid end,
+      case when team_b_id = '${seeded.teams.a}' then '${player1}'::uuid end,
+      case when team_b_id = '${seeded.teams.a}' then '${player2}'::uuid end
+    from public.team_fixtures where id = '${seeded.finalFixtureId}';
+  `)
+}
+
+function finalPairsSaved(seeded: SeededRoundRobin): string {
+  return runSql(`
+    select count(*) filter (where pair_a_player_1_id is not null or pair_b_player_1_id is not null)
+    from public.matches where fixture_id = '${seeded.finalFixtureId}';
   `)
 }
 
@@ -183,7 +196,8 @@ describe('team result impacts', () => {
   it('blocks a qualifying correction that changes a started playoff', async () => {
     const organizer = await signInAnonymously()
     await elevate(organizer)
-    // A 6, then B and C level on 3 with nothing to separate them, D 0.
+    // A 6, then B and C level on 3 with nothing to separate them, D 0, so
+    // progression opens a two-team round 1; its match is under way.
     const seeded = seedRoundRobin({
       ab: ['a', 'a'],
       ac: ['a', 'a'],
@@ -191,13 +205,14 @@ describe('team result impacts', () => {
       bc: ['a', 'b'],
       bd: ['a', 'a'],
       cd: ['a', 'a'],
-    }, false)
-    const playoffFixture = crypto.randomUUID()
+    })
+    expect(runSql(`select count(*) from public.qualification_playoff_rounds where tournament_id = '${seeded.tournamentId}';`)).toBe('1')
     runSql(`
-      insert into public.team_fixtures (id, tournament_id, stage, team_a_id, team_b_id)
-      values ('${playoffFixture}', '${seeded.tournamentId}', 'qualification-playoff', '${seeded.teams.b}', '${seeded.teams.c}');
-      insert into public.matches (fixture_id, match_number, state)
-      values ('${playoffFixture}', 1, 'playing');
+      update public.matches set state = 'playing'
+      where fixture_id in (
+        select id from public.team_fixtures
+        where tournament_id = '${seeded.tournamentId}' and stage = 'qualification-playoff'
+      );
     `)
 
     const preview = await rpc(
@@ -209,11 +224,12 @@ describe('team result impacts', () => {
     expect(await preview.json()).toMatchObject({ blockedReason: 'playoff-started', after: null })
   })
 
-  it('revokes finalist confirmation and clears placement lineups when finalists change', async () => {
+  it('revokes finalist confirmation and clears placement pairs when finalists change', async () => {
     const organizer = await signInAnonymously()
     await elevate(organizer)
     const seeded = seedSeparatedStandings()
-    confirmFinalistsWithLineup(seeded)
+    confirmFinalistsWithPair(seeded)
+    expect(finalPairsSaved(seeded)).toBe('1')
     expect(runSql(`
       select count(*) from public.team_fixtures
       where id = '${seeded.finalFixtureId}' and '${seeded.teams.b}'::uuid in (team_a_id, team_b_id);
@@ -234,7 +250,7 @@ describe('team result impacts', () => {
       organizer,
     )
     expect(correction.ok).toBe(true)
-    expect(runSql(`select count(*) from private.lineups where fixture_id = '${seeded.finalFixtureId}';`)).toBe('0')
+    expect(finalPairsSaved(seeded)).toBe('0')
     expect(runSql(`select finalists_confirmed_at is null from public.tournament where id = '${seeded.tournamentId}';`)).toBe('t')
     expect(runSql(`
       select count(*) from public.team_fixtures
@@ -246,10 +262,10 @@ describe('team result impacts', () => {
     const organizer = await signInAnonymously()
     await elevate(organizer)
     const seeded = seedSeparatedStandings()
-    confirmFinalistsWithLineup(seeded)
+    confirmFinalistsWithPair(seeded)
     runSql(`
       insert into public.matches (fixture_id, match_number, state)
-      values ('${seeded.finalFixtureId}', 1, 'playing');
+      values ('${seeded.finalFixtureId}', 2, 'playing');
     `)
 
     const preview = await rpc(

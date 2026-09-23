@@ -1,7 +1,7 @@
+import { resolvePlayoffRound, type PlayoffRound } from './playoff-rounds'
 import {
   qualificationCutoff,
   qualifyingStandings,
-  threeTeamPlayoffOutcome,
   type QualificationCutoff,
 } from './standings'
 import { fixtureWinnerTeamId, isPlacementStage } from './team-fixtures'
@@ -15,7 +15,7 @@ import type {
 
 export type ProgressionState = Pick<
   TournamentSnapshot,
-  'tournament' | 'teams' | 'fixtures' | 'matches'
+  'tournament' | 'teams' | 'fixtures' | 'matches' | 'playoffRounds'
 >
 
 export interface PlacementParticipants {
@@ -26,7 +26,7 @@ export interface PlacementParticipants {
 }
 
 /** How a finalist earned its place, for the organizer's confirmation. */
-export type FinalistBasis = 'standings' | 'playoff' | 'draw'
+export type FinalistBasis = 'standings' | 'playoff'
 
 export interface Finalist {
   teamId: UUID
@@ -43,9 +43,8 @@ const qualifyingMatchCount = 12
 
 /**
  * Who plays the final and the third-place fixture, derived from the finished
- * qualifying standings and any qualification playoff or supervised draw.
- * Null while qualifying, a required playoff, or a required draw is
- * unresolved. Mirrors `private.populate_placement_fixtures()`; each pair is in
+ * qualifying standings and any qualification playoff rounds. Null while
+ * qualifying or a required playoff round is unresolved. Mirrors `private.populate_placement_fixtures()`; each pair is in
  * team id order, as the server assigns them.
  */
 export function placementParticipants(
@@ -117,10 +116,7 @@ export function correctionBlockCode(
 
   const proposed: ProgressionState = { ...state, matches: [...proposedMatches] }
 
-  if (
-    stageStarted(state, (stage) => stage === 'qualification-playoff') &&
-    !sameCutoff(cutoffFor(state), cutoffFor(proposed))
-  ) {
+  if (startedRoundChanges(state, proposed)) {
     return 'playoff-started'
   }
 
@@ -150,12 +146,97 @@ export function resolvedFinalists(state: ProgressionState): Finalist[] | null {
       ? [...cutoff.fixedFinalistIds, ...cutoff.tiedTeamIds]
       : cutoff.fixedFinalistIds,
   )
-  const drawnIds = drawnTeamIds(state, cutoff)
 
   return [...ids].sort().map((teamId) => ({
     teamId,
-    basis: byStandings.has(teamId) ? 'standings' : drawnIds.includes(teamId) ? 'draw' : 'playoff',
+    basis: byStandings.has(teamId) ? 'standings' : 'playoff',
   }))
+}
+
+type RoundComposition = Pick<PlayoffRound, 'teamIds' | 'fixedFinalistIds' | 'availablePlaces'>
+
+/**
+ * The rounds the current results call for, in order, mirroring the walk in
+ * `private.populate_placement_fixtures()`: round 1 comes from the qualifying
+ * tie, and each later round from its stored predecessor's outcome. The walk
+ * stops at the first round that is missing, differs, or is unresolved.
+ */
+function expectedRounds(state: ProgressionState): {
+  compositions: RoundComposition[]
+  finalistIds: UUID[] | null
+} {
+  const none = { compositions: [], finalistIds: null }
+  if (!isQualifyingComplete(state)) {
+    return none
+  }
+  const cutoff = cutoffFor(state)
+  if (!cutoff) {
+    return none
+  }
+  if (cutoff.tiedTeamIds.length <= cutoff.availablePlaces) {
+    return {
+      compositions: [],
+      finalistIds: [...cutoff.fixedFinalistIds, ...cutoff.tiedTeamIds],
+    }
+  }
+
+  const compositions: RoundComposition[] = []
+  let expected: RoundComposition = {
+    teamIds: cutoff.tiedTeamIds,
+    fixedFinalistIds: cutoff.fixedFinalistIds,
+    availablePlaces: cutoff.availablePlaces as 1 | 2,
+  }
+  for (let roundNumber = 1; ; roundNumber += 1) {
+    compositions.push(expected)
+    const stored = state.playoffRounds.find((round) => round.roundNumber === roundNumber)
+    if (!stored || !sameComposition(stored, expected)) {
+      return { compositions, finalistIds: null }
+    }
+    const outcome = resolvePlayoffRound(stored, state.fixtures, state.matches)
+    if (!outcome) {
+      return { compositions, finalistIds: null }
+    }
+    if (!outcome.nextRound) {
+      return { compositions, finalistIds: outcome.finalistIds }
+    }
+    expected = outcome.nextRound
+  }
+}
+
+function resolvedFinalistIds(state: ProgressionState): UUID[] | null {
+  return expectedRounds(state).finalistIds
+}
+
+/**
+ * Whether the proposed results would rebuild a stored round that already has
+ * a started match; the server rejects that as `playoff-started`.
+ */
+function startedRoundChanges(state: ProgressionState, proposed: ProgressionState): boolean {
+  const startedFixtureIds = new Set(
+    state.matches
+      .filter((match) => match.state === 'playing' || match.state === 'completed')
+      .map((match) => match.fixtureId),
+  )
+  const { compositions } = expectedRounds(proposed)
+  return state.playoffRounds.some((round) => {
+    if (!round.fixtureIds.some((fixtureId) => startedFixtureIds.has(fixtureId))) {
+      return false
+    }
+    const expected = compositions[round.roundNumber - 1]
+    return !expected || !sameComposition(round, expected)
+  })
+}
+
+function sameComposition(left: RoundComposition, right: RoundComposition): boolean {
+  return JSON.stringify([
+    [...left.teamIds].sort(),
+    [...left.fixedFinalistIds].sort(),
+    left.availablePlaces,
+  ]) === JSON.stringify([
+    [...right.teamIds].sort(),
+    [...right.fixedFinalistIds].sort(),
+    right.availablePlaces,
+  ])
 }
 
 /** Every qualifying match is completed. Standings before then are provisional. */
@@ -168,96 +249,6 @@ export function isQualifyingComplete(state: ProgressionState): boolean {
       (match) => match.state === 'completed' || match.state === 'unnecessary',
     )
   )
-}
-
-/** Teams a stored supervised draw sent through, beyond the playoff's automatic qualifiers. */
-function drawnTeamIds(state: ProgressionState, cutoff: QualificationCutoff): UUID[] {
-  if (cutoff.tiedTeamIds.length !== 3 || cutoff.tiedTeamIds.length <= cutoff.availablePlaces) {
-    return []
-  }
-  const outcome = threeTeamPlayoffOutcome(
-    state.fixtures.filter((fixture) => fixture.stage === 'qualification-playoff'),
-    state.matches,
-    cutoff.tiedTeamIds,
-    cutoff.availablePlaces,
-  )
-  if (!outcome || outcome.drawSlots === 0) {
-    return []
-  }
-  return (state.tournament.qualificationDrawWinnerIds ?? []).filter(
-    (teamId) => !outcome.automaticTeamIds.includes(teamId),
-  )
-}
-
-function resolvedFinalistIds(state: ProgressionState): UUID[] | null {
-  if (!isQualifyingComplete(state)) {
-    return null
-  }
-
-  const cutoff = cutoffFor(state)
-  if (!cutoff) {
-    return null
-  }
-  if (cutoff.tiedTeamIds.length <= cutoff.availablePlaces) {
-    return [...cutoff.fixedFinalistIds, ...cutoff.tiedTeamIds]
-  }
-
-  const playoffs = state.fixtures.filter(
-    (fixture) => fixture.stage === 'qualification-playoff',
-  )
-  const winners = playoffs.map((fixture) => fixtureWinnerTeamId(fixture, state.matches))
-  if (playoffs.length === 0 || winners.some((winner) => winner === null)) {
-    return null
-  }
-
-  if (cutoff.tiedTeamIds.length !== 3) {
-    return [...cutoff.fixedFinalistIds, ...winners.filter((id) => id !== null)]
-  }
-
-  const outcome = threeTeamPlayoffOutcome(
-    playoffs,
-    state.matches,
-    cutoff.tiedTeamIds,
-    cutoff.availablePlaces,
-  )
-  if (!outcome) {
-    return null
-  }
-  if (outcome.drawSlots === 0) {
-    return [...cutoff.fixedFinalistIds, ...outcome.automaticTeamIds]
-  }
-
-  const drawn = drawnPlayoffTeamIds(
-    state.tournament.qualificationDrawWinnerIds,
-    outcome.automaticTeamIds,
-    outcome.drawCandidateIds,
-    cutoff.availablePlaces,
-  )
-  return drawn ? [...cutoff.fixedFinalistIds, ...drawn] : null
-}
-
-/**
- * The stored draw result, or null when it no longer fits the playoff: it must
- * hold every automatic qualifier plus exactly the open places, drawn from the
- * tied candidates.
- */
-function drawnPlayoffTeamIds(
-  drawWinnerIds: readonly UUID[] | null,
-  automaticTeamIds: readonly UUID[],
-  candidateIds: readonly UUID[],
-  availablePlaces: number,
-): UUID[] | null {
-  if (!drawWinnerIds || new Set(drawWinnerIds).size !== availablePlaces) {
-    return null
-  }
-
-  const drawn = drawWinnerIds.filter((teamId) => !automaticTeamIds.includes(teamId))
-  const valid =
-    automaticTeamIds.every((teamId) => drawWinnerIds.includes(teamId)) &&
-    drawn.length === availablePlaces - automaticTeamIds.length &&
-    drawn.every((teamId) => candidateIds.includes(teamId))
-
-  return valid ? [...drawWinnerIds] : null
 }
 
 function cutoffFor(state: ProgressionState): QualificationCutoff | null {
@@ -283,13 +274,6 @@ function matchesInStage(
     state.fixtures.filter((fixture) => inStage(fixture.stage)).map(({ id }) => id),
   )
   return state.matches.filter((match) => fixtureIds.has(match.fixtureId))
-}
-
-function sameCutoff(
-  left: QualificationCutoff | null,
-  right: QualificationCutoff | null,
-): boolean {
-  return JSON.stringify(left) === JSON.stringify(right)
 }
 
 function sameParticipants(

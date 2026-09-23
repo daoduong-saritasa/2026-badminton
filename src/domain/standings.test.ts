@@ -3,7 +3,6 @@ import { describe, expect, it } from 'vitest'
 import {
   qualifyingStandings,
   requiredPlayoff,
-  threeTeamPlayoffOutcome,
 } from './standings'
 import type {
   FixtureMatch,
@@ -226,41 +225,6 @@ describe('requiredPlayoff', () => {
       fixedFinalistIds: [],
       tiedTeamIds: ['t1', 't2', 't3', 't4'],
       availablePlaces: 2,
-    })
-  })
-})
-
-describe('threeTeamPlayoffOutcome', () => {
-  const p12 = fixture('t1', 't2', 'qualification-playoff')
-  const p13 = fixture('t1', 't3', 'qualification-playoff')
-  const p23 = fixture('t2', 't3', 'qualification-playoff')
-  const playoffs = [p12, p13, p23]
-
-  it('advances teams the playoff ranking separates', () => {
-    const matches = [
-      played(p12, 1, { a: 11, b: 5 }),
-      played(p13, 1, { a: 11, b: 9 }),
-      played(p23, 1, { a: 11, b: 3 }),
-    ]
-
-    expect(threeTeamPlayoffOutcome(playoffs, matches, ['t1', 't2', 't3'], 1)).toEqual({
-      automaticTeamIds: ['t1'],
-      drawCandidateIds: [],
-      drawSlots: 0,
-    })
-  })
-
-  it('leaves a tie the playoff ranking cannot break to a supervised draw', () => {
-    const matches = [
-      played(p12, 1, { a: 11, b: 9 }),
-      played(p13, 1, { a: 9, b: 11 }),
-      played(p23, 1, { a: 11, b: 9 }),
-    ]
-
-    expect(threeTeamPlayoffOutcome(playoffs, matches, ['t1', 't2', 't3'], 2)).toEqual({
-      automaticTeamIds: [],
-      drawCandidateIds: ['t1', 't2', 't3'],
-      drawSlots: 2,
     })
   })
 })

@@ -19,17 +19,17 @@ function confirmed(gameNumber: number, score: Score): Game {
 }
 
 describe('team tournament game rules', () => {
-  it('uses 11/15 for qualification playoffs and 21/30 everywhere else', () => {
+  it('uses 11/15 for qualification playoffs, 15/21 for third place, and 21/30 otherwise', () => {
     expect(gameRules('qualifying')).toEqual({ target: 21, cap: 30 })
     expect(gameRules('qualification-playoff')).toEqual({ target: 11, cap: 15 })
-    expect(gameRules('third-place')).toEqual({ target: 21, cap: 30 })
+    expect(gameRules('third-place')).toEqual({ target: 15, cap: 21 })
     expect(gameRules('final')).toEqual({ target: 21, cap: 30 })
   })
 
-  it('plays the final as best of three and every other match as one game', () => {
+  it('plays placement matches as best of three and every other match as one game', () => {
     expect(gamesToWinMatch('qualifying')).toBe(1)
     expect(gamesToWinMatch('qualification-playoff')).toBe(1)
-    expect(gamesToWinMatch('third-place')).toBe(1)
+    expect(gamesToWinMatch('third-place')).toBe(2)
     expect(gamesToWinMatch('final')).toBe(2)
   })
 
@@ -45,8 +45,14 @@ describe('team tournament game rules', () => {
     ['qualification-playoff', { a: 14, b: 13 }, false],
     ['qualification-playoff', { a: 15, b: 14 }, true],
     ['qualification-playoff', { a: 16, b: 14 }, false],
-    ['third-place', { a: 21, b: 20 }, false],
-    ['third-place', { a: 30, b: 29 }, true],
+    ['third-place', { a: 15, b: 13 }, true],
+    ['third-place', { a: 15, b: 14 }, false],
+    ['third-place', { a: 17, b: 15 }, true],
+    ['third-place', { a: 20, b: 19 }, false],
+    ['third-place', { a: 21, b: 20 }, true],
+    ['third-place', { a: 21, b: 19 }, true],
+    ['third-place', { a: 22, b: 20 }, false],
+    ['third-place', { a: 30, b: 29 }, false],
     ['final', { a: 21, b: 19 }, true],
     ['final', { a: 30, b: 28 }, true],
   ] as const)('validates %s score %o as %s', (stage, score, expected) => {
@@ -82,11 +88,13 @@ describe('correctedMatchWinner', () => {
     expect(correctedMatchWinner([{ a: 21, b: 10 }], 'qualifying')).toBe('a')
     expect(correctedMatchWinner([{ a: 9, b: 11 }], 'qualification-playoff')).toBe('b')
     expect(correctedMatchWinner([{ a: 21, b: 10 }, { a: 12, b: 21 }, { a: 19, b: 21 }], 'final')).toBe('b')
+    expect(correctedMatchWinner([{ a: 21, b: 20 }, { a: 15, b: 9 }], 'third-place')).toBe('a')
   })
 
   it('rejects an invalid game, an unfinished match, and a game after the match was decided', () => {
     expect(correctedMatchWinner([{ a: 21, b: 20 }], 'qualifying')).toBeNull()
     expect(correctedMatchWinner([], 'third-place')).toBeNull()
+    expect(correctedMatchWinner([{ a: 15, b: 10 }], 'third-place')).toBeNull()
     expect(correctedMatchWinner([{ a: 21, b: 10 }, { a: 21, b: 10 }], 'qualifying')).toBeNull()
     expect(correctedMatchWinner([{ a: 21, b: 10 }], 'final')).toBeNull()
     expect(correctedMatchWinner([{ a: 21, b: 10 }, { a: 21, b: 10 }, { a: 10, b: 21 }], 'final')).toBeNull()

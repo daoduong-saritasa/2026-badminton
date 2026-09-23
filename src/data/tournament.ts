@@ -1,12 +1,12 @@
 import { z } from 'zod'
 
 import type { CommandPayloads, MutationInput, MutationReceipt } from '../domain/commands'
+import type { PlayoffRound } from '../domain/playoff-rounds'
 import type {
   Court,
   FixtureMatch,
   Game,
-  Lineup,
-  LineupPair,
+  Pair,
   TeamFixture,
   TeamPlayer,
   Team,
@@ -31,7 +31,7 @@ const tournamentDtoSchema = z.object({
   version: z.int().nonnegative(),
   result_revision: z.int().nonnegative(),
   finalists_confirmed_at: z.string().nullable(),
-  qualification_draw_winner_ids: z.array(uuidSchema).nullable(),
+  current_playoff_round_id: uuidSchema.nullable(),
 })
 
 const teamDtoSchema = z.object({
@@ -51,6 +51,7 @@ const fixtureDtoSchema = z.object({
   stage: z.enum(['qualifying', 'qualification-playoff', 'third-place', 'final']),
   team_a_id: uuidSchema.nullable(),
   team_b_id: uuidSchema.nullable(),
+  playoff_round_id: uuidSchema.nullable(),
   version: z.int().nonnegative(),
 })
 
@@ -77,16 +78,12 @@ const gameDtoSchema = z.object({
   confirmed_at: z.string().nullable(),
 })
 
-const lineupPairDtoSchema = z.object({
-  player1Id: uuidSchema,
-  player2Id: uuidSchema,
-})
-
-const lineupDtoSchema = z.object({
-  fixtureId: uuidSchema,
-  teamId: uuidSchema,
-  pairs: z.tuple([lineupPairDtoSchema, lineupPairDtoSchema, lineupPairDtoSchema, lineupPairDtoSchema]),
-  confirmedAt: z.string().nullable(),
+const playoffRoundDtoSchema = z.object({
+  id: uuidSchema,
+  round_number: z.int().positive(),
+  team_ids: z.array(uuidSchema).min(2).max(4),
+  fixed_finalist_ids: z.array(uuidSchema),
+  available_places: z.union([z.literal(1), z.literal(2)]),
 })
 
 const snapshotDtoSchema = z.object({
@@ -96,7 +93,7 @@ const snapshotDtoSchema = z.object({
   fixtures: z.array(fixtureDtoSchema),
   matches: z.array(matchDtoSchema),
   games: z.array(gameDtoSchema),
-  lineups: z.array(lineupDtoSchema),
+  playoff_rounds: z.array(playoffRoundDtoSchema),
 })
 
 const tournamentStateDtoSchema = z.object({
@@ -171,7 +168,7 @@ function mapTournament(dto: z.infer<typeof tournamentDtoSchema>): Tournament {
     version: dto.version,
     resultRevision: dto.result_revision,
     finalistsConfirmedAt: dto.finalists_confirmed_at,
-    qualificationDrawWinnerIds: dto.qualification_draw_winner_ids,
+    currentPlayoffRoundId: dto.current_playoff_round_id,
   }
 }
 
@@ -193,7 +190,11 @@ function mapFixture(dto: z.infer<typeof fixtureDtoSchema>): TeamFixture {
   }
 }
 
-function mapPair(player1Id: string | null, player2Id: string | null): LineupPair | null {
+/** Throws on a half-saved side; the database keeps each side all-or-nothing. */
+function mapPair(matchId: string, player1Id: string | null, player2Id: string | null): Pair | null {
+  if ((player1Id === null) !== (player2Id === null)) {
+    throw new InvalidTournamentDataError(`Match ${matchId} has a half-populated pair`)
+  }
   return player1Id === null || player2Id === null ? null : { player1Id, player2Id }
 }
 
@@ -210,9 +211,11 @@ function mapMatch(dto: MatchDto, games: readonly GameDto[]): FixtureMatch {
   const consistent = dto.state === 'completed'
     ? resolved
     : dto.result_kind === null && dto.winner_side === null
-  const pairA = mapPair(dto.pair_a_player_1_id, dto.pair_a_player_2_id)
-  const pairB = mapPair(dto.pair_b_player_1_id, dto.pair_b_player_2_id)
-  if (!consistent || (pairA === null) !== (pairB === null)) {
+  // Sides are assigned independently, so one saved pair beside an empty side
+  // is valid.
+  const pairA = mapPair(dto.id, dto.pair_a_player_1_id, dto.pair_a_player_2_id)
+  const pairB = mapPair(dto.id, dto.pair_b_player_1_id, dto.pair_b_player_2_id)
+  if (!consistent) {
     throw new InvalidTournamentDataError(`Match ${dto.id} has inconsistent state and result fields`)
   }
   return {
@@ -233,23 +236,37 @@ function mapMatch(dto: MatchDto, games: readonly GameDto[]): FixtureMatch {
   }
 }
 
-function mapLineup(dto: z.infer<typeof lineupDtoSchema>): Lineup {
+function mapPlayoffRound(
+  dto: z.infer<typeof playoffRoundDtoSchema>,
+  fixtures: ReadonlyArray<z.infer<typeof fixtureDtoSchema>>,
+): PlayoffRound {
   return {
-    fixtureId: dto.fixtureId,
-    teamId: dto.teamId,
-    pairs: dto.pairs,
-    confirmedAt: dto.confirmedAt,
+    id: dto.id,
+    roundNumber: dto.round_number,
+    teamIds: dto.team_ids,
+    fixedFinalistIds: dto.fixed_finalist_ids,
+    availablePlaces: dto.available_places,
+    fixtureIds: fixtures
+      .filter((fixture) => fixture.playoff_round_id === dto.id)
+      .map((fixture) => fixture.id),
   }
 }
 
 function mapSnapshotDto(dto: z.infer<typeof snapshotDtoSchema>): TournamentSnapshot {
+  // A playoff fixture outside every round is a released slot the database
+  // keeps for reuse; it is not part of the tournament until a round claims it.
+  const fixtures = dto.fixtures.filter((fixture) =>
+    fixture.stage !== 'qualification-playoff' || fixture.playoff_round_id !== null)
+  const fixtureIds = new Set(fixtures.map((fixture) => fixture.id))
   return {
     tournament: mapTournament(dto.tournament),
     teams: dto.teams.map(mapTeam),
     players: dto.players.map(mapPlayer),
-    fixtures: dto.fixtures.map(mapFixture),
-    matches: dto.matches.map((match) => mapMatch(match, dto.games)),
-    lineups: dto.lineups.map(mapLineup),
+    fixtures: fixtures.map(mapFixture),
+    matches: dto.matches
+      .filter((match) => fixtureIds.has(match.fixture_id))
+      .map((match) => mapMatch(match, dto.games)),
+    playoffRounds: dto.playoff_rounds.map((round) => mapPlayoffRound(round, dto.fixtures)),
   }
 }
 

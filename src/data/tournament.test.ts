@@ -52,7 +52,7 @@ function snapshot(version: number, overrides: Record<string, unknown> = {}) {
       version,
       result_revision: version,
       finalists_confirmed_at: null,
-      qualification_draw_winner_ids: null,
+      current_playoff_round_id: null,
     },
     teams: [
       { id: teamId, name: 'Team A' },
@@ -65,14 +65,14 @@ function snapshot(version: number, overrides: Record<string, unknown> = {}) {
       { id: playerDId, team_id: otherTeamId, name: 'D', seed: 2 },
     ],
     fixtures: [
-      { id: fixtureId, stage: 'qualifying', team_a_id: teamId, team_b_id: otherTeamId, version: 2 },
+      { id: fixtureId, stage: 'qualifying', team_a_id: teamId, team_b_id: otherTeamId, playoff_round_id: null, version: 2 },
     ],
     matches: [match()],
     games: [
       { match_id: matchId, game_number: 2, score_a: 3, score_b: 1, confirmed_at: null },
       { match_id: matchId, game_number: 1, score_a: 15, score_b: 10, confirmed_at: '2026-09-09T00:10:00Z' },
     ],
-    lineups: [],
+    playoff_rounds: [],
     ...overrides,
   }
 }
@@ -123,9 +123,11 @@ describe('tournament data', () => {
     await expect(fetchTournament()).rejects.toBeInstanceOf(StaleTournamentSnapshotError)
   })
 
-  it('maps finalist confirmation, playoff fixtures, and four-pair lineups', async () => {
+  it('maps finalist confirmation and playoff rounds, dropping released playoff slots', async () => {
     const playoffId = '00000000-0000-4000-8000-000000000020'
-    const pair = { player1Id: playerAId, player2Id: playerBId }
+    const releasedId = '00000000-0000-4000-8000-000000000021'
+    const roundId = '00000000-0000-4000-8000-000000000022'
+    const releasedMatchId = '00000000-0000-4000-8000-000000000023'
     const base = snapshot(1)
     rpc.mockResolvedValueOnce({
       data: {
@@ -134,28 +136,83 @@ describe('tournament data', () => {
           tournament: {
             ...base.tournament,
             finalists_confirmed_at: '2026-09-21T02:00:00Z',
-            qualification_draw_winner_ids: [teamId],
+            current_playoff_round_id: roundId,
           },
           fixtures: [
             ...base.fixtures,
-            { id: playoffId, stage: 'qualification-playoff', team_a_id: null, team_b_id: null, version: 1 },
+            { id: playoffId, stage: 'qualification-playoff', team_a_id: teamId, team_b_id: otherTeamId, playoff_round_id: roundId, version: 1 },
+            { id: releasedId, stage: 'qualification-playoff', team_a_id: null, team_b_id: null, playoff_round_id: null, version: 3 },
           ],
-          lineups: [{ fixtureId, teamId, pairs: [pair, pair, pair, pair], confirmedAt: null }],
+          matches: [
+            ...base.matches,
+            match({
+              id: releasedMatchId,
+              fixture_id: releasedId,
+              state: 'unstarted',
+              pair_a_player_1_id: null,
+              pair_a_player_2_id: null,
+              pair_b_player_1_id: null,
+              pair_b_player_2_id: null,
+            }),
+          ],
+          playoff_rounds: [{
+            id: roundId,
+            round_number: 2,
+            team_ids: [teamId, otherTeamId],
+            fixed_finalist_ids: [],
+            available_places: 1,
+          }],
         }),
       },
       error: null,
     })
 
-    await expect(fetchTournament()).resolves.toMatchObject({
+    const loaded = await fetchTournament()
+    expect(loaded).toMatchObject({
       snapshot: {
-        tournament: { finalistsConfirmedAt: '2026-09-21T02:00:00Z', qualificationDrawWinnerIds: [teamId] },
+        tournament: { finalistsConfirmedAt: '2026-09-21T02:00:00Z', currentPlayoffRoundId: roundId },
         fixtures: [
           { id: fixtureId, stage: 'qualifying' },
-          { id: playoffId, stage: 'qualification-playoff', teamAId: null, teamBId: null },
+          { id: playoffId, stage: 'qualification-playoff', teamAId: teamId, teamBId: otherTeamId },
         ],
-        lineups: [{ fixtureId, teamId, pairs: [pair, pair, pair, pair] }],
+        playoffRounds: [{
+          id: roundId,
+          roundNumber: 2,
+          teamIds: [teamId, otherTeamId],
+          fixedFinalistIds: [],
+          availablePlaces: 1,
+          fixtureIds: [playoffId],
+        }],
       },
     })
+    expect(loaded.snapshot?.fixtures).toHaveLength(2)
+    expect(loaded.snapshot?.matches.map(({ id }) => id)).toEqual([matchId])
+  })
+
+  it('accepts one assigned side beside an unassigned one', async () => {
+    rpc.mockResolvedValueOnce({
+      data: {
+        resetGeneration: 0,
+        snapshot: snapshot(1, {
+          matches: [match({ state: 'unstarted', pair_b_player_1_id: null, pair_b_player_2_id: null })],
+        }),
+      },
+      error: null,
+    })
+    await expect(fetchTournament()).resolves.toMatchObject({
+      snapshot: { matches: [{ pairA: { player1Id: playerAId, player2Id: playerBId }, pairB: null }] },
+    })
+  })
+
+  it('rejects a half-populated pair', async () => {
+    rpc.mockResolvedValueOnce({
+      data: {
+        resetGeneration: 9,
+        snapshot: snapshot(0, { matches: [match({ state: 'unstarted', pair_a_player_2_id: null })] }),
+      },
+      error: null,
+    })
+    await expect(fetchTournament()).rejects.toBeInstanceOf(InvalidTournamentDataError)
   })
 
   it('rejects a snapshot that still carries the removed group stage', async () => {
@@ -174,24 +231,6 @@ describe('tournament data', () => {
   it('rejects a completed match without a winner', async () => {
     rpc.mockResolvedValueOnce({
       data: { resetGeneration: 9, snapshot: snapshot(0, { matches: [match({ state: 'completed' })] }) },
-      error: null,
-    })
-    await expect(fetchTournament()).rejects.toBeInstanceOf(InvalidTournamentDataError)
-  })
-
-  it('rejects a lineup that does not carry four pairs', async () => {
-    rpc.mockResolvedValueOnce({
-      data: {
-        resetGeneration: 9,
-        snapshot: snapshot(0, {
-          lineups: [{
-            fixtureId,
-            teamId,
-            pairs: [{ player1Id: playerAId, player2Id: playerBId }],
-            confirmedAt: null,
-          }],
-        }),
-      },
       error: null,
     })
     await expect(fetchTournament()).rejects.toBeInstanceOf(InvalidTournamentDataError)
@@ -233,7 +272,7 @@ describe('tournament data', () => {
     expect(rpc).toHaveBeenNthCalledWith(2, 'get_tournament_snapshot')
   })
 
-  it('sends the substitution, draw, and finalist commands with their payloads unchanged', async () => {
+  it('sends the pair assignment, draw, and finalist commands with their payloads unchanged', async () => {
     async function expectSent<K extends keyof CommandPayloads>(operation: K, payload: CommandPayloads[K]) {
       rpc.mockReset()
       rpc
@@ -252,9 +291,9 @@ describe('tournament data', () => {
       })
     }
 
-    await expectSent('substitute_players', { matchId, side: 'b', player1Id: playerCId, player2Id: playerDId })
+    await expectSent('assign_pair', { matchId, side: 'b', ruleException: false, player1Id: playerCId, player2Id: playerDId })
+    await expectSent('assign_pair', { matchId, side: 'a', ruleException: true, player1Id: playerAId, player2Id: playerBId })
     await expectSent('record_draw', { matchups: [{ fixtureId, teamAId: teamId, teamBId: otherTeamId }] })
-    await expectSent('record_draw', { advancingTeamIds: [teamId] })
     await expectSent('confirm_finalists', {})
   })
 

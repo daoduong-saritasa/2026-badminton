@@ -193,8 +193,8 @@ export default function App() {
     queryClient.setQueryData(staffQueryKey, null)
     setSelectedView(null)
   }
-  if (view === 'scoring') {
-    return <ScoreTracker snapshot={snapshot} resetGeneration={tournamentState.resetGeneration} onExit={() => setSelectedView('matches')} />
+  if (view === 'scoring' && staffAccess) {
+    return <ScoreTracker snapshot={snapshot} resetGeneration={tournamentState.resetGeneration} role={staffAccess.role} onExit={() => setSelectedView('matches')} />
   }
   if (view === 'organizer' && staffAccess) {
     return (

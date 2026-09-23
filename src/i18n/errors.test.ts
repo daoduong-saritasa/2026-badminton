@@ -13,8 +13,9 @@ describe('errorMessage', () => {
     expect(errorMessage(new Error('playoff-started'))).toContain('Trận tranh vé')
   })
 
-  it('translates substitution and qualification failures', () => {
-    expect(errorMessage(new Error('A substitute is already playing'))).toBe('Người thay đang thi đấu ở trận khác.')
+  it('translates pair assignment and qualification failures', () => {
+    expect(errorMessage(new Error('Pair must mix seeds'))).toBe('Trận này cần một hạt giống 1 và một hạt giống 2.')
+    expect(errorMessage(new Error('Pairs are fixed after the match starts'))).toBe('Trận đã bắt đầu nên cặp không đổi được.')
     expect(errorMessage(new Error('Third place must finish before the final starts')))
       .toBe('Tranh hạng ba phải kết thúc trước khi chung kết bắt đầu.')
   })
@@ -69,7 +70,20 @@ describe('errorMessage', () => {
     const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
     const asciiOnly = /^[\x20-\x7E]*$/
 
-    for (const message of ['Game does not have a valid winning score', 'Decider is not eligible', 'Service role required']) {
+    for (const message of [
+      'Game does not have a valid winning score',
+      'Decider is not eligible',
+      'Service role required',
+      // Raised by the pair assignment migration.
+      'Invalid pair assignment',
+      'Pairs are fixed after the match starts',
+      'Pair assignment is not open for this match',
+      'A pair requires two distinct players',
+      'Pair players must belong to the team',
+      'Pair must mix seeds',
+      'Player already plays in this fixture',
+      'Qualifying requires four complete teams',
+    ]) {
       const translated = errorMessage(new Error(message))
       expect(translated).not.toBe(unknownErrorMessage)
       expect(asciiOnly.test(translated)).toBe(false)

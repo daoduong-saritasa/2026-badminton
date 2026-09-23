@@ -17,14 +17,6 @@ export interface QualificationCutoff {
   availablePlaces: number
 }
 
-/** A three-team playoff's automatic qualifiers, and the tie a draw settles. */
-export interface ThreeTeamPlayoffOutcome {
-  automaticTeamIds: UUID[]
-  drawCandidateIds: UUID[]
-  /** Places left for a supervised draw; 0 when the playoff settled them all. */
-  drawSlots: number
-}
-
 interface MatchResult {
   teamAId: UUID
   teamBId: UUID
@@ -154,52 +146,6 @@ export function requiredPlayoff(
     tiedTeamIds: cutoff.tiedTeamIds,
     availablePlaces,
   }
-}
-
-/**
- * Ranks a completed three-team playoff by match wins, then point difference,
- * then points scored, and splits it into teams that advance outright and the
- * teams a supervised draw must choose between.
- */
-export function threeTeamPlayoffOutcome(
-  fixtures: readonly TeamFixture[],
-  matches: readonly FixtureMatch[],
-  tiedTeamIds: readonly UUID[],
-  availablePlaces: number,
-): ThreeTeamPlayoffOutcome | null {
-  const results = matchResults(fixtures, matches, 'qualification-playoff')
-  const ranked: RankingKey[] = tiedTeamIds.map((teamId) => {
-    const total = teamTotals(teamId, results)
-    return {
-      teamId,
-      keys: [
-        total.matchWins,
-        total.pointsScored - total.pointsConceded,
-        total.pointsScored,
-        0,
-      ],
-    }
-  })
-  const ranks = ranked
-    .map((key) => ({ teamId: key.teamId, rank: competitionRank(key, ranked) }))
-    .sort((left, right) => left.rank - right.rank || left.teamId.localeCompare(right.teamId))
-
-  const cutoffRank = ranks[availablePlaces - 1]?.rank
-  if (cutoffRank === undefined) {
-    return null
-  }
-
-  const automaticTeamIds = sortedIds(ranks.filter(({ rank }) => rank < cutoffRank))
-  const candidates = sortedIds(ranks.filter(({ rank }) => rank === cutoffRank))
-  const drawSlots = availablePlaces - automaticTeamIds.length
-
-  return candidates.length > drawSlots
-    ? { automaticTeamIds, drawCandidateIds: candidates, drawSlots }
-    : {
-        automaticTeamIds: [...automaticTeamIds, ...candidates].sort(),
-        drawCandidateIds: [],
-        drawSlots: 0,
-      }
 }
 
 function matchResults(

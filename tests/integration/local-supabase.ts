@@ -136,7 +136,6 @@ export function resetLocalDatabase(organizerPin = '2468', refereePin = '1357'): 
     truncate table
       private.mutation_log,
       private.scoring_handovers,
-      private.lineups,
       private.match_ownership,
       private.staff_grants,
       private.pin_attempts,
@@ -144,6 +143,7 @@ export function resetLocalDatabase(organizerPin = '2468', refereePin = '1357'): 
       public.match_games,
       public.matches,
       public.team_fixtures,
+      public.qualification_playoff_rounds,
       public.players,
       public.teams,
       public.tournament

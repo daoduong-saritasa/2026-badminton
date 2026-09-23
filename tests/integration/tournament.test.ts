@@ -42,6 +42,10 @@ interface Match {
   fixture_id: string
   id: string
   match_number: 1 | 2 | 3
+  pair_a_player_1_id: string | null
+  pair_a_player_2_id: string | null
+  pair_b_player_1_id: string | null
+  pair_b_player_2_id: string | null
   state: 'unstarted' | 'playing' | 'completed' | 'unnecessary'
   version: number
   winner_side: 'a' | 'b' | null
@@ -56,7 +60,6 @@ interface Snapshot {
     score_a: number
     score_b: number
   }>
-  lineups: Array<{ fixtureId: string; teamId: string }>
   matches: Match[]
   players: Player[]
   teams: Team[]
@@ -118,61 +121,8 @@ async function createRoster(session: LocalSession): Promise<Snapshot> {
   return snapshot(session)
 }
 
-/**
- * Pairs 1–3 mix seeds and pairs 1 and 2 use all four players; pair 4 is the
- * predeclared playoff pair, the same two seed 1 players in every fixture.
- */
-function lineupPayload(current: Snapshot, fixture: Fixture, teamId: string) {
-  const players = current.players.filter((player) => player.team_id === teamId)
-  const seed1 = players.filter((player) => player.seed === 1)
-  const seed2 = players.filter((player) => player.seed === 2)
-  return {
-    fixtureId: fixture.id,
-    teamId,
-    pairs: [
-      { player1Id: seed1[0].id, player2Id: seed2[0].id },
-      { player1Id: seed1[1].id, player2Id: seed2[1].id },
-      { player1Id: seed1[0].id, player2Id: seed2[1].id },
-      { player1Id: seed1[0].id, player2Id: seed1[1].id },
-    ],
-  }
-}
-
-async function saveLineup(session: LocalSession, fixtureId: string, teamId: string): Promise<void> {
-  const current = await snapshot(session)
-  const fixture = current.fixtures.find((candidate) => candidate.id === fixtureId)
-  if (!fixture) throw new Error('Fixture is missing')
-  await callMutation('save_lineup', session, fixture.version, lineupPayload(current, fixture, teamId))
-}
-
-async function confirmLineup(session: LocalSession, fixtureId: string, teamId: string): Promise<void> {
-  const fixture = (await snapshot(session)).fixtures.find((candidate) => candidate.id === fixtureId)
-  if (!fixture) throw new Error('Fixture vanished')
-  await callMutation('confirm_lineup', session, fixture.version, { fixtureId, teamId })
-}
-
-/**
- * A confirmed lineup locks its fixture against further saves, so both teams
- * save before either confirms.
- */
-async function saveAndConfirmFixture(session: LocalSession, fixture: Fixture): Promise<void> {
-  if (!fixture.team_a_id || !fixture.team_b_id) throw new Error('Fixture participants are missing')
-  await saveLineup(session, fixture.id, fixture.team_a_id)
-  await saveLineup(session, fixture.id, fixture.team_b_id)
-  await confirmLineup(session, fixture.id, fixture.team_a_id)
-  await confirmLineup(session, fixture.id, fixture.team_b_id)
-}
-
-async function confirmAllLineups(session: LocalSession, stages: Fixture['stage'][]): Promise<void> {
-  const fixtures = (await snapshot(session)).fixtures.filter((fixture) => stages.includes(fixture.stage))
-  for (const fixture of fixtures) {
-    await saveAndConfirmFixture(session, fixture)
-  }
-}
-
-/** Confirms every qualifying lineup on the existing roster and starts play. */
+/** Starts qualifying on the existing roster; no pair is declared in advance. */
 async function beginQualifying(session: LocalSession): Promise<Snapshot> {
-  await confirmAllLineups(session, ['qualifying'])
   const current = await snapshot(session)
   await callMutation('start_qualifying', session, current.tournament.version, {})
   return snapshot(session)
@@ -183,6 +133,37 @@ async function startQualifying(session: LocalSession): Promise<Snapshot> {
   return beginQualifying(session)
 }
 
+/**
+ * The mixed-seed pair for one team in one match: match 1 takes the first seed
+ * 1 and seed 2 players and match 2 the others, so a fixture uses all four.
+ */
+function mixedPair(current: Snapshot, teamId: string, matchNumber: number) {
+  const players = current.players.filter((player) => player.team_id === teamId)
+  const seed1 = players.filter((player) => player.seed === 1)
+  const seed2 = players.filter((player) => player.seed === 2)
+  const index = matchNumber === 2 ? 1 : 0
+  return { player1Id: seed1[index].id, player2Id: seed2[index].id }
+}
+
+async function assignPairs(session: LocalSession, matchId: string): Promise<Match> {
+  for (const side of ['a', 'b'] as const) {
+    const current = await snapshot(session)
+    const target = current.matches.find((match) => match.id === matchId)
+    const fixture = current.fixtures.find((candidate) => candidate.id === target?.fixture_id)
+    const teamId = side === 'a' ? fixture?.team_a_id : fixture?.team_b_id
+    if (!target || !teamId) throw new Error('Match side is not assignable')
+    await callMutation('assign_pair', session, target.version, {
+      matchId,
+      side,
+      ruleException: false,
+      ...mixedPair(current, teamId, target.match_number),
+    })
+  }
+  const assigned = (await snapshot(session)).matches.find((match) => match.id === matchId)
+  if (!assigned) throw new Error('Assigned match vanished')
+  return assigned
+}
+
 function stageFixtures(current: Snapshot, stage: Fixture['stage']): Fixture[] {
   return current.fixtures.filter((fixture) => fixture.stage === stage)
 }
@@ -191,6 +172,11 @@ function fixtureMatches(current: Snapshot, fixtureId: string): Match[] {
   return current.matches
     .filter((match) => match.fixture_id === fixtureId)
     .sort((first, second) => first.match_number - second.match_number)
+}
+
+async function errorMessage(response: Response): Promise<string> {
+  const body = (await response.json()) as { message?: unknown }
+  return typeof body.message === 'string' ? body.message : ''
 }
 
 async function assignCourt(session: LocalSession, matchId: string, court: 1 | 2): Promise<Match> {
@@ -240,62 +226,56 @@ describe('team tournament commands', () => {
     expect(created.matches).toEqual([])
   })
 
-  it('keeps qualifying lineups private until all twelve are confirmed', async () => {
+  it('publishes each saved side immediately and freezes pairs once the match starts', async () => {
     const organizer = await signInAnonymously()
-    const referee = await signInAnonymously()
     await elevate(organizer)
-    await elevate(referee, '1357')
-    const created = await createRoster(organizer)
-    const fixture = stageFixtures(created, 'qualifying')[0]
-    if (!fixture.team_a_id || !fixture.team_b_id) throw new Error('Fixture has no teams')
+    const ready = await startQualifying(organizer)
+    const fixture = stageFixtures(ready, 'qualifying')[0]
+    const [first] = fixtureMatches(ready, fixture.id)
+    if (!fixture.team_a_id || !first) throw new Error('Qualifying match is missing')
 
-    await saveLineup(organizer, fixture.id, fixture.team_a_id)
-    expect((await snapshot(organizer)).lineups).toHaveLength(1)
-    expect((await snapshot(referee)).lineups).toEqual([])
-    expect((await snapshot()).lineups).toEqual([])
+    await callMutation('assign_pair', organizer, first.version, {
+      matchId: first.id,
+      side: 'a',
+      ruleException: false,
+      ...mixedPair(ready, fixture.team_a_id, 1),
+    })
+    const published = (await snapshot()).matches.find((match) => match.id === first.id)
+    expect(published).toMatchObject({
+      pair_a_player_1_id: mixedPair(ready, fixture.team_a_id, 1).player1Id,
+      pair_b_player_1_id: null,
+    })
 
-    await saveLineup(organizer, fixture.id, fixture.team_b_id)
-    await confirmLineup(organizer, fixture.id, fixture.team_a_id)
-    // One confirmation locks the fixture, so the opponent can no longer save.
-    const locked = (await snapshot(organizer)).fixtures.find((candidate) => candidate.id === fixture.id)
-    expect((await rpc('save_lineup', mutation(locked?.version ?? -1, lineupPayload(created, fixture, fixture.team_b_id)), organizer)).ok)
-      .toBe(false)
-    await confirmLineup(organizer, fixture.id, fixture.team_b_id)
-    expect((await snapshot(referee)).lineups).toEqual([])
-    expect((await snapshot()).lineups).toEqual([])
+    const withCourt = await assignCourt(organizer, first.id, 1)
+    const halfReady = await rpc('start_match', mutation(withCourt.version, { matchId: first.id }), organizer)
+    expect(halfReady.ok).toBe(false)
+    expect(await errorMessage(halfReady)).toBe('Match is not ready to start')
 
-    const remaining = stageFixtures(await snapshot(organizer), 'qualifying').filter((candidate) => candidate.id !== fixture.id)
-    for (const other of remaining) {
-      await saveAndConfirmFixture(organizer, other)
-    }
-    expect((await snapshot(referee)).lineups).toHaveLength(12)
-    expect((await snapshot()).lineups).toHaveLength(12)
+    const assigned = await assignPairs(organizer, first.id)
+    await callMutation('start_match', organizer, assigned.version, { matchId: first.id })
+    const started = (await snapshot(organizer)).matches.find((match) => match.id === first.id)
+    const frozen = await rpc('assign_pair', mutation(started?.version ?? -1, {
+      matchId: first.id,
+      side: 'a',
+      ruleException: false,
+      ...mixedPair(ready, fixture.team_a_id, 2),
+    }), organizer)
+    expect(frozen.ok).toBe(false)
+    expect(await errorMessage(frozen)).toBe('Pairs are fixed after the match starts')
   })
 
-  it('rejects invalid declared pairs and locks lineups after play starts', async () => {
+  it('removes the lineup, substitution, and advancement draw surface', async () => {
     const organizer = await signInAnonymously()
     await elevate(organizer)
-    const created = await createRoster(organizer)
-    const fixture = stageFixtures(created, 'qualifying')[0]
-    if (!fixture.team_a_id) throw new Error('Fixture has no team A')
-
-    const repeated = lineupPayload(created, fixture, fixture.team_a_id)
-    repeated.pairs[1] = repeated.pairs[0]
-    expect((await rpc('save_lineup', mutation(fixture.version, repeated), organizer)).ok).toBe(false)
-
-    const sameSeed = lineupPayload(created, fixture, fixture.team_a_id)
-    sameSeed.pairs[0] = sameSeed.pairs[3]
-    expect((await rpc('save_lineup', mutation(fixture.version, sameSeed), organizer)).ok).toBe(false)
-
-    const ready = await beginQualifying(organizer)
-    const qualifyingMatch = fixtureMatches(ready, fixture.id)[0]
-    if (!qualifyingMatch) throw new Error('Qualifying match is missing')
-    const assigned = await assignCourt(organizer, qualifyingMatch.id, 1)
-    await callMutation('start_match', organizer, assigned.version, { matchId: assigned.id })
-    const startedFixture = (await snapshot(organizer)).fixtures.find((candidate) => candidate.id === fixture.id)
-    expect((await rpc('reopen_lineups', mutation(startedFixture?.version ?? -1, {
-      fixtureId: fixture.id,
-    }), organizer)).ok).toBe(false)
+    for (const operation of ['save_lineup', 'confirm_lineup', 'reopen_lineups', 'substitute_players']) {
+      expect((await rpc(operation, mutation(0, {}), organizer)).status).toBe(404)
+    }
+    expect(runSql("select to_regclass('private.lineups') is null;")).toBe('t')
+    expect(runSql(`
+      select count(*) from information_schema.columns
+      where table_schema = 'public' and table_name = 'tournament'
+        and column_name = 'qualification_draw_winner_ids';
+    `)).toBe('0')
   })
 
   it('enforces stage scoring rules and completes a one-game match', async () => {
@@ -303,14 +283,18 @@ describe('team tournament commands', () => {
     await elevate(organizer)
     expect(runSql("select private.is_game_won(21, 20, 'qualifying');")).toBe('f')
     expect(runSql("select private.is_game_won(21, 19, 'qualifying');")).toBe('t')
-    expect(runSql("select private.is_game_won(30, 29, 'third-place');")).toBe('t')
+    expect(runSql("select private.is_game_won(15, 13, 'third-place');")).toBe('t')
+    expect(runSql("select private.is_game_won(15, 14, 'third-place');")).toBe('f')
+    expect(runSql("select private.is_game_won(21, 20, 'third-place');")).toBe('t')
+    expect(runSql("select private.is_game_won(30, 29, 'third-place');")).toBe('f')
     expect(runSql("select private.is_game_won(11, 9, 'qualification-playoff');")).toBe('t')
     expect(runSql("select private.is_game_won(14, 13, 'qualification-playoff');")).toBe('f')
     expect(runSql("select private.is_game_won(15, 14, 'qualification-playoff');")).toBe('t')
     expect(runSql("select private.is_game_won(30, 28, 'final');")).toBe('t')
 
     const qualifying = await startQualifying(organizer)
-    const assigned = await assignCourt(organizer, qualifying.matches[0].id, 1)
+    await assignCourt(organizer, qualifying.matches[0].id, 1)
+    const assigned = await assignPairs(organizer, qualifying.matches[0].id)
     await callMutation('start_match', organizer, assigned.version, { matchId: assigned.id })
     runSql(`update public.match_games set score_a = 21, score_b = 19 where match_id = '${assigned.id}'::uuid and confirmed_at is null;`)
     const won = (await snapshot(organizer)).matches.find((match) => match.id === assigned.id)
@@ -345,7 +329,8 @@ describe('team tournament commands', () => {
     await elevate(organizer)
     await elevate(referee, '1357')
     const qualifying = await startQualifying(organizer)
-    const first = await assignCourt(organizer, qualifying.matches[0].id, 1)
+    await assignCourt(organizer, qualifying.matches[0].id, 1)
+    const first = await assignPairs(organizer, qualifying.matches[0].id)
     await callMutation('start_match', organizer, first.version, { matchId: first.id })
 
     // A fixture sharing no team, so only the occupied court can block the start.
@@ -355,7 +340,8 @@ describe('team tournament commands', () => {
       !busyTeams.includes(fixture.team_a_id) && !busyTeams.includes(fixture.team_b_id))
     const other = freeFixture ? fixtureMatches(qualifying, freeFixture.id)[0] : undefined
     if (!other) throw new Error('Second match is missing')
-    const assignedOther = await assignCourt(organizer, other.id, 1)
+    await assignCourt(organizer, other.id, 1)
+    const assignedOther = await assignPairs(organizer, other.id)
     expect((await rpc('start_match', mutation(assignedOther.version, { matchId: assignedOther.id }), referee)).ok).toBe(false)
 
     const playing = (await snapshot(organizer)).matches.find((match) => match.id === first.id)
@@ -383,18 +369,20 @@ describe('team tournament commands', () => {
     const thirdPlace = placement.find((fixture) => fixture.stage === 'third-place')
     const final = placement.find((fixture) => fixture.stage === 'final')
     if (!thirdPlace?.team_a_id || !final?.team_a_id) throw new Error('Placement fixtures are missing')
-    expect((await rpc('save_lineup', mutation(final.version, lineupPayload(progressed, final, final.team_a_id)), organizer)).ok)
-      .toBe(false)
+    // Placement matches open for pair assignment only after finalist confirmation.
+    expect(fixtureMatches(progressed, final.id)).toEqual([])
 
     await callMutation('confirm_finalists', organizer, progressed.tournament.version, {})
     expect((await snapshot(organizer)).tournament).toMatchObject({ stage: 'knockouts' })
-    await confirmAllLineups(organizer, ['third-place', 'final'])
     progressed = await snapshot(organizer)
     const finalMatches = fixtureMatches(progressed, final.id)
     expect(finalMatches).toHaveLength(3)
 
-    const earlyFinal = await assignCourt(organizer, finalMatches[0].id, 1)
-    expect((await rpc('start_match', mutation(earlyFinal.version, { matchId: earlyFinal.id }), organizer)).ok).toBe(false)
+    await assignCourt(organizer, finalMatches[0].id, 1)
+    const earlyFinal = await assignPairs(organizer, finalMatches[0].id)
+    const blocked = await rpc('start_match', mutation(earlyFinal.version, { matchId: earlyFinal.id }), organizer)
+    expect(blocked.ok).toBe(false)
+    expect(await errorMessage(blocked)).toBe('Third place must finish before the final starts')
 
     const thirdMatches = fixtureMatches(progressed, thirdPlace.id)
     await walkover(organizer, thirdMatches[0].id, 'a')
