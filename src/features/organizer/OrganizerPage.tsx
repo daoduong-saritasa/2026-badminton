@@ -183,7 +183,7 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
                   <p className="text-base font-semibold [overflow-wrap:anywhere]">{fixtureTeams}</p>
                   <p className="mt-0.5 text-[0.8125rem] text-muted-ink">{fixtureLabel(fixture)}</p>
                 </div>
-                <Button className="w-[7.5rem]" variant={paired ? 'outline' : 'default'} onClick={() => { setAssignFixtureId(fixtureId); setAssignOpen(true) }}>
+                <Button className={paired ? 'w-[7.5rem] border-navy text-navy hover:bg-navy-soft' : 'w-[7.5rem] bg-navy text-white hover:bg-ink'} variant={paired ? 'outline' : 'secondary'} onClick={() => { setAssignFixtureId(fixtureId); setAssignOpen(true) }}>
                   <Users /> {messages.pairAssignment.open}
                 </Button>
               </div>

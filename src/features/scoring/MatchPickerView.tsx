@@ -69,7 +69,7 @@ export function MatchPickerView({ snapshot, onSelect, onExit, onAssign, onStart,
                       <p className="text-[0.9375rem] font-semibold [overflow-wrap:anywhere]">{fixtureTeams}</p>
                       <p className="mt-0.5 text-[0.8125rem] text-muted-ink">{fixtureLabel(fixture)}</p>
                     </div>
-                    <Button className="w-[7.5rem]" variant={paired ? 'outline' : 'default'} onClick={() => { onAssign(fixtureId) }}>
+                    <Button className={paired ? 'w-[7.5rem] border-navy text-navy hover:bg-navy-soft' : 'w-[7.5rem] bg-navy text-white hover:bg-ink'} variant={paired ? 'outline' : 'secondary'} onClick={() => { onAssign(fixtureId) }}>
                       <Users /> {messages.pairAssignment.open}
                     </Button>
                   </div>
