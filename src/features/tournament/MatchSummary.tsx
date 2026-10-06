@@ -30,9 +30,12 @@ export function MatchSummary({ snapshot, match, compact = false }: {
         {(['a', 'b'] as const).map((side) => {
           const won = match.state === 'completed' && match.winnerSide === side
           return (
-            <div key={side}>
-              <div className="flex min-w-0 items-baseline gap-3">
-                <TeamIdentity snapshot={snapshot} teamId={sideTeamId(fixture, side)} className="flex-1 text-base" />
+            <div className="flex min-w-0 items-center gap-3" key={side}>
+              <div className="min-w-0 flex-1">
+                <TeamIdentity snapshot={snapshot} teamId={sideTeamId(fixture, side)} className="text-base" />
+                {showPairs ? <PairDisplay snapshot={snapshot} pair={matchPair(match, side)} compact className="mt-1" /> : null}
+              </div>
+              <div className="flex shrink-0 items-center gap-3">
                 {won ? <span className="shrink-0 text-xs font-semibold text-navy">{messages.fixtures.winner}</span> : null}
                 {hasScores ? (
                   <div className="numeric flex shrink-0 gap-3">
@@ -45,7 +48,6 @@ export function MatchSummary({ snapshot, match, compact = false }: {
                   </div>
                 ) : null}
               </div>
-              {showPairs ? <PairDisplay snapshot={snapshot} pair={matchPair(match, side)} compact className="mt-1" /> : null}
             </div>
           )
         })}

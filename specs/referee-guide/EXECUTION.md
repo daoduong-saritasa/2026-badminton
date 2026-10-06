@@ -61,6 +61,8 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 
 - [x] (amended 2026-10-07) Use blue pair-assignment actions in `OrganizerPage.tsx` and `MatchPickerView.tsx`; retain filled versus outlined states for unassigned versus assigned pairs.
 
+- [x] (amended 2026-10-07) Center scores and the winner label vertically beside the team and pair block in `MatchSummary.tsx`.
+
 **Phase gate (hard):**
 - [x] Run `npm run typecheck` project-wide.
 - [x] Run `npm run test:related -- <changed source files from the phase diff>`; record pass, failure, and skip counts (2026-10-07: 7 passed, 0 failed, 0 skipped). If integration setup lacks the prohibited Supabase socket, defer only that blocked verification with substitute evidence and STATUS debt.
