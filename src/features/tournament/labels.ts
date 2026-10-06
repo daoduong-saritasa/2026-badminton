@@ -126,6 +126,11 @@ export function isDeciderOpen(snapshot: TournamentSnapshot, match: FixtureMatch)
   return fixture !== undefined && deciderStatus(fixture, fixtureMatches(snapshot, match.fixtureId)) !== 'unnecessary'
 }
 
+/** The name staff gave a court, such as "Sân 1". */
+export function courtLabel(snapshot: TournamentSnapshot, court: 1 | 2): string {
+  return snapshot.tournament.courtNames[court - 1]
+}
+
 /** A match side's saved pair; null until staff assign it. */
 export function matchPair(match: FixtureMatch, side: Side): Pair | null {
   return side === 'a' ? match.pairA : match.pairB

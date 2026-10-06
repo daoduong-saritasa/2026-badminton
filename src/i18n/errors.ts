@@ -51,6 +51,7 @@ const serverMessages: Record<string, string> = {
   'Only unstarted matches can be assigned': 'Chỉ xếp được sân cho trận chưa bắt đầu.',
   'Match is not ready to start': 'Trận đấu chưa sẵn sàng: cần xếp sân và cặp của cả hai đội.',
   'Court is occupied': 'Sân này đang có trận khác thi đấu.',
+  'Court names must be two distinct names of 1 to 30 characters': 'Hai sân phải có tên khác nhau, mỗi tên 1–30 ký tự.',
   'A player is already playing': 'Có người chơi đang thi đấu ở trận khác.',
   'Decider is not eligible': 'Trận 3 chỉ diễn ra khi hai trận đầu đã có kết quả 1–1.',
 

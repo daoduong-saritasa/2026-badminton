@@ -5,6 +5,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { messages } from '@/i18n/vi'
 
 import {
+  courtLabel,
   fixtureLabel,
   fixtureMatches,
   fixtureOf,
@@ -95,7 +96,7 @@ function TeamSchedule({ snapshot, teamId }: { snapshot: TournamentSnapshot; team
                             <span className="font-semibold">
                               {messages.common.matchNumber(match.matchNumber)}
                               {' · '}
-                              {match.court ? messages.common.court(match.court) : messages.publicView.courtPending}
+                              {match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending}
                             </span>
                             <span className="text-muted-ink">{matchResultText(snapshot, match)}</span>
                           </span>
@@ -183,7 +184,7 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
                 <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{teams(snapshot, match)}</span>
                 <span className="flex flex-wrap items-center gap-2.5 text-xs text-muted-ink">
                   <StageChip snapshot={snapshot} match={match} />
-                  {match.court ? messages.common.court(match.court) : messages.publicView.courtPending}
+                  {match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending}
                 </span>
               </li>
             ))}

@@ -24,7 +24,6 @@ export const messages = {
     unknownPlayer: 'Không rõ tên',
     unknownFixture: 'Cuộc đối đầu không xác định',
     unknownMatch: 'Trận không xác định',
-    court: (court: number) => `Sân ${formatNumber(court)}`,
     matchNumber: (matchNumber: number) => `Trận ${formatNumber(matchNumber)}`,
     fixtureMatch: (fixture: string, matchNumber: number) => `${fixture} · Trận ${formatNumber(matchNumber)}`,
     gameNumber: (gameNumber: number) => `Ván ${formatNumber(gameNumber)}`,
@@ -97,6 +96,19 @@ export const messages = {
       starting: 'Đang bắt đầu…',
       start: 'Bắt đầu ghi điểm',
       startShort: 'Bắt đầu',
+    },
+
+    courts: {
+      rename: 'Đổi tên sân',
+      title: 'Tên sân',
+      description: 'Tên mới hiện ngay trên mọi màn hình. Trận đang xếp sân vẫn giữ nguyên sân.',
+      label: (court: number) => `Sân số ${formatNumber(court)}`,
+      save: 'Lưu tên sân',
+      issues: {
+        empty: 'Nhập tên cho cả hai sân.',
+        'too-long': 'Tên sân tối đa 30 ký tự.',
+        duplicate: 'Hai sân phải có tên khác nhau.',
+      },
     },
 
     qualifying: {
@@ -225,7 +237,7 @@ export const messages = {
       'court-and-pairs': 'Cần xếp sân và cặp',
     },
     startTitle: 'Bắt đầu trận này?',
-    startBody: (court: string) => `Trận bắt đầu trên ${court.toLowerCase()}. Thiết bị này sẽ dùng để ghi điểm.`,
+    startBody: (court: string) => `Trận bắt đầu trên ${court}. Thiết bị này sẽ dùng để ghi điểm.`,
     starting: 'Đang bắt đầu…',
     undo: 'Hoàn tác',
     swapSides: 'Đổi bên',

@@ -27,6 +27,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import {
+  courtLabel,
   fixtureLabel,
   fixtureOf,
   groupByFixture,
@@ -327,7 +328,7 @@ function ScoringSurface({
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden text-right text-xs font-semibold sm:block">
-            {match.court ? messages.common.court(match.court) : '–'}
+            {match.court ? courtLabel(snapshot, match.court) : '–'}
             <span className="block font-normal text-muted-ink">
               {gamesToWinMatch(state.stage) === 2 ? messages.scoring.gameStatus(state.gameNumber, scoreText(tally)) : stageRule(state.stage)}
             </span>
@@ -471,7 +472,7 @@ function MatchPicker({
           {messages.common.versus(teamName(snapshot, sideTeamId(fixtureOf(snapshot, match), 'a')), teamName(snapshot, sideTeamId(fixtureOf(snapshot, match), 'b')))}
         </span>
         <span className="mt-1 block text-[0.8125rem] text-muted-ink">
-          {match.court ? messages.common.court(match.court) : messages.publicView.courtPending} · {matchLabel(snapshot, match)}
+          {match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending} · {matchLabel(snapshot, match)}
         </span>
         <PairLines snapshot={snapshot} match={match} className="mt-1" />
         {isPlaying(match) ? (
@@ -527,7 +528,7 @@ function MatchPicker({
                       <li className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-x-3 gap-y-1" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
                         <p className="text-sm font-semibold">
                           {messages.common.matchNumber(match.matchNumber)}
-                          <span className="font-normal text-muted-ink"> · {match.court ? messages.common.court(match.court) : messages.publicView.courtPending}</span>
+                          <span className="font-normal text-muted-ink"> · {match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending}</span>
                         </p>
                         <p className="text-right text-xs text-muted-ink">
                           {startBlocker(snapshot, match) ? messages.scoring.startBlocked[startBlocker(snapshot, match) ?? 'pairs'] : null}
@@ -566,7 +567,7 @@ function MatchPicker({
           <AlertDialogHeader>
             <AlertDialogTitle>{messages.scoring.startTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              {startMatch?.court ? messages.scoring.startBody(messages.common.court(startMatch.court)) : null}
+              {startMatch?.court ? messages.scoring.startBody(courtLabel(snapshot, startMatch.court)) : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

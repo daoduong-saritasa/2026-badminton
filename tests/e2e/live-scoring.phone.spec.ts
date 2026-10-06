@@ -57,7 +57,7 @@ test('a referee scores a game to the cap while the public view follows live', as
   const { snapshot, match } = await preparedQualifyingMatch(pins.organizer)
   const spectator = await openPage('Desktop Chrome')
   await spectator.goto('/')
-  const ticket = spectator.getByRole('article', { name: messages.common.court(1) })
+  const ticket = spectator.getByRole('article', { name: snapshot.tournament.court_names[0] })
 
   await page.goto('/')
   await signIn(page, pins.referee, 'referee')

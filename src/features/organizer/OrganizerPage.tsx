@@ -36,6 +36,7 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PairAssignmentForm } from '@/features/scoring/PairAssignmentForm'
 import {
+  courtLabel,
   fixtureLabel,
   fixtureMatches,
   fixtureOf,
@@ -52,6 +53,7 @@ import { errorMessage } from '@/i18n/errors'
 import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
 import { PairLines } from '@/features/tournament/PairLines'
+import { CourtNamesDialog } from './CourtNamesDialog'
 import { ResultEditor } from './ResultEditor'
 import { ResultSchedule } from './ResultSchedule'
 import { SetupForm } from './SetupForm'
@@ -165,7 +167,10 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
 
   return (
     <section className="rounded-card border border-ink/5 bg-white p-5 shadow-card sm:p-6">
-      <h3 className="text-[0.9375rem] font-semibold">{messages.organizer.schedule.heading}</h3>
+      <div className="flex items-center justify-between gap-3">
+        <h3 className="text-[0.9375rem] font-semibold">{messages.organizer.schedule.heading}</h3>
+        <CourtNamesDialog snapshot={snapshot} resetGeneration={resetGeneration} />
+      </div>
       <ul className="mt-4 divide-y divide-hairline">
         {groupByFixture(waiting).map(({ fixtureId, matches }) => {
           const fixture = snapshot.fixtures.find((candidate) => candidate.id === fixtureId)
@@ -200,7 +205,7 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
                         <SelectValue placeholder={messages.organizer.schedule.noCourt} />
                       </SelectTrigger>
                       <SelectContent>
-                        {courts.map((option) => <SelectItem value={String(option)} key={option}>{messages.common.court(option)}</SelectItem>)}
+                        {courts.map((option) => <SelectItem value={String(option)} key={option}>{courtLabel(snapshot, option)}</SelectItem>)}
                       </SelectContent>
                     </Select>
                     </div>

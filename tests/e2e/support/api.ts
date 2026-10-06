@@ -69,6 +69,7 @@ export interface Snapshot {
     result_revision: number
     finalists_confirmed_at: string | null
     current_playoff_round_id: string | null
+    court_names: [string, string]
   }
   teams: Team[]
   players: Player[]

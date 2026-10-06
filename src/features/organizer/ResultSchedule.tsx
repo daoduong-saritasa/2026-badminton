@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import type { FixtureMatch, TournamentSnapshot, UUID } from '@/domain/types'
 import { Button } from '@/components/ui/button'
 import {
+  courtLabel,
   fixtureOf,
   isDeciderEligible,
   matchLabel,
@@ -37,7 +38,7 @@ function MatchRow({
         </span>
         <span className="mt-1 block text-[0.8125rem] text-muted-ink">
           {matchLabel(snapshot, match)}
-          {match.court === null ? '' : ` · ${messages.common.court(match.court)}`}
+          {match.court === null ? '' : ` · ${courtLabel(snapshot, match.court)}`}
           {` · ${matchResultText(snapshot, match)}`}
         </span>
       </span>

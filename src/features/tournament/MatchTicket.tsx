@@ -6,6 +6,7 @@ import { messages } from '@/i18n/vi'
 import { cn } from '@/lib/utils'
 
 import {
+  courtLabel,
   fixtureLabel,
   fixtureOf,
   matchPair,
@@ -76,12 +77,12 @@ export function MatchTicket({
         'ticket lift-card rounded-card border-t-[5px] bg-white p-[1.625rem] shadow-card',
         match.court === 2 ? 'border-t-cyan' : 'border-t-orange',
       )}
-      aria-label={match.court ? messages.common.court(match.court) : messages.common.fixtureMatch(fixtureLabel(fixture), match.matchNumber)}
+      aria-label={match.court ? courtLabel(snapshot, match.court) : messages.common.fixtureMatch(fixtureLabel(fixture), match.matchNumber)}
     >
       <div className="mb-7 flex items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-2.5">
           <h3 className="text-sm font-semibold">
-            {match.court ? messages.common.court(match.court) : messages.publicView.courtPending}
+            {match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending}
           </h3>
           <span
             className={cn(

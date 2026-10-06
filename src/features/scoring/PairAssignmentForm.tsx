@@ -27,6 +27,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
+  courtLabel,
   fixtureLabel,
   fixtureMatches,
   isDeciderEligible,
@@ -316,7 +317,7 @@ export function PairAssignmentForm({
             <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
               <h3 className="text-sm font-semibold">
                 {messages.common.matchNumber(match.matchNumber)}
-                {match.court ? <span className="font-normal text-muted-ink"> · {messages.common.court(match.court)}</span> : null}
+                {match.court ? <span className="font-normal text-muted-ink"> · {courtLabel(snapshot, match.court)}</span> : null}
               </h3>
               {!isDeciderEligible(snapshot, match) ? <span className="text-xs text-muted-ink">{messages.scoring.startBlocked.decider}</span> : null}
             </div>
