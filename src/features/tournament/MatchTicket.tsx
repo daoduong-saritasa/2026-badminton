@@ -54,11 +54,9 @@ function TicketSide({
 export function MatchTicket({
   match,
   snapshot,
-  nextLabel,
 }: {
   match: FixtureMatch
   snapshot: TournamentSnapshot
-  nextLabel?: string
 }) {
   const fixture = fixtureOf(snapshot, match)
   const live = openGame(match)
@@ -68,8 +66,7 @@ export function MatchTicket({
   return (
     <article
       className={cn(
-        'ticket rounded-card border border-line border-t-4 bg-white p-5 shadow-card',
-        match.court === 2 ? 'border-t-cyan' : 'border-t-orange',
+        'ticket rounded-card border border-line bg-white p-5 shadow-card',
       )}
       aria-label={match.court ? courtLabel(snapshot, match.court) : messages.common.fixtureMatch(fixtureScheduleLabel(snapshot, fixture), match.matchNumber)}
     >
@@ -94,20 +91,11 @@ export function MatchTicket({
         <TicketSide match={match} side="a" snapshot={snapshot} />
         <TicketSide match={match} side="b" snapshot={snapshot} />
       </div>
-      {nextLabel || (match.state === 'playing' && live && fixture !== undefined && gamesToWinMatch(fixture.stage) === 2) ? (
+      {match.state === 'playing' && live && fixture !== undefined && gamesToWinMatch(fixture.stage) === 2 ? (
         <div className="-mx-5 -mb-5 mt-4 rounded-b-card border-t border-hairline bg-well px-5 py-3">
-          <p className="text-xs/[1.6]">
-            {match.state === 'playing' && live && fixture !== undefined && gamesToWinMatch(fixture.stage) === 2 ? (
-              <span className="font-medium">
-                {messages.ticket.gameTally(live.gameNumber, scoreText(matchGameTally(match.games)))}
-            </span>
-          ) : null}
-          {nextLabel ? (
-            <span className="text-muted-ink [overflow-wrap:anywhere]">
-              {match.state === 'playing' && live && fixture !== undefined && gamesToWinMatch(fixture.stage) === 2 ? ' · ' : ''}{messages.ticket.upNext}: {nextLabel}
-            </span>
-          ) : null}
-        </p>
+          <p className="text-xs/[1.6] font-medium">
+            {messages.ticket.gameTally(live.gameNumber, scoreText(matchGameTally(match.games)))}
+          </p>
         </div>
       ) : null}
     </article>

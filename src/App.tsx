@@ -20,8 +20,6 @@ import { StandingsTable } from '@/features/tournament/StandingsTable'
 import { tournamentTitle } from '@/features/tournament/document-title'
 import { TournamentPage } from '@/features/tournament/TournamentPage'
 
-import './App.css'
-
 type PublicView = 'matches' | 'standings' | 'knockouts'
 type StaffView = 'scoring' | 'organizer'
 type AppView = PublicView | StaffView
@@ -255,6 +253,7 @@ export default function App() {
         )}
       </header>
 
+      <a href="/guide" className="mb-4 inline-block text-sm font-medium text-navy underline underline-offset-4">{messages.guide.heading}</a>
       <Tabs value={view} onValueChange={handleViewChange} className="gap-6">
         <TabsList variant="default" className="court-navigation w-full items-stretch gap-1 rounded-card p-1.5 group-data-horizontal/tabs:h-auto">
           {tabs.map((tab) => (

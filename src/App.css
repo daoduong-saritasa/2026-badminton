@@ -60,11 +60,21 @@
 .score-viewport {
   height: 100dvh;
   min-height: 28rem;
-  padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+  padding: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
 }
 
 .scoring-surface {
-  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 0.5rem;
+}
+
+.score-header {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 2.75rem;
+}
+
+.score-feedback {
+  font-size: 0.75rem;
 }
 
 .score-panels {
@@ -90,7 +100,7 @@
 }
 
 .score-actions [data-slot="button"] {
-  min-height: 3rem;
+  min-height: 2.75rem;
 }
 
 @media (hover: hover) {
@@ -138,6 +148,19 @@
 }
 
 @media (max-width: 39.999rem) {
+  .score-header {
+    position: relative;
+    padding-bottom: 2.5rem;
+  }
+
+  .score-court {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    text-align: center;
+  }
+
   [data-slot="dialog-content"],
   [data-slot="alert-dialog-content"] {
     max-height: calc(100dvh - 2rem);

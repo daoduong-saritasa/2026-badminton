@@ -326,3 +326,10 @@ window. Record the operator, timestamp, deployed commit, project reference, and 
 If any step fails, stop operational changes. Capture the timestamp, browser, action, and sanitized
 error; do not log PINs, tokens, database passwords, or request bodies. Fix and repeat the complete
 procedure before the event.
+
+## Standalone guide links
+
+Cloudflare Pages serves the SPA entry for unmatched routes when the build has no top-level `404.html`.
+Keep that fallback for `/guide`, `/guide/`, and `/rules`.
+Verify direct navigation and reload on a Pages preview before publishing.
+See [Cloudflare Pages serving behavior](https://developers.cloudflare.com/pages/configuration/serving-pages/).

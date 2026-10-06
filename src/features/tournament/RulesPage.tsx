@@ -42,7 +42,8 @@ export function RulesPage() {
 
       <div>
         <SectionHeading>{rules.formatHeading}</SectionHeading>
-        <p className="mb-4 text-sm/[1.65]">{rules.teamRule}</p>
+        <p className="mb-2 text-sm/[1.65]">{rules.teamRule}</p>
+        <p className="mb-5 max-w-3xl text-sm/[1.65] text-muted-ink">{rules.formatNote}</p>
         <ol className="grid gap-4 md:grid-cols-3">
           {rules.stages.map((stage, index) => (
             <li className={`rounded-card border border-ink/10 p-5 ${stageBackgrounds[index]}`} key={stage.name}>
@@ -71,7 +72,9 @@ export function RulesPage() {
         <p className="mt-5 text-sm/[1.65] font-medium">{rules.gameRule}</p>
         <details className="mt-2 text-sm/[1.65]">
           <summary className="w-fit cursor-pointer rounded-field text-navy underline decoration-navy/30 underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-navy">{rules.scoringDetails}</summary>
-          <p className="mt-2 text-muted-ink">{rules.gameExamples}</p>
+          <ul className="mt-3 list-disc space-y-2 pl-5 text-muted-ink">
+            {rules.gameExamples.map((example) => <li key={example}>{example}</li>)}
+          </ul>
         </details>
       </div>
 

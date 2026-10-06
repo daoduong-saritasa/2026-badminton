@@ -171,26 +171,26 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
         <h3 className="text-[0.9375rem] font-semibold">{messages.organizer.schedule.heading}</h3>
         <CourtNamesDialog snapshot={snapshot} resetGeneration={resetGeneration} />
       </div>
-      <ul className="mt-4 divide-y divide-hairline">
+      <ul className="mt-6 divide-y divide-line">
         {groupByFixture(waiting).map(({ fixtureId, matches }) => {
           const fixture = snapshot.fixtures.find((candidate) => candidate.id === fixtureId)
           const fixtureTeams = teams(snapshot, matches[0])
           const paired = matches.every((match) => match.pairA !== null && match.pairB !== null)
           return (
-            <li className="py-4 first:pt-0 last:pb-0" aria-label={`${fixtureLabel(fixture)} · ${fixtureTeams}`} key={fixtureId}>
+            <li className="py-6 first:pt-0 last:pb-0" aria-label={`${fixtureLabel(fixture)} · ${fixtureTeams}`} key={fixtureId}>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <p className="text-[0.9375rem] font-semibold [overflow-wrap:anywhere]">{fixtureTeams}</p>
+                  <p className="text-base font-semibold [overflow-wrap:anywhere]">{fixtureTeams}</p>
                   <p className="mt-0.5 text-[0.8125rem] text-muted-ink">{fixtureLabel(fixture)}</p>
                 </div>
-                <Button className="w-[7.5rem]" variant={paired ? 'outline' : 'default'} onClick={() => { setAssignFixtureId(fixtureId); setAssignOpen(true) }}>
+                <Button className={paired ? 'w-[7.5rem] border-navy text-navy hover:bg-navy-soft' : 'w-[7.5rem] bg-navy text-white hover:bg-ink'} variant={paired ? 'outline' : 'secondary'} onClick={() => { setAssignFixtureId(fixtureId); setAssignOpen(true) }}>
                   <Users /> {messages.pairAssignment.open}
                 </Button>
               </div>
-              <ul className="mt-3 space-y-3 border-l-2 border-hairline pl-3 sm:pl-4">
+              <ul className="mt-4 divide-y divide-hairline">
                 {matches.map((match) => (
-                  <li className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-x-3 gap-y-1 md:grid-cols-[minmax(0,1fr)_14rem_7.5rem]" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
-                    <p className="col-start-1 row-start-1 text-sm font-semibold">{messages.common.matchNumber(match.matchNumber)}</p>
+                  <li className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-x-4 gap-y-4 py-5 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_14rem_7.5rem]" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
+                    <p className="col-start-1 row-start-1 w-fit rounded-field bg-well px-2.5 py-1 text-sm font-semibold">{messages.common.matchNumber(match.matchNumber)}</p>
                     <p className="col-start-2 row-start-1 text-right text-xs text-muted-ink md:col-start-3">
                       {startBlocker(snapshot, match) ? messages.scoring.startBlocked[startBlocker(snapshot, match) ?? 'pairs'] : null}
                     </p>
