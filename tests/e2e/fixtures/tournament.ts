@@ -1,5 +1,6 @@
 import {
   findMatch,
+  fixtureCommand,
   matchCommand,
   readState,
   tournamentCommand,
@@ -107,6 +108,28 @@ export async function assignPair(
   ruleException = false,
 ): Promise<void> {
   await matchCommand(session, 'assign_pair', matchId, { side, ruleException, ...pair })
+}
+
+/**
+ * Saves several pairs of one fixture in one `assign_fixture_pairs` call, each
+ * against its match's current version.
+ */
+export async function assignFixturePairs(
+  session: LocalSession,
+  fixtureId: string,
+  assignments: ReadonlyArray<{ matchId: string; side: Side; pair: Pair }>,
+  ruleException = false,
+): Promise<void> {
+  const { snapshot } = await readState()
+  await fixtureCommand(session, 'assign_fixture_pairs', fixtureId, {
+    ruleException,
+    assignments: assignments.map(({ matchId, side, pair }) => ({
+      matchId,
+      side,
+      matchVersion: findMatch(snapshot, matchId).version,
+      ...pair,
+    })),
+  })
 }
 
 /**

@@ -15,6 +15,7 @@ import { findMatch, readState, signInStaff } from './support/api.ts'
 import { readRoster } from './support/roster.ts'
 import { signIn } from './support/staff.ts'
 import { localTarget } from './support/target.ts'
+import { matchRow } from './support/ui.ts'
 import { expect, test } from './support/test.ts'
 
 function maintenanceEnvironment(): NodeJS.ProcessEnv {
@@ -81,6 +82,7 @@ test('a progress reset from the maintenance command clears play, keeps the roste
 
   // The open page follows the reset without a reload.
   await expect(page.getByRole('banner').getByText(messages.app.stage.setup, { exact: true })).toBeVisible()
+  await expect(page.getByText(messages.publicView.setupInProgress)).toBeVisible()
 
   const { snapshot } = await readState()
   expect(snapshot.tournament.stage).toBe('setup')
@@ -101,8 +103,7 @@ test('a reset sends a referee who is scoring back to an empty match list', async
   await page.goto('/')
   await signIn(page, pins.referee, 'referee')
   const pointA = page.getByRole('button', { name: messages.scoring.addPoint(matchPairLabel(prepared, findMatch(prepared, match.id), 'a')) })
-  await page.getByRole('listitem').filter({ hasText: matchPairLabel(prepared, findMatch(prepared, match.id), 'a') })
-    .getByRole('button', { name: messages.scoring.start }).click()
+  await matchRow(page, prepared, findMatch(prepared, match.id)).getByRole('button', { name: messages.scoring.start }).click()
   await page.getByRole('alertdialog', { name: messages.scoring.startTitle })
     .getByRole('button', { name: messages.scoring.start }).click()
   await pointA.click()

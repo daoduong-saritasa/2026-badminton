@@ -22,49 +22,30 @@ export async function openOrganizerSection(page: Page, section: keyof typeof mes
     .click()
 }
 
-/** A match's row in the organizer's court schedule. */
-export function scheduleRow(page: Page, snapshot: Snapshot, match: Match): Locator {
-  const court = messages.organizer.schedule.courtFor(`${matchLabel(snapshot, match)} · ${matchTeams(snapshot, match)}`)
-  return page.getByRole('combobox', { name: court, exact: true }).locator('..')
-}
-
-/** A third match is played only once the first two finished one each. */
-function deciderEligible(snapshot: Snapshot, decider: Match): boolean {
-  const openers = snapshot.matches.filter((match) => match.fixture_id === decider.fixture_id && match.match_number !== 3)
-  return openers.length === 2
-    && openers.every((match) => match.state === 'completed')
-    && openers[0].winner_side !== openers[1].winner_side
-}
-
 /**
- * A match's row in the referee's match list. Rows carry no team names, so the
- * row is found by its position among the matches staff can prepare.
+ * A fixture's row in the organizer's schedule or the referee's match list,
+ * holding the fixture's pair assignment button and its match rows.
  */
-export function pickerRow(page: Page, snapshot: Snapshot, match: Match): Locator {
-  const upcoming = snapshot.matches.filter((candidate) => {
-    const fixture = fixtureOf(snapshot, candidate)
-    const placement = fixture.stage === 'third-place' || fixture.stage === 'final'
-    return candidate.state === 'unstarted'
-      && fixture.team_a_id !== null
-      && fixture.team_b_id !== null
-      && (!placement || snapshot.tournament.finalists_confirmed_at !== null)
-      && (candidate.match_number !== 3 || deciderEligible(snapshot, candidate))
-  })
-  const index = upcoming.findIndex((candidate) => candidate.id === match.id)
-  if (index < 0) throw new Error(`Match ${match.id} is not in the referee's list`)
-  return page.getByRole('heading', { name: messages.scoring.startHeading, exact: true })
-    .locator('..')
-    .getByRole('listitem')
-    .nth(index)
+export function fixtureRow(page: Page, snapshot: Snapshot, match: Match): Locator {
+  const label = `${stageLabels[fixtureOf(snapshot, match).stage]} · ${matchTeams(snapshot, match)}`
+  return page.getByRole('listitem', { name: label, exact: true })
 }
 
+/** One match's row inside its fixture row. */
+export function matchRow(page: Page, snapshot: Snapshot, match: Match): Locator {
+  return fixtureRow(page, snapshot, match).getByRole('listitem', { name: messages.common.matchNumber(match.match_number), exact: true })
+}
+
+/** The pair assignment dialog for a match's fixture. */
 export function pairDialog(page: Page, snapshot: Snapshot, match: Match): Locator {
-  return page.getByRole('dialog').filter({
-    has: page.getByRole('heading', { name: messages.pairAssignment.title(matchLabel(snapshot, match)) }),
+  const fixture = fixtureOf(snapshot, match)
+  return page.getByRole('dialog', {
+    name: messages.pairAssignment.title(stageLabels[fixture.stage], matchTeams(snapshot, match)),
   })
 }
 
-/** One team's card inside the pair assignment dialog. */
-export function sideCard(dialog: Locator, team: string): Locator {
-  return dialog.getByRole('heading', { level: 4, name: team, exact: true }).locator('../..')
+/** One team's player choices for one match inside the pair assignment dialog. */
+export function teamPicker(dialog: Locator, matchNumber: 1 | 2 | 3, team: string): Locator {
+  return dialog.getByRole('region', { name: messages.common.matchNumber(matchNumber), exact: true })
+    .getByRole('group', { name: team, exact: true })
 }
