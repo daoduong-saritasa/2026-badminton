@@ -237,6 +237,7 @@ export type Database = {
           created_at: string
           id: string
           playoff_round_id: string | null
+          qualifying_order: number | null
           stage: string
           team_a_id: string | null
           team_b_id: string | null
@@ -248,6 +249,7 @@ export type Database = {
           created_at?: string
           id?: string
           playoff_round_id?: string | null
+          qualifying_order?: number | null
           stage: string
           team_a_id?: string | null
           team_b_id?: string | null
@@ -259,6 +261,7 @@ export type Database = {
           created_at?: string
           id?: string
           playoff_round_id?: string | null
+          qualifying_order?: number | null
           stage?: string
           team_a_id?: string | null
           team_b_id?: string | null

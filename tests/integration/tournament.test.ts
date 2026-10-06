@@ -31,6 +31,7 @@ interface Player {
 
 interface Fixture {
   id: string
+  qualifying_order: number | null
   stage: 'qualifying' | 'qualification-playoff' | 'third-place' | 'final'
   team_a_id: string | null
   team_b_id: string | null
@@ -224,6 +225,53 @@ describe('team tournament commands', () => {
     expect(created.fixtures.filter((fixture) => fixture.stage !== 'qualifying').map((fixture) => fixture.stage).sort())
       .toEqual(['final', 'third-place'])
     expect(created.matches).toEqual([])
+  })
+
+  it('orders qualifying fixtures by roster position and keeps both matches in that queue', async () => {
+    const organizer = await signInAnonymously()
+    await elevate(organizer)
+    const names = ['Zulu', 'Alpha', 'Mike', 'Bravo']
+    const payload = {
+      tournamentName: 'Fixture order',
+      teams: names.map((name) => ({
+        name,
+        players: Array.from({ length: 4 }, (_, index) => ({
+          name: `${name} ${index + 1}`,
+          seed: index < 2 ? 1 : 2,
+        })),
+      })),
+    }
+    await callMutation('save_roster', organizer, 0, payload)
+    const saved = await snapshot(organizer)
+    await callMutation('save_roster', organizer, saved.tournament.version, payload)
+    const ready = await beginQualifying(organizer)
+    const qualifying = stageFixtures(ready, 'qualifying')
+    const teamNames = new Map(ready.teams.map((team) => [team.id, team.name]))
+    expect(qualifying.map((fixture) => fixture.qualifying_order)).toEqual([1, 2, 3, 4, 5, 6])
+    expect(qualifying.map((fixture) => [
+      teamNames.get(fixture.team_a_id ?? ''),
+      teamNames.get(fixture.team_b_id ?? ''),
+    ])).toEqual([
+      ['Zulu', 'Alpha'],
+      ['Zulu', 'Mike'],
+      ['Alpha', 'Bravo'],
+      ['Zulu', 'Bravo'],
+      ['Alpha', 'Mike'],
+      ['Mike', 'Bravo'],
+    ])
+    expect(ready.matches.map((match) => [match.fixture_id, match.match_number]))
+      .toEqual(qualifying.flatMap((fixture) => [[fixture.id, 1], [fixture.id, 2]]))
+    for (const team of ready.teams) {
+      const appearances = qualifying.map((fixture) =>
+        fixture.team_a_id === team.id || fixture.team_b_id === team.id,
+      )
+      for (let index = 0; index < appearances.length - 2; index += 1) {
+        expect(appearances.slice(index, index + 3).every(Boolean)).toBe(false)
+      }
+    }
+    await assignCourt(organizer, ready.matches[2].id, 2)
+    expect((await snapshot(organizer)).matches.map((match) => match.id))
+      .toEqual(ready.matches.map((match) => match.id))
   })
 
   it('publishes each saved side immediately and freezes pairs once the match starts', async () => {
