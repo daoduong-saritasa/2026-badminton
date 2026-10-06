@@ -1,16 +1,15 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
-import { Check } from 'lucide-react'
 
 import { mutateTournament } from '@/data/tournament'
-import { pairingRule, qualifyingPairings, validatePairAssignment } from '@/domain/pair-assignment'
-import { deciderStatus } from '@/domain/team-fixtures'
+import { applyPairDrafts, pairingRule, validatePairDrafts } from '@/domain/pair-assignment'
 import type {
   FixtureMatch,
+  FixtureStage,
   Pair,
+  PairDraft,
   Side,
   StaffRole,
-  TeamFixture,
   TeamPlayer,
   TournamentSnapshot,
   UUID,
@@ -25,12 +24,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
+  fixtureLabel,
   fixtureMatches,
-  fixtureOf,
-  matchLabel,
+  isDeciderEligible,
+  isDeciderOpen,
   matchPair,
   pairPlayers,
   sideTeamId,
@@ -38,6 +38,10 @@ import {
 } from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
 import { messages } from '@/i18n/vi'
+import { cn } from '@/lib/utils'
+
+const pa = messages.pairAssignment
+const sides = ['a', 'b'] as const
 
 function samePair(left: Pair | null, right: Pair | null): boolean {
   if (left === null || right === null) return left === right
@@ -45,295 +49,323 @@ function samePair(left: Pair | null, right: Pair | null): boolean {
     || (left.player1Id === right.player2Id && left.player2Id === right.player1Id)
 }
 
-function playerIds(pair: Pair | null): UUID[] {
-  return pair ? [pair.player1Id, pair.player2Id] : []
+function key(matchId: UUID, side: Side): string {
+  return `${matchId}:${side}`
 }
 
-/**
- * Completed, played matches in this stage where the player was in the team's
- * pair. Walkovers are excluded: nobody played them.
- */
-function stageAppearances(snapshot: TournamentSnapshot, stage: TeamFixture['stage'], teamId: UUID, playerId: UUID): number {
-  return snapshot.fixtures
-    .filter((fixture) => fixture.stage === stage && (fixture.teamAId === teamId || fixture.teamBId === teamId))
-    .flatMap((fixture) => fixtureMatches(snapshot, fixture.id).map((match) => ({ fixture, match })))
-    .filter(({ fixture, match }) =>
-      match.state === 'completed'
-      && match.resultKind === 'played'
-      && playerIds(matchPair(match, fixture.teamAId === teamId ? 'a' : 'b')).includes(playerId))
-    .length
-}
-
-/**
- * The usage line under a player. Qualifying caps at three; a placement fixture
- * allows two, or three while its decider may still be played; playoff rounds
- * have no fixed total. This informs staff and imposes no quota of its own.
- */
-function usageText(snapshot: TournamentSnapshot, fixture: TeamFixture, teamId: UUID, playerId: UUID): string {
-  const played = stageAppearances(snapshot, fixture.stage, teamId, playerId)
-  switch (fixture.stage) {
-    case 'qualifying':
-      return messages.pairAssignment.usage.qualifying(played)
-    case 'qualification-playoff':
-      return messages.pairAssignment.usage.playoff(played)
-    default: {
-      const available = deciderStatus(fixture, fixtureMatches(snapshot, fixture.id)) === 'unnecessary' ? 2 : 3
-      return messages.pairAssignment.usage.placement(played, available)
-    }
-  }
+function toPair(playerIds: readonly UUID[]): Pair | null {
+  const [player1Id, player2Id] = playerIds
+  return player1Id && player2Id ? { player1Id, player2Id } : null
 }
 
 function playingPlayerIds(snapshot: TournamentSnapshot): Set<UUID> {
   return new Set(snapshot.matches
     .filter((match) => match.state === 'playing')
-    .flatMap((match) => [...playerIds(match.pairA), ...playerIds(match.pairB)]))
+    .flatMap((match) => [match.pairA, match.pairB])
+    .flatMap((pair) => (pair ? [pair.player1Id, pair.player2Id] : [])))
 }
 
-function OptionButton({ selected, onClick, children }: {
+/**
+ * Matches in `stage` where the player is in a pair: saved for later, on court,
+ * or finished. A walkover without pairs and an unnecessary decider count for
+ * nobody.
+ */
+function stageAppearances(snapshot: TournamentSnapshot, stage: FixtureStage, playerId: UUID): number {
+  const stageFixtureIds = new Set(snapshot.fixtures.filter((fixture) => fixture.stage === stage).map((fixture) => fixture.id))
+  return snapshot.matches.filter((match) =>
+    stageFixtureIds.has(match.fixtureId)
+    && match.state !== 'unnecessary'
+    && [match.pairA, match.pairB].some((pair) => pair?.player1Id === playerId || pair?.player2Id === playerId))
+    .length
+}
+
+/** A player button; selected players fill navy. The second line shows matches played and whether the player is on court. */
+function PlayerChoice({ player, selected, playedText, overLimit, playing, onClick }: {
+  player: TeamPlayer
   selected: boolean
+  playedText: string
+  overLimit: boolean
+  playing: boolean
   onClick: () => void
-  children: React.ReactNode
 }) {
   return (
-    <Button
+    <button
       type="button"
-      size="sm"
-      variant={selected ? 'default' : 'outline'}
       aria-pressed={selected}
-      className="h-auto min-h-11 justify-start whitespace-normal text-left"
+      className={cn(
+        'flex h-full min-h-14 min-w-0 flex-col justify-center rounded-field border px-3 py-2 text-left text-[0.8125rem] font-medium transition-colors',
+        selected ? 'border-navy bg-navy text-white' : 'border-line bg-white text-ink hover:bg-well',
+      )}
       onClick={onClick}
     >
-      {selected ? <Check /> : null}
-      <span className="min-w-0 [overflow-wrap:anywhere]">{children}</span>
-    </Button>
+      <span className="[overflow-wrap:anywhere]">{player.name}</span>
+      <span className={cn('mt-0.5 text-xs font-normal', selected ? 'text-white/80' : 'text-muted-ink')}>
+        <span className={cn(overLimit && 'font-semibold', overLimit && !selected && 'text-destructive')}>{playedText}</span>
+        {playing ? <span className={selected ? undefined : 'text-destructive'}> · {pa.playing}</span> : null}
+      </span>
+    </button>
   )
 }
 
-function SideAssignment({
-  snapshot,
-  match,
-  fixture,
-  side,
-  teamId,
-  role,
-  resetGeneration,
-}: {
-  snapshot: TournamentSnapshot
-  match: FixtureMatch
-  fixture: TeamFixture
-  side: Side
-  teamId: UUID
-  role: StaffRole
-  resetGeneration: number
-}) {
-  const saved = matchPair(match, side)
-  const rule = pairingRule(fixture.stage, match.matchNumber)
-  const arrangements = rule === 'mixed-seed' ? qualifyingPairings(snapshot.players, teamId) : []
-  const savedIsArrangement = arrangements.some((arrangement) => arrangement.some((pair) => samePair(pair, saved)))
-  const [selection, setSelection] = useState<Pair | null>(saved)
-  const [picked, setPicked] = useState<UUID[]>(playerIds(saved))
-  // An organizer starts in the free list when the saved pair is already an exception.
-  const [exceptionMode, setExceptionMode] = useState(role === 'organizer' && saved !== null && rule === 'mixed-seed' && !savedIsArrangement)
-  const [confirmOpen, setConfirmOpen] = useState(false)
-  const name = teamName(snapshot, teamId)
-  const teamPlayers: TeamPlayer[] = snapshot.players.filter((player) => player.teamId === teamId)
-  const playing = playingPlayerIds(snapshot)
-  const freeList = rule === 'free' || exceptionMode
+interface TeamPickerProps {
+  teamLabel: string
+  players: TeamPlayer[]
+  picked: UUID[]
+  mixed: boolean
+  playing: Set<UUID>
+  playedText: (playerId: UUID) => string
+  overLimit: (playerId: UUID) => boolean
+  onPick: (playerIds: UUID[]) => void
+}
 
-  const issues = selection ? validatePairAssignment(snapshot, match.id, side, selection) : []
-  const blocking = issues.filter((issue) => !issue.overridable)
-  const overridable = issues.filter((issue) => issue.overridable)
-  const dirty = selection !== null && !samePair(selection, saved)
-  const needsException = blocking.length === 0 && overridable.length > 0
-
-  const mutation = useMutation({
-    mutationFn: (ruleException: boolean) => {
-      if (!selection) throw new Error(messages.pairAssignment.notAssigned)
-      return mutateTournament('assign_pair', {
-        requestId: crypto.randomUUID(),
-        resetGeneration,
-        expectedVersion: match.version,
-        payload: { matchId: match.id, side, ruleException, ...selection },
-      })
-    },
-    onSuccess: () => setConfirmOpen(false),
-  })
-
-  const togglePlayer = (playerId: UUID) => {
-    const next = picked.includes(playerId)
-      ? picked.filter((id) => id !== playerId)
-      : [...picked, playerId].slice(-2)
-    setPicked(next)
-    setSelection(next.length === 2 ? { player1Id: next[0], player2Id: next[1] } : null)
-  }
-
-  const choosePair = (pair: Pair) => {
-    setSelection(pair)
-    setPicked(playerIds(pair))
+/**
+ * One team's pair for one match. A mixed-seed match asks for one player per
+ * seed; any other match asks for two players.
+ */
+function TeamPicker({ teamLabel, players, picked, mixed, playing, playedText, overLimit, onPick }: TeamPickerProps) {
+  const choose = (player: TeamPlayer) => {
+    if (mixed) {
+      const others = picked.filter((id) => players.find((candidate) => candidate.id === id)?.seed !== player.seed)
+      onPick(player.seed === 1 ? [player.id, ...others] : [...others, player.id])
+    } else {
+      onPick(picked.includes(player.id) ? picked.filter((id) => id !== player.id) : [...picked, player.id].slice(-2))
+    }
   }
 
   return (
-    <div className="rounded-field border border-hairline p-4">
-      <div className="flex items-center justify-between gap-2">
-        <h4 className="min-w-0 text-[0.8125rem] font-semibold [overflow-wrap:anywhere]">{name}</h4>
-        <Badge variant={saved ? 'default' : 'outline'}>
-          {saved ? messages.pairAssignment.saved : messages.pairAssignment.notAssigned}
-        </Badge>
-      </div>
-      <p className="mt-1 text-[0.6875rem] text-muted-ink">
-        {fixture.stage === 'qualifying' ? messages.pairAssignment.qualifyingRule : messages.pairAssignment.rule[rule]}
-      </p>
-      {saved ? <p className="mt-1 text-[0.75rem] font-medium">{pairPlayers(snapshot, saved)}</p> : null}
-
-      <ul className="mt-3 grid gap-1.5 text-[0.75rem]" aria-label={messages.pairAssignment.playersLabel(name)}>
-        {teamPlayers.map((player) => (
-          <li className="flex flex-wrap items-baseline justify-between gap-x-2" key={player.id}>
-            <span className="min-w-0 [overflow-wrap:anywhere]">
-              {player.name} <span className="text-muted-ink">· {messages.common.seed(player.seed)}</span>
-            </span>
-            <span className="text-[0.6875rem] text-muted-ink">
-              {usageText(snapshot, fixture, teamId, player.id)}
-              {playing.has(player.id) ? <span className="ml-1.5 font-semibold text-destructive">{messages.pairAssignment.playing}</span> : null}
-            </span>
-          </li>
-        ))}
-      </ul>
-
-      {freeList ? (
-        <div className="mt-3">
-          <p className="text-[0.6875rem] font-semibold text-muted-ink">{messages.pairAssignment.pickTwo}</p>
-          <div className="mt-1.5 grid grid-cols-2 gap-2">
-            {teamPlayers.map((player) => (
-              <OptionButton key={player.id} selected={picked.includes(player.id)} onClick={() => togglePlayer(player.id)}>
-                {player.name}
-              </OptionButton>
+    <div role="group" aria-label={teamLabel} className="min-w-0 space-y-2">
+      <p className="text-[0.8125rem] font-semibold [overflow-wrap:anywhere]">{teamLabel}</p>
+      {mixed ? (
+        ([1, 2] as const).map((seed) => (
+          <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_minmax(0,1fr)] items-stretch gap-2" key={seed}>
+            <span className="self-center text-xs font-semibold text-muted-ink">{pa.seedShort(seed)}</span>
+            {players.filter((player) => player.seed === seed).map((player) => (
+              <PlayerChoice key={player.id} player={player} selected={picked.includes(player.id)} playedText={playedText(player.id)} overLimit={overLimit(player.id)} playing={playing.has(player.id)} onClick={() => choose(player)} />
             ))}
           </div>
-        </div>
+        ))
       ) : (
-        <div className="mt-3 space-y-2.5">
-          {arrangements.map((arrangement, index) => (
-            <div key={index}>
-              <p className="text-[0.6875rem] font-semibold text-muted-ink">{messages.pairAssignment.arrangement(index + 1)}</p>
-              <div className="mt-1.5 grid gap-2 sm:grid-cols-2">
-                {arrangement.map((pair) => (
-                  <OptionButton key={playerIds(pair).join('-')} selected={samePair(pair, selection)} onClick={() => choosePair(pair)}>
-                    {pairPlayers(snapshot, pair)}
-                  </OptionButton>
-                ))}
-              </div>
-            </div>
+        <div className="grid grid-cols-2 items-stretch gap-2">
+          {players.map((player) => (
+            <PlayerChoice key={player.id} player={player} selected={picked.includes(player.id)} playedText={playedText(player.id)} overLimit={overLimit(player.id)} playing={playing.has(player.id)} onClick={() => choose(player)} />
           ))}
         </div>
       )}
-
-      {role === 'organizer' && rule === 'mixed-seed' ? (
-        <Button type="button" variant="link" size="sm" className="mt-2 h-auto px-0" onClick={() => setExceptionMode((current) => !current)}>
-          {exceptionMode ? messages.pairAssignment.hideException : messages.pairAssignment.showException}
-        </Button>
-      ) : null}
-
-      {issues.length > 0 ? (
-        <ul className="mt-3 space-y-1 text-[0.6875rem] text-destructive">
-          {issues.map((issue) => <li key={issue.code}>{messages.pairAssignment.issues[issue.code]}</li>)}
-          {needsException && role !== 'organizer' ? <li>{messages.pairAssignment.organizerOnly}</li> : null}
-        </ul>
-      ) : null}
-
-      <div className="mt-3">
-        {needsException && role === 'organizer' ? (
-          <Button size="sm" variant="outline" disabled={!dirty || mutation.isPending} onClick={() => setConfirmOpen(true)}>
-            {messages.pairAssignment.saveException}
-          </Button>
-        ) : (
-          <Button size="sm" disabled={!dirty || issues.length > 0 || mutation.isPending} onClick={() => mutation.mutate(false)}>
-            {mutation.isPending ? messages.common.saving : messages.pairAssignment.save}
-          </Button>
-        )}
-      </div>
-      {mutation.isError ? <p className="mt-2 text-sm text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
-
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{messages.pairAssignment.exceptionTitle}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {messages.pairAssignment.exceptionBody(overridable.map((issue) => messages.pairAssignment.issues[issue.code]).join(' '))}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction disabled={mutation.isPending} onClick={() => mutation.mutate(true)}>
-              {mutation.isPending ? messages.common.saving : messages.pairAssignment.confirmException}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   )
 }
 
 /**
- * Staff record each team's pair for one unstarted match. Each side saves on
- * its own through `assign_pair`; the server repeats every check here.
+ * Staff pick each team's pair for every open match of one fixture, then save
+ * them together through `assign_fixture_pairs`; the server repeats every
+ * check here and saves all of them or none. While both opening matches need
+ * mixed seeds, one of them takes the two players the other leaves.
  */
 export function PairAssignmentForm({
   snapshot,
-  matchId,
+  fixtureId,
   role,
   resetGeneration,
+  onSaved,
 }: {
   snapshot: TournamentSnapshot
-  matchId: UUID
+  fixtureId: UUID
   role: StaffRole
   resetGeneration: number
+  onSaved: () => void
 }) {
-  const match = snapshot.matches.find((candidate) => candidate.id === matchId)
-  if (!match) return <p className="text-[0.8125rem] text-muted-ink">{messages.organizer.matchGone}</p>
-  const fixture = fixtureOf(snapshot, match)
-  const teamIds = (['a', 'b'] as const).map((side) => sideTeamId(fixture, side))
-  const placement = fixture?.stage === 'third-place' || fixture?.stage === 'final'
+  const [picks, setPicks] = useState<Record<string, UUID[]>>({})
+  const [exceptionMode, setExceptionMode] = useState(false)
+  const [confirmOpen, setConfirmOpen] = useState(false)
+  const fixture = snapshot.fixtures.find((candidate) => candidate.id === fixtureId)
+  const matches = fixture ? fixtureMatches(snapshot, fixture.id) : []
+  const openMatches = matches.filter((match) => match.state === 'unstarted' && isDeciderOpen(snapshot, match))
+  const playing = playingPlayerIds(snapshot)
+  const isMixed = (match: FixtureMatch) => fixture !== undefined && pairingRule(fixture.stage, match.matchNumber) === 'mixed-seed'
+  const openers = matches.filter((match) => match.matchNumber < 3)
+  const linked = !exceptionMode && openers.length === 2 && openers.every(isMixed)
 
-  let body: React.ReactNode
-  if (!fixture || teamIds.some((teamId) => teamId === null)) {
-    body = <p className="text-[0.8125rem] text-muted-ink">{messages.pairAssignment.awaitingTeams}</p>
-  } else if (placement && snapshot.tournament.finalistsConfirmedAt === null) {
-    body = <p className="text-[0.8125rem] text-muted-ink">{messages.pairAssignment.awaitingFinalists}</p>
-  } else if (match.state !== 'unstarted') {
-    body = (
-      <div className="space-y-1 text-[0.8125rem]">
-        <p className="text-muted-ink">{messages.pairAssignment.locked}</p>
-        <p className="font-medium">{messages.common.versus(pairPlayers(snapshot, match.pairA), pairPlayers(snapshot, match.pairB))}</p>
-      </div>
-    )
-  } else {
-    body = (
-      <div className="grid gap-4 md:grid-cols-2">
-        {(['a', 'b'] as const).map((side, index) => {
-          const teamId = teamIds[index]
-          return teamId ? (
-            <SideAssignment
-              // A new saved pair on this side replaces its draft; the other
-              // side's draft survives.
-              key={`${side}-${playerIds(matchPair(match, side)).join('-')}`}
-              snapshot={snapshot}
-              match={match}
-              fixture={fixture}
-              side={side}
-              teamId={teamId}
-              role={role}
-              resetGeneration={resetGeneration}
-            />
-          ) : null
-        })}
-      </div>
-    )
+  const teamPlayers = (side: Side) => {
+    const teamId = sideTeamId(fixture, side)
+    return snapshot.players.filter((player) => player.teamId === teamId)
+  }
+  /**
+   * The opening match whose pair fixes this one's, or null when this match is
+   * picked freely. With both openers open, match 1 is picked and match 2
+   * follows; once one opener has started or finished, its saved pair decides
+   * the other, whichever order they went on court.
+   */
+  const sourceOf = (match: FixtureMatch, side: Side): FixtureMatch | null => {
+    if (!linked || match.matchNumber === 3 || !openMatches.includes(match)) return null
+    const sibling = openers.find((opener) => opener.id !== match.id)
+    if (!sibling) return null
+    if (openMatches.includes(sibling)) return match.matchNumber === 2 ? sibling : null
+    return matchPair(sibling, side) ? sibling : null
+  }
+  const picked = (match: FixtureMatch, side: Side): UUID[] => {
+    const source = sourceOf(match, side)
+    if (source) {
+      const sourcePair = openMatches.includes(source) ? null : matchPair(source, side)
+      const taken = sourcePair ? [sourcePair.player1Id, sourcePair.player2Id] : picked(source, side)
+      return taken.length === 2 ? teamPlayers(side).map((player) => player.id).filter((id) => !taken.includes(id)) : []
+    }
+    const own = picks[key(match.id, side)]
+    if (own) return own
+    const saved = matchPair(match, side)
+    return saved ? [saved.player1Id, saved.player2Id] : []
   }
 
+  const changed: PairDraft[] = openMatches.flatMap((match) => sides.flatMap((side) => {
+    const pair = toPair(picked(match, side))
+    return pair && !samePair(pair, matchPair(match, side)) ? [{ matchId: match.id, side, pair }] : []
+  }))
+  const issues = validatePairDrafts(snapshot, changed).flatMap((result) => result.issues)
+  // Counts include the picks in this dialog, so a player's total moves as staff choose.
+  const projected = applyPairDrafts(snapshot, changed)
+  const playedText = (playerId: UUID) => {
+    if (!fixture) return ''
+    const count = stageAppearances(projected, fixture.stage, playerId)
+    return fixture.stage === 'qualifying' ? pa.played.qualifying(count) : pa.played.other(count)
+  }
+  // Each player plays one match per qualifying fixture, so three in all; only an exception goes past it.
+  const overLimit = (playerId: UUID) => fixture?.stage === 'qualifying' && stageAppearances(projected, 'qualifying', playerId) > 3
+  const blocking = issues.filter((issue) => !issue.overridable)
+  const overridable = issues.filter((issue) => issue.overridable)
+  const needsException = blocking.length === 0 && overridable.length > 0
+  const issueTexts = [...new Set(issues.map((issue) => pa.issues[issue.code]))]
+
+  const mutation = useMutation({
+    mutationFn: (ruleException: boolean) => {
+      if (!fixture) throw new Error(messages.organizer.matchGone)
+      return mutateTournament('assign_fixture_pairs', {
+        requestId: crypto.randomUUID(),
+        resetGeneration,
+        expectedVersion: fixture.version,
+        payload: {
+          fixtureId: fixture.id,
+          ruleException,
+          assignments: changed.map(({ matchId, side, pair }) => ({
+            matchId,
+            side,
+            matchVersion: matches.find((match) => match.id === matchId)?.version ?? 0,
+            ...pair,
+          })),
+        },
+      })
+    },
+    onSuccess: () => {
+      setConfirmOpen(false)
+      setPicks({})
+      onSaved()
+    },
+  })
+
+  const teams = messages.common.versus(teamName(snapshot, sideTeamId(fixture, 'a')), teamName(snapshot, sideTeamId(fixture, 'b')))
+  const ruleText = !fixture || openMatches.length === 0
+    ? null
+    : fixture.stage === 'qualifying'
+      ? pa.rule.qualifying
+      : openMatches.some(isMixed) ? pa.rule['mixed-seed'] : pa.rule.free
+  const header = (
+    <DialogHeader className="pr-6">
+      <DialogTitle>{fixture ? pa.title(fixtureLabel(fixture), teams) : pa.open}</DialogTitle>
+      {ruleText ? <DialogDescription className="text-[0.8125rem]">{ruleText}</DialogDescription> : null}
+    </DialogHeader>
+  )
+
+  const unavailable = !fixture || sides.some((side) => sideTeamId(fixture, side) === null)
+    ? pa.awaitingTeams
+    : (fixture.stage === 'third-place' || fixture.stage === 'final') && snapshot.tournament.finalistsConfirmedAt === null
+      ? pa.awaitingFinalists
+      : openMatches.length === 0 ? pa.locked : null
+  if (unavailable) return <>{header}<p className="text-[0.8125rem] text-muted-ink">{unavailable}</p></>
+
   return (
-    <section className="space-y-4">
-      <h3 className="text-sm font-semibold [overflow-wrap:anywhere]">{messages.pairAssignment.title(matchLabel(snapshot, match))}</h3>
-      {body}
-    </section>
+    <>
+      {header}
+      <div className="space-y-4">
+        {openMatches.map((match) => (
+          <section className="rounded-card border border-line bg-white p-4 sm:p-5" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
+            <h3 className="mb-3 text-sm font-semibold">
+              {messages.common.matchNumber(match.matchNumber)}
+              {match.court ? <span className="font-normal text-muted-ink"> · {messages.common.court(match.court)}</span> : null}
+              {!isDeciderEligible(snapshot, match) ? <span className="font-normal text-muted-ink"> · {messages.scoring.startBlocked.decider}</span> : null}
+            </h3>
+            <div className="grid gap-5 sm:grid-cols-2">
+              {sides.map((side) => {
+                const source = sourceOf(match, side)
+                if (source) {
+                  const pair = toPair(picked(match, side))
+                  return (
+                    <div className="min-w-0 space-y-2" key={side}>
+                      <p className="text-[0.8125rem] font-semibold [overflow-wrap:anywhere]">{teamName(snapshot, sideTeamId(fixture, side))}</p>
+                      <p className="rounded-field bg-well px-3 py-3 text-[0.8125rem]">
+                        <span className="block font-medium">{pair ? pairPlayers(snapshot, pair) : pa.notAssigned}</span>
+                        <span className="mt-0.5 block text-xs text-muted-ink">{pa.remainingOf(source.matchNumber)}</span>
+                      </p>
+                    </div>
+                  )
+                }
+                return (
+                  <TeamPicker
+                    key={side}
+                    teamLabel={teamName(snapshot, sideTeamId(fixture, side))}
+                    players={teamPlayers(side)}
+                    picked={picked(match, side)}
+                    mixed={isMixed(match) && !exceptionMode}
+                    playing={playing}
+                    playedText={playedText}
+                    overLimit={overLimit}
+                    onPick={(playerIds) => setPicks((existing) => ({ ...existing, [key(match.id, side)]: playerIds }))}
+                  />
+                )
+              })}
+            </div>
+          </section>
+        ))}
+      </div>
+
+      {issueTexts.length > 0 ? (
+        <ul className="space-y-1 text-[0.8125rem] text-destructive" role="status">
+          {issueTexts.map((text) => <li key={text}>{text}</li>)}
+          {needsException && role !== 'organizer' ? <li>{pa.organizerOnly}</li> : null}
+        </ul>
+      ) : null}
+      {mutation.isError ? <p className="text-[0.8125rem] text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
+
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {role === 'organizer' && openMatches.some(isMixed) ? (
+          <Button type="button" variant="link" className="h-auto px-0" onClick={() => { setExceptionMode((value) => !value); setPicks({}) }}>
+            {exceptionMode ? pa.hideException : pa.showException}
+          </Button>
+        ) : <span />}
+        {needsException && role === 'organizer' ? (
+          <Button variant="outline" disabled={mutation.isPending} onClick={() => setConfirmOpen(true)}>
+            {pa.saveException}
+          </Button>
+        ) : (
+          <Button disabled={changed.length === 0 || issues.length > 0 || mutation.isPending} onClick={() => mutation.mutate(false)}>
+            {mutation.isPending ? messages.common.saving : pa.save}
+          </Button>
+        )}
+      </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>{pa.exceptionTitle}</AlertDialogTitle>
+            <AlertDialogDescription>
+              {pa.exceptionBody([...new Set(overridable.map((issue) => pa.issues[issue.code]))].join(' '))}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
+            <AlertDialogAction disabled={mutation.isPending} onClick={() => mutation.mutate(true)}>
+              {mutation.isPending ? messages.common.saving : pa.confirmException}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import {
+  Activity,
   CalendarRange,
   CheckCircle2,
   ChevronRight,
@@ -35,12 +36,15 @@ import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { PairAssignmentForm } from '@/features/scoring/PairAssignmentForm'
 import {
+  fixtureLabel,
   fixtureMatches,
   fixtureOf,
+  groupByFixture,
   isDeciderEligible,
-  isStartable,
+  startBlocker,
   matchLabel,
   matchPair,
+  pairPlayers,
   sideTeamId,
   teamName,
   teamNames,
@@ -103,7 +107,7 @@ function StageProgressMeter({ snapshot }: { snapshot: TournamentSnapshot }) {
   const label = messages.organizer.progress
   return (
     <div className="min-w-52">
-      <p className="text-[0.6875rem] text-muted-ink">
+      <p className="text-xs text-muted-ink">
         <span className="numeric text-sm font-semibold text-navy">{formatNumber(done)}</span>
         <span className="numeric"> / {formatNumber(total)}</span> {label}
       </p>
@@ -126,30 +130,32 @@ function teams(snapshot: TournamentSnapshot, match: FixtureMatch): string {
   return messages.common.versus(teamName(snapshot, sideTeamId(fixture, 'a')), teamName(snapshot, sideTeamId(fixture, 'b')))
 }
 
+function pairsText(snapshot: TournamentSnapshot, match: FixtureMatch): string {
+  const pairA = matchPair(match, 'a')
+  const pairB = matchPair(match, 'b')
+  if (!pairA && !pairB) return messages.pairAssignment.notAssigned
+  return messages.common.versus(pairPlayers(snapshot, pairA), pairPlayers(snapshot, pairB))
+}
+
+/**
+ * Matches waiting to be played. Choosing a court saves it at once; pairs are
+ * assigned per fixture in a dialog; starting a match asks first because it
+ * cannot be undone.
+ */
 function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot: TournamentSnapshot; resetGeneration: number; onStartScoring: () => void }) {
   const waiting = upcomingMatches(snapshot)
-  const [drafts, setDrafts] = useState<Record<UUID, Court>>({})
-  // The match outlives `assignOpen` so the dialog keeps its content while closing.
-  const [assignMatchId, setAssignMatchId] = useState<UUID | null>(null)
+  // The fixture outlives `assignOpen` so the dialog keeps its content while closing.
+  const [assignFixtureId, setAssignFixtureId] = useState<UUID | null>(null)
   const [assignOpen, setAssignOpen] = useState(false)
-  const [confirmAssignments, setConfirmAssignments] = useState(false)
   const [startMatchId, setStartMatchId] = useState<UUID | null>(null)
-  const assignments = waiting.flatMap((match) => {
-    const court = drafts[match.id]
-    return court !== undefined && court !== match.court ? [{ matchId: match.id, court }] : []
-  })
 
-  const assignmentMutation = useMutation({
-    mutationFn: () => mutateTournament('assign_courts', {
+  const courtMutation = useMutation({
+    mutationFn: ({ matchId, court }: { matchId: UUID; court: Court }) => mutateTournament('assign_courts', {
       requestId: crypto.randomUUID(),
       resetGeneration,
       expectedVersion: snapshot.tournament.version,
-      payload: { assignments },
+      payload: { assignments: [{ matchId, court }] },
     }),
-    onSuccess: () => {
-      setConfirmAssignments(false)
-      setDrafts({})
-    },
   })
   const startMutation = useMutation({
     mutationFn: (matchId: UUID) => {
@@ -166,94 +172,78 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
   })
 
   return (
-    <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h3 className="text-sm font-semibold">{messages.organizer.schedule.heading}</h3>
-          <p className="mt-1.5 text-[0.6875rem]/[1.6] text-muted-ink">{messages.organizer.schedule.description}</p>
-        </div>
-        <CalendarRange className="size-5 text-muted-ink" />
-      </div>
-      {waiting.length > 0 ? (
-        <div
-          aria-hidden="true"
-          className="mt-6 mb-2 hidden gap-2.5 px-[0.9375rem] text-[0.625rem] text-muted-ink md:grid md:grid-cols-[minmax(0,1fr)_9rem_7rem_6.5rem]"
-        >
-          <span>{messages.organizer.schedule.match}</span>
-          <span>{messages.organizer.schedule.court}</span>
-          <span />
-          <span />
-        </div>
-      ) : null}
-      <div className="space-y-3">
-        {waiting.map((match) => {
-          const court = drafts[match.id] ?? match.court
-          const fixture = fixtureOf(snapshot, match)
-          const pendingSides = (['a', 'b'] as const).filter((side) => matchPair(match, side) === null)
+    <section className="rounded-card border border-ink/5 bg-white p-5 shadow-card sm:p-6">
+      <h3 className="text-[0.9375rem] font-semibold">{messages.organizer.schedule.heading}</h3>
+      <ul className="mt-4 divide-y divide-hairline">
+        {groupByFixture(waiting).map(({ fixtureId, matches }) => {
+          const fixture = snapshot.fixtures.find((candidate) => candidate.id === fixtureId)
+          const fixtureTeams = teams(snapshot, matches[0])
+          const paired = matches.every((match) => match.pairA !== null && match.pairB !== null)
           return (
-            <div className="grid gap-2.5 rounded-field border border-hairline p-3.5 md:grid-cols-[minmax(0,1fr)_9rem_7rem_6.5rem] md:items-center" key={match.id}>
-              <span className="flex min-w-0 flex-wrap items-center gap-2.5">
-                <span className="shrink-0 rounded-pill bg-well px-2 py-0.5 text-[0.625rem] font-semibold text-muted-ink">
-                  {matchLabel(snapshot, match)}
-                </span>
-                <span className="min-w-0 [overflow-wrap:anywhere] text-[0.8125rem] font-medium">{teams(snapshot, match)}</span>
-                {pendingSides.length > 0 ? (
-                  <span className="basis-full text-[0.6875rem] text-muted-ink">
-                    {pendingSides.map((side) => messages.pairAssignment.sidePending(teamName(snapshot, sideTeamId(fixture, side)))).join(' · ')}
-                  </span>
-                ) : null}
-              </span>
-              <Select
-                value={court === null ? '' : String(court)}
-                onValueChange={(value) => setDrafts((current) => ({ ...current, [match.id]: Number(value) as Court }))}
-              >
-                <SelectTrigger className="w-full" aria-label={messages.organizer.schedule.courtFor(`${matchLabel(snapshot, match)} · ${teams(snapshot, match)}`)}>
-                  <SelectValue placeholder={messages.organizer.schedule.noCourt} />
-                </SelectTrigger>
-                <SelectContent>
-                  {courts.map((option) => <SelectItem value={String(option)} key={option}>{messages.common.court(option)}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Button variant="outline" className="w-full" onClick={() => { setAssignMatchId(match.id); setAssignOpen(true) }}>
-                <Users /> {messages.pairAssignment.open}
-              </Button>
-              <Button variant="outline" className="w-full" disabled={!isStartable(match) || startMutation.isPending} onClick={() => setStartMatchId(match.id)}>
-                <Play /> {messages.organizer.schedule.startShort}
-              </Button>
-            </div>
+            <li className="py-4 first:pt-0 last:pb-0" aria-label={`${fixtureLabel(fixture)} · ${fixtureTeams}`} key={fixtureId}>
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-[0.9375rem] font-semibold [overflow-wrap:anywhere]">{fixtureTeams}</p>
+                  <p className="mt-0.5 text-[0.8125rem] text-muted-ink">{fixtureLabel(fixture)}</p>
+                </div>
+                <Button className="w-[7.5rem]" variant={paired ? 'outline' : 'default'} onClick={() => { setAssignFixtureId(fixtureId); setAssignOpen(true) }}>
+                  <Users /> {messages.pairAssignment.open}
+                </Button>
+              </div>
+              <ul className="mt-3 space-y-3 border-l-2 border-hairline pl-4">
+                {matches.map((match) => (
+                  <li className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-x-3 gap-y-1 md:grid-cols-[minmax(0,1fr)_9rem_7.5rem]" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
+                    <p className="col-start-1 row-start-1 text-sm font-semibold">{messages.common.matchNumber(match.matchNumber)}</p>
+                    <p className="col-start-2 row-start-1 text-right text-xs text-muted-ink md:col-start-3">
+                      {startBlocker(snapshot, match) ? messages.scoring.startBlocked[startBlocker(snapshot, match) ?? 'pairs'] : null}
+                    </p>
+                    <p className="col-span-2 row-start-2 text-[0.8125rem] text-muted-ink [overflow-wrap:anywhere] md:col-span-1 md:col-start-1">{pairsText(snapshot, match)}</p>
+                    <div className="col-start-1 row-start-3 md:col-start-2 md:row-start-2">
+                    <Select
+                      value={match.court === null ? '' : String(match.court)}
+                      disabled={courtMutation.isPending}
+                      onValueChange={(value) => courtMutation.mutate({ matchId: match.id, court: Number(value) as Court })}
+                    >
+                      <SelectTrigger className="w-full" aria-label={messages.organizer.schedule.courtFor(`${matchLabel(snapshot, match)} · ${fixtureTeams}`)}>
+                        <SelectValue placeholder={messages.organizer.schedule.noCourt} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {courts.map((option) => <SelectItem value={String(option)} key={option}>{messages.common.court(option)}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                    </div>
+                    <Button
+                      className="col-start-2 row-start-3 w-full md:col-start-3 md:row-start-2"
+                      disabled={startBlocker(snapshot, match) !== null || startMutation.isPending}
+                      onClick={() => setStartMatchId(match.id)}
+                    >
+                      <Play /> {messages.organizer.schedule.startShort}
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </li>
           )
         })}
-        {waiting.length === 0 ? <p className="text-[0.8125rem] text-muted-ink">{messages.organizer.schedule.empty}</p> : null}
-      </div>
-      {waiting.length > 0 ? (
-        <Button className="mt-4" variant="outline" disabled={assignments.length === 0 || assignmentMutation.isPending} onClick={() => setConfirmAssignments(true)}>
-          {messages.organizer.schedule.review}
-        </Button>
-      ) : null}
-      {assignmentMutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{errorMessage(assignmentMutation.error)}</p> : null}
-      {startMutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{errorMessage(startMutation.error)}</p> : null}
+      </ul>
+      {waiting.length === 0 ? <p className="text-[0.8125rem] text-muted-ink">{messages.organizer.schedule.empty}</p> : null}
+      {courtMutation.isError ? <p className="mt-3 text-[0.8125rem] text-destructive" role="alert">{errorMessage(courtMutation.error)}</p> : null}
+      {startMutation.isError ? <p className="mt-3 text-[0.8125rem] text-destructive" role="alert">{errorMessage(startMutation.error)}</p> : null}
 
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
-          {assignMatchId ? (
-            <PairAssignmentForm snapshot={snapshot} matchId={assignMatchId} role="organizer" resetGeneration={resetGeneration} />
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-4xl">
+          {assignFixtureId ? (
+            <PairAssignmentForm
+              key={assignFixtureId}
+              snapshot={snapshot}
+              fixtureId={assignFixtureId}
+              role="organizer"
+              resetGeneration={resetGeneration}
+              onSaved={() => setAssignOpen(false)}
+            />
           ) : null}
         </DialogContent>
       </Dialog>
-      <AlertDialog open={confirmAssignments} onOpenChange={setConfirmAssignments}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{messages.organizer.schedule.confirmTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{messages.organizer.schedule.confirmBody}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{messages.organizer.schedule.keep}</AlertDialogCancel>
-            <AlertDialogAction disabled={assignmentMutation.isPending} onClick={() => assignmentMutation.mutate()}>
-              {assignmentMutation.isPending ? messages.common.saving : messages.organizer.schedule.publish}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
       <AlertDialog open={startMatchId !== null} onOpenChange={(open) => { if (!open) setStartMatchId(null) }}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -288,13 +278,12 @@ function StartQualifying({ snapshot, resetGeneration }: { snapshot: TournamentSn
   })
 
   return (
-    <section className="rounded-card bg-navy p-6 text-white shadow-final">
-      <h3 className="text-sm font-semibold">{messages.organizer.qualifying.heading}</h3>
-      <p className="mt-1.5 text-[0.6875rem] text-navy-soft">{messages.organizer.qualifying.description}</p>
-      <Button className="mt-4 bg-white text-navy hover:bg-navy-soft" disabled={!ready || mutation.isPending} onClick={() => setConfirmOpen(true)}>
+    <section className="rounded-card border border-ink/5 bg-white p-5 shadow-card sm:p-6">
+      <h3 className="text-[0.9375rem] font-semibold">{messages.organizer.qualifying.heading}</h3>
+      <Button className="mt-4" disabled={!ready || mutation.isPending} onClick={() => setConfirmOpen(true)}>
         <Flag /> {messages.organizer.qualifying.review}
       </Button>
-      {mutation.isError ? <p className="mt-3 text-sm text-white" role="alert">{errorMessage(mutation.error)}</p> : null}
+      {mutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -338,21 +327,20 @@ function FinalistConfirmation({ snapshot, resetGeneration }: { snapshot: Tournam
   const rankOf = (teamId: UUID) => standings.find((standing) => standing.teamId === teamId)?.rank ?? 0
 
   return (
-    <section className="rounded-card bg-navy p-6 text-white shadow-final">
-      <h3 className="text-sm font-semibold">{messages.organizer.finalists.heading}</h3>
-      <p className="mt-1.5 text-[0.6875rem] text-navy-soft">{messages.organizer.finalists.description}</p>
+    <section className="rounded-card border border-ink/5 bg-white p-5 shadow-card sm:p-6">
+      <h3 className="text-[0.9375rem] font-semibold">{messages.organizer.finalists.heading}</h3>
       <ul className="mt-4 space-y-2">
         {finalists.map(({ teamId, basis }) => (
-          <li className="flex flex-wrap items-baseline justify-between gap-2 rounded-chip bg-white/10 px-3 py-2" key={teamId}>
-            <span className="text-[0.8125rem] font-semibold [overflow-wrap:anywhere]">{teamName(snapshot, teamId)}</span>
-            <span className="text-[0.6875rem] text-navy-soft">{basisText(basis, rankOf(teamId))}</span>
+          <li className="flex flex-wrap items-baseline justify-between gap-2 rounded-chip bg-well px-3 py-2.5" key={teamId}>
+            <span className="text-sm font-semibold [overflow-wrap:anywhere]">{teamName(snapshot, teamId)}</span>
+            <span className="text-[0.8125rem] text-muted-ink">{basisText(basis, rankOf(teamId))}</span>
           </li>
         ))}
       </ul>
-      <Button className="mt-4 bg-white text-navy hover:bg-navy-soft" disabled={mutation.isPending} onClick={() => setConfirmOpen(true)}>
+      <Button className="mt-4" disabled={mutation.isPending} onClick={() => setConfirmOpen(true)}>
         <CheckCircle2 /> {messages.organizer.finalists.review}
       </Button>
-      {mutation.isError ? <p className="mt-3 text-sm text-white" role="alert">{errorMessage(mutation.error)}</p> : null}
+      {mutation.isError ? <p className="mt-3 text-sm text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -439,7 +427,7 @@ function DrawRecording({ snapshot, resetGeneration }: { snapshot: TournamentSnap
         </SelectContent>
       </Select>
       {rest.length === 2 && opponentId ? (
-        <p className="text-[0.6875rem] text-muted-ink">
+        <p className="text-xs text-muted-ink">
           {messages.organizer.draw.otherMatchup(messages.common.versus(teamName(snapshot, rest[0]), teamName(snapshot, rest[1])))}
         </p>
       ) : null}
@@ -451,7 +439,7 @@ function DrawRecording({ snapshot, resetGeneration }: { snapshot: TournamentSnap
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold">{messages.organizer.draw.matchupHeading}</h3>
-          <p className="mt-1.5 text-[0.6875rem]/[1.6] text-muted-ink">{messages.organizer.draw.matchupDescription}</p>
+          <p className="mt-1.5 text-xs/[1.6] text-muted-ink">{messages.organizer.draw.matchupDescription}</p>
         </div>
         <Shuffle className="size-5 text-muted-ink" />
       </div>
@@ -493,13 +481,13 @@ function PlayoffRoundStatus({ snapshot }: { snapshot: TournamentSnapshot }) {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h3 className="text-sm font-semibold">{messages.organizer.playoffRound.heading(round.roundNumber)}</h3>
-          <p className="mt-1.5 text-[0.6875rem]/[1.6] text-muted-ink">
+          <p className="mt-1.5 text-xs/[1.6] text-muted-ink">
             {round.roundNumber > 1
               ? messages.organizer.playoffRound.playOn(teamNames(snapshot, round.teamIds), round.availablePlaces)
               : messages.organizer.playoffRound.inProgress(teamNames(snapshot, round.teamIds), round.availablePlaces)}
           </p>
           {round.fixedFinalistIds.length > 0 ? (
-            <p className="mt-1 text-[0.6875rem]/[1.6] text-muted-ink">
+            <p className="mt-1 text-xs/[1.6] text-muted-ink">
               {messages.organizer.playoffRound.qualified(teamNames(snapshot, round.fixedFinalistIds))}
             </p>
           ) : null}
@@ -510,7 +498,7 @@ function PlayoffRoundStatus({ snapshot }: { snapshot: TournamentSnapshot }) {
   )
 }
 
-type OrganizerSection = 'overview' | 'teams' | 'matches' | 'results'
+export type OrganizerSection = 'overview' | 'teams' | 'matches' | 'results'
 
 function OrganizerOverview({
   snapshot,
@@ -579,15 +567,25 @@ function OrganizerOverview({
   )
 }
 
-export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { snapshot: TournamentSnapshot; resetGeneration: number; onStartScoring: () => void }) {
-  const [selectedSection, setSelectedSection] = useState<OrganizerSection>('overview')
+/**
+ * The organizer workspace. The caller holds the selected section, so it
+ * survives a trip to the scoring screen, which `onOpenScoring` opens.
+ */
+export function OrganizerPage({ snapshot, resetGeneration, selectedSection, onSectionChange, onOpenScoring }: {
+  snapshot: TournamentSnapshot
+  resetGeneration: number
+  selectedSection: OrganizerSection
+  onSectionChange: (section: OrganizerSection) => void
+  onOpenScoring: () => void
+}) {
   const inSetup = snapshot.tournament.stage === 'setup'
   const section = inSetup && (selectedSection === 'matches' || selectedSection === 'results') ? 'overview' : selectedSection
-  const navigation = [
-    { value: 'overview' as const, label: messages.organizer.navigation.overview, icon: LayoutDashboard },
-    { value: 'teams' as const, label: messages.organizer.navigation.teams, icon: Users },
+  const navigation: Array<{ value: OrganizerSection | 'scoring'; label: string; icon: typeof Users }> = [
+    { value: 'overview', label: messages.organizer.navigation.overview, icon: LayoutDashboard },
+    { value: 'teams', label: messages.organizer.navigation.teams, icon: Users },
     ...(!inSetup ? [
       { value: 'matches' as const, label: messages.organizer.navigation.matches, icon: CalendarRange },
+      { value: 'scoring' as const, label: messages.organizer.navigation.scoring, icon: Activity },
       { value: 'results' as const, label: messages.organizer.navigation.results, icon: Trophy },
     ] : []),
   ]
@@ -595,13 +593,13 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
   let content: React.ReactNode
   switch (section) {
     case 'overview':
-      content = <OrganizerOverview snapshot={snapshot} resetGeneration={resetGeneration} onNavigate={setSelectedSection} />
+      content = <OrganizerOverview snapshot={snapshot} resetGeneration={resetGeneration} onNavigate={onSectionChange} />
       break
     case 'teams':
       content = <SetupForm key={`setup-${resetGeneration}-${snapshot.tournament.version}`} snapshot={snapshot} resetGeneration={resetGeneration} />
       break
     case 'matches':
-      content = <CourtSchedule snapshot={snapshot} resetGeneration={resetGeneration} onStartScoring={onStartScoring} />
+      content = <CourtSchedule snapshot={snapshot} resetGeneration={resetGeneration} onStartScoring={onOpenScoring} />
       break
     case 'results':
       content = <ResultsSection key={`results-${resetGeneration}`} snapshot={snapshot} resetGeneration={resetGeneration} />
@@ -628,7 +626,7 @@ export function OrganizerPage({ snapshot, resetGeneration, onStartScoring }: { s
               }`}
               aria-current={section === value ? 'page' : undefined}
               key={value}
-              onClick={() => setSelectedSection(value)}
+              onClick={() => { if (value === 'scoring') onOpenScoring(); else onSectionChange(value) }}
             >
               <Icon className="size-4" aria-hidden="true" />{label}
             </button>

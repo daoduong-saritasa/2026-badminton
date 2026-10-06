@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 
 import type { FixtureMatch, TournamentSnapshot, UUID } from '@/domain/types'
 import { Button } from '@/components/ui/button'
@@ -30,12 +30,12 @@ function MatchRow({
 }) {
   const fixture = fixtureOf(snapshot, match)
   return (
-    <li className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-ink/5 px-3 py-2">
+    <li className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
       <span className="min-w-0">
-        <span className="block truncate text-[0.8125rem] font-medium">
+        <span className="block text-sm font-semibold [overflow-wrap:anywhere]">
           {messages.common.versus(teamName(snapshot, sideTeamId(fixture, 'a')), teamName(snapshot, sideTeamId(fixture, 'b')))}
         </span>
-        <span className="block truncate text-[0.6875rem] text-muted-ink">
+        <span className="mt-1 block text-[0.8125rem] text-muted-ink">
           {matchLabel(snapshot, match)}
           {match.court === null ? '' : ` · ${messages.common.court(match.court)}`}
           {` · ${matchResultText(snapshot, match)}`}
@@ -49,9 +49,9 @@ function MatchRow({
 }
 
 /**
- * An open match can only be awarded as a walkover; live scores belong to the
- * referee and pairs to pair assignment. A completed match stays reachable so
- * its result can be corrected.
+ * Completed matches, each open to correction. Open matches can only be
+ * awarded as walkovers, which is rare, so that list stays folded away until
+ * asked for.
  */
 export function ResultSchedule({ snapshot, onSelect }: ResultScheduleProps) {
   const { open, completed } = useMemo(() => ({
@@ -60,35 +60,37 @@ export function ResultSchedule({ snapshot, onSelect }: ResultScheduleProps) {
       && isDeciderEligible(snapshot, match)),
     completed: snapshot.matches.filter((match) => match.state === 'completed'),
   }), [snapshot])
+  const [showOpen, setShowOpen] = useState(false)
 
   return (
-    <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
-      <h3 className="text-sm font-semibold">{messages.results.heading}</h3>
-      <p className="mt-1.5 text-[0.6875rem] text-muted-ink">
-        {messages.results.description}
-      </p>
-
-      <h4 className="mt-5 text-[0.6875rem] font-semibold text-muted-ink">{messages.results.open}</h4>
-      {open.length === 0 ? (
-        <p className="mt-2 text-[0.8125rem] text-muted-ink">{messages.results.noOpen}</p>
-      ) : (
-        <ul className="mt-2 space-y-2">
-          {open.map((match) => (
-            <MatchRow key={match.id} snapshot={snapshot} match={match} actionLabel={messages.results.walkover} onSelect={onSelect} />
-          ))}
-        </ul>
-      )}
-
-      <h4 className="mt-6 text-[0.6875rem] font-semibold text-muted-ink">{messages.results.completed}</h4>
+    <section className="rounded-card border border-ink/5 bg-white p-5 shadow-card sm:p-6">
+      <h3 className="text-[0.9375rem] font-semibold">{messages.results.completed}</h3>
       {completed.length === 0 ? (
-        <p className="mt-2 text-[0.8125rem] text-muted-ink">{messages.results.noCompleted}</p>
+        <p className="mt-3 text-[0.8125rem] text-muted-ink">{messages.results.noCompleted}</p>
       ) : (
-        <ul className="mt-2 space-y-2">
+        <ul className="mt-4 divide-y divide-hairline">
           {completed.map((match) => (
             <MatchRow key={match.id} snapshot={snapshot} match={match} actionLabel={messages.results.correct} onSelect={onSelect} />
           ))}
         </ul>
       )}
+
+      <div className="mt-6 border-t border-hairline pt-4">
+        <Button variant="ghost" className="-ml-3" aria-expanded={showOpen} onClick={() => setShowOpen((value) => !value)}>
+          {showOpen ? messages.results.hideWalkovers : messages.results.showWalkovers(open.length)}
+        </Button>
+        {showOpen ? (
+          open.length === 0 ? (
+            <p className="mt-2 text-[0.8125rem] text-muted-ink">{messages.results.noOpen}</p>
+          ) : (
+            <ul className="mt-2 divide-y divide-hairline">
+              {open.map((match) => (
+                <MatchRow key={match.id} snapshot={snapshot} match={match} actionLabel={messages.results.walkover} onSelect={onSelect} />
+              ))}
+            </ul>
+          )
+        ) : null}
+      </div>
     </section>
   )
 }

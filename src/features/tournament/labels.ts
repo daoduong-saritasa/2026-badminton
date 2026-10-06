@@ -115,14 +115,25 @@ export function isDeciderEligible(snapshot: TournamentSnapshot, match: FixtureMa
   return fixture !== undefined && deciderStatus(fixture, fixtureMatches(snapshot, match.fixtureId)) === 'eligible'
 }
 
+/**
+ * Whether staff can prepare the match: always for matches 1 and 2, and for a
+ * decider until its fixture is decided without it. A decider still waiting on
+ * matches 1 and 2 is open but cannot start yet.
+ */
+export function isDeciderOpen(snapshot: TournamentSnapshot, match: FixtureMatch): boolean {
+  if (match.matchNumber !== 3) return true
+  const fixture = fixtureOf(snapshot, match)
+  return fixture !== undefined && deciderStatus(fixture, fixtureMatches(snapshot, match.fixtureId)) !== 'unnecessary'
+}
+
 /** A match side's saved pair; null until staff assign it. */
 export function matchPair(match: FixtureMatch, side: Side): Pair | null {
   return side === 'a' ? match.pairA : match.pairB
 }
 
 /**
- * Unstarted matches staff can prepare now: both teams known, the decider
- * eligible, and placement matches opened by finalist confirmation.
+ * Unstarted matches staff can prepare now: both teams known, the decider not
+ * yet ruled out, and placement matches opened by finalist confirmation.
  */
 export function upcomingMatches(snapshot: TournamentSnapshot): FixtureMatch[] {
   if (snapshot.tournament.stage === 'setup') return []
@@ -133,11 +144,35 @@ export function upcomingMatches(snapshot: TournamentSnapshot): FixtureMatch[] {
       && fixture?.teamAId != null
       && fixture.teamBId != null
       && (!placement || snapshot.tournament.finalistsConfirmedAt !== null)
-      && isDeciderEligible(snapshot, match)
+      && isDeciderOpen(snapshot, match)
   })
+}
+
+/** What a match still needs before it can start, or null when it is ready. */
+export function startBlocker(
+  snapshot: TournamentSnapshot,
+  match: FixtureMatch,
+): 'decider' | 'court' | 'pairs' | 'court-and-pairs' | null {
+  if (match.matchNumber === 3 && !isDeciderEligible(snapshot, match)) return 'decider'
+  const needsCourt = match.court === null
+  const needsPairs = match.pairA === null || match.pairB === null
+  if (needsCourt && needsPairs) return 'court-and-pairs'
+  if (needsCourt) return 'court'
+  return needsPairs ? 'pairs' : null
 }
 
 /** Ready to start: a court and both saved pairs. */
 export function isStartable(match: FixtureMatch): boolean {
   return match.court !== null && match.pairA !== null && match.pairB !== null
+}
+
+/** Matches grouped under their fixture, both in the order given. */
+export function groupByFixture(matches: readonly FixtureMatch[]): Array<{ fixtureId: UUID; matches: FixtureMatch[] }> {
+  const groups: Array<{ fixtureId: UUID; matches: FixtureMatch[] }> = []
+  for (const match of matches) {
+    const group = groups.find((candidate) => candidate.fixtureId === match.fixtureId)
+    if (group) group.matches.push(match)
+    else groups.push({ fixtureId: match.fixtureId, matches: [match] })
+  }
+  return groups
 }

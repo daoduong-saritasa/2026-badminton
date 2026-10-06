@@ -41,6 +41,10 @@ export const messages = {
   matchState: {
     unstarted: 'Chưa bắt đầu',
     playing: 'Đang thi đấu',
+    played: {
+      qualifying: (count: number) => `${formatNumber(count)}/3 trận`,
+      other: (count: number) => `${formatNumber(count)} trận`,
+    },
     completed: 'Đã kết thúc',
     unnecessary: 'Không cần thi đấu',
     walkover: (team: string) => `Xử thắng cho ${team}`,
@@ -67,6 +71,7 @@ export const messages = {
       overview: 'Tổng quan',
       teams: 'Đội',
       matches: 'Sân & trận',
+      scoring: 'Ghi điểm',
       results: 'Kết quả',
     },
     overview: {
@@ -84,17 +89,9 @@ export const messages = {
 
     schedule: {
       heading: 'Xếp sân',
-      description: 'Chọn sân và xếp cặp cho các trận. Trận bắt đầu được khi đã có sân và cặp của cả hai đội.',
-      match: 'Trận',
-      court: 'Sân',
       empty: 'Chưa có trận nào chờ xếp sân.',
       courtFor: (match: string) => `Sân cho ${match}`,
       noCourt: 'Chưa xếp sân',
-      review: 'Công bố lịch sân',
-      confirmTitle: 'Công bố lịch sân này?',
-      confirmBody: 'Mọi người sẽ thấy lịch mới ngay.',
-      keep: 'Chưa công bố',
-      publish: 'Công bố',
       startTitle: 'Bắt đầu ghi điểm trận này?',
       startBody: 'Trận bắt đầu trên sân đã chọn. Thiết bị này sẽ dùng để ghi điểm.',
       starting: 'Đang bắt đầu…',
@@ -104,7 +101,6 @@ export const messages = {
 
     qualifying: {
       heading: 'Bắt đầu vòng loại',
-      description: 'Kiểm tra 4 đội trước khi bắt đầu. Cặp được xếp trước mỗi trận.',
       review: 'Bắt đầu vòng loại',
       title: 'Bắt đầu vòng loại?',
       body: 'Danh sách đội sẽ được khoá. Sau đó có thể xếp cặp cho các trận vòng loại.',
@@ -113,7 +109,6 @@ export const messages = {
 
     finalists: {
       heading: 'Xác nhận đội vào chung kết',
-      description: 'Kiểm tra hai đội đi tiếp trước khi mở xếp cặp tranh hạng.',
       basis: {
         standings: (rank: number) => `Hạng ${formatNumber(rank)} vòng loại`,
         playoff: 'Thắng trận tranh vé',
@@ -178,25 +173,20 @@ export const messages = {
 
   pairAssignment: {
     open: 'Xếp cặp',
-    title: (match: string) => `Xếp cặp · ${match}`,
+    title: (fixture: string, teams: string) => `${fixture} · ${teams}`,
     rule: {
-      'mixed-seed': 'Mỗi cặp gồm 1 hạt giống 1 và 1 hạt giống 2.',
+      qualifying: 'Mỗi cặp 1 hạt giống 1 + 1 hạt giống 2; mỗi người đánh một trận.',
+      'mixed-seed': 'Mỗi cặp 1 hạt giống 1 + 1 hạt giống 2.',
       free: 'Chọn bất kỳ hai người trong đội.',
     },
-    qualifyingRule: 'Mỗi cặp gồm 1 hạt giống 1 và 1 hạt giống 2; mỗi người đánh một trận trong cuộc đối đầu.',
-    arrangement: (index: number) => `Cách ghép ${formatNumber(index)}`,
-    pickTwo: 'Chọn hai người',
-    playersLabel: (team: string) => `Người chơi của ${team}`,
-    usage: {
-      qualifying: (played: number) => `${formatNumber(played)}/3 trận`,
-      placement: (played: number, available: number) =>
-        `${formatNumber(played)} trận · tối đa ${formatNumber(available)}`,
-      playoff: (played: number) => `${formatNumber(played)} trận`,
-    },
+    seedShort: (seed: number) => `HG${formatNumber(seed)}`,
+    remainingOf: (matchNumber: number) => `Hai người không đánh trận ${formatNumber(matchNumber)}`,
     playing: 'Đang thi đấu',
-    saved: 'Đã lưu',
+    played: {
+      qualifying: (count: number) => `${formatNumber(count)}/3 trận`,
+      other: (count: number) => `${formatNumber(count)} trận`,
+    },
     notAssigned: 'Chưa xếp cặp',
-    sidePending: (team: string) => `${team}: chưa xếp cặp`,
     save: 'Lưu cặp',
     saveException: 'Lưu ngoại lệ…',
     showException: 'Chọn cặp ngoại lệ',
@@ -206,7 +196,7 @@ export const messages = {
       `${issues} Chỉ dùng khi thiếu người và đối phương đồng ý. Ngoại lệ không hiển thị công khai.`,
     confirmException: 'Lưu ngoại lệ',
     organizerOnly: 'Chỉ điều hành mới lưu được ngoại lệ.',
-    locked: 'Trận đã bắt đầu nên cặp không đổi được.',
+    locked: 'Các trận đã bắt đầu nên cặp không đổi được.',
     awaitingFinalists: 'Xác nhận đội vào chung kết để mở xếp cặp tranh hạng.',
     awaitingTeams: 'Chưa xác định hai đội.',
     issues: {
@@ -215,7 +205,7 @@ export const messages = {
       'duplicate-player': 'Một cặp phải gồm hai người khác nhau.',
       'player-playing': 'Có người đang thi đấu ở trận khác.',
       'same-seed': 'Trận này cần một hạt giống 1 và một hạt giống 2.',
-      'qualifying-player-reused': 'Có người đã được xếp ở trận còn lại của cuộc đối đầu.',
+      'qualifying-player-reused': 'Một người được xếp ở cả hai trận của cuộc đối đầu.',
     },
   },
 
@@ -224,11 +214,16 @@ export const messages = {
     resumeHeading: 'Đang thi đấu',
     startHeading: 'Sắp tới',
     noMatch: 'Chưa có trận nào chờ xếp cặp hoặc bắt đầu.',
-    backToMatches: 'Về danh sách trận',
     recovering: 'Đang khôi phục quyền ghi điểm…',
     back: 'Quay lại',
     resume: 'Ghi điểm',
     start: 'Bắt đầu',
+    startBlocked: {
+      decider: 'Chỉ đánh khi hòa 1–1',
+      court: 'Cần xếp sân',
+      pairs: 'Cần xếp cặp',
+      'court-and-pairs': 'Cần xếp sân và cặp',
+    },
     startTitle: 'Bắt đầu trận này?',
     startBody: (court: string) => `Trận bắt đầu trên ${court.toLowerCase()}. Thiết bị này sẽ dùng để ghi điểm.`,
     starting: 'Đang bắt đầu…',
@@ -415,8 +410,6 @@ export const messages = {
 
   fixtures: {
     qualifyingHeading: 'Vòng loại',
-    qualifyingDescription:
-      'Mỗi đội gặp ba đội còn lại. Mỗi cuộc đối đầu có hai trận và có thể hòa 1–1. Hai đội đứng đầu vào chung kết.',
     standingsHeading: 'Bảng xếp hạng',
     columns: {
       rank: 'Hạng',
@@ -451,7 +444,6 @@ export const messages = {
       `Chạm ${formatNumber(target)}, cách 2 điểm, tối đa ${formatNumber(cap)}`,
     bestOfThree: 'Thắng 2 ván',
     playoffHeading: 'Trận tranh vé',
-    playoffDescription: 'Phân định suất vào chung kết còn lại giữa các đội bằng nhau sau mọi tiêu chí.',
     awaitingDraw: 'Chờ bốc thăm',
     drawOutcomesHeading: 'Kết quả bốc thăm',
     matchupDrawn: (matchup: string) => `Cặp đấu tranh vé: ${matchup}`,
@@ -471,10 +463,9 @@ export const messages = {
   },
 
   results: {
-    heading: 'Kết quả',
-    description: 'Xử thắng hoặc sửa kết quả đã ghi.',
-    open: 'Chưa có kết quả',
-    completed: 'Đã kết thúc',
+    completed: 'Kết quả đã ghi',
+    showWalkovers: (count: number) => `Xử thắng một trận chưa có kết quả (${formatNumber(count)})`,
+    hideWalkovers: 'Ẩn các trận chưa có kết quả',
     noOpen: 'Không có trận nào chờ kết quả.',
     noCompleted: 'Chưa ghi kết quả nào.',
     walkover: 'Xử thắng',
@@ -495,7 +486,6 @@ export const messages = {
     cannotApply: 'Chưa thể lưu thay đổi này.',
     confirmChange: 'Xác nhận thay đổi',
     walkoverWinner: 'Đội được xử thắng',
-    confirmWalkoverTitle: 'Xử thắng trận này?',
     walkoverConsequence: (team: string) =>
       `${team} thắng trận này mà không thi đấu. Các kết quả trước đó giữ nguyên.`,
     confirmWalkover: 'Xác nhận xử thắng',
