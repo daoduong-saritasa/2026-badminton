@@ -14,10 +14,10 @@ seed 1 and two seed 2 players. _Avoid_: "pair" for the four-player roster.
 Two players from the same team selected to compete together in a doubles match.
 _Avoid_: "team" or "đội" for the two-player pairing.
 
-**Team fixture** (_Cuộc đối đầu_):
+**Team fixture** (_Cặp đấu_):
 A contest between two teams, made up of doubles matches. A qualifying fixture
 contains two matches and may end level; a placement fixture goes to the first
-team to win two matches.
+team to win two matches. _Avoid_: "Cuộc đối đầu".
 
 **Match** (_Trận_):
 A doubles contest between two pairs. Qualifying and qualification playoff
@@ -44,7 +44,7 @@ teams reach the final and which play for third place.
 An extra match played to separate teams the ranking criteria left tied for a
 final place.
 
-**Placement fixture** (_Cuộc đối đầu xếp hạng_):
+**Placement fixture** (_Cặp đấu xếp hạng_):
 The final or the third-place fixture. Each decides two finishing positions.
 
 **Drawn fixture** (_Hòa_):

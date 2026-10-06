@@ -10,7 +10,7 @@
 const serverMessages: Record<string, string> = {
   // Concurrency and staleness
   'Tournament version conflict': 'Giải đấu vừa thay đổi. Hãy tải lại và thử lại.',
-  'Fixture version conflict': 'Cuộc đối đầu vừa thay đổi. Hãy tải lại và thử lại.',
+  'Fixture version conflict': 'Cặp đấu vừa thay đổi. Hãy tải lại và thử lại.',
   'Match version conflict': 'Trận đấu vừa thay đổi. Hãy tải lại và thử lại.',
   'Tournament reset generation conflict': 'Giải đấu đã được đặt lại. Hãy tải lại trang.',
   'Reviewed result impact is stale': 'Kết quả đã thay đổi sau khi xem trước. Hãy xem lại rồi xác nhận.',
@@ -32,8 +32,8 @@ const serverMessages: Record<string, string> = {
   'A pair requires two distinct players': 'Một cặp phải gồm hai người khác nhau.',
   'Pair players must belong to the team': 'Người chơi phải thuộc đội này.',
   'Pair must mix seeds': 'Trận này cần một hạt giống 1 và một hạt giống 2.',
-  'Player already plays in this fixture': 'Có người đã được xếp ở trận còn lại của cuộc đối đầu.',
-  'Fixture participants are not assigned': 'Cuộc đối đầu chưa xác định đủ hai đội.',
+  'Player already plays in this fixture': 'Có người đã được xếp ở trận còn lại của cặp đấu.',
+  'Fixture participants are not assigned': 'Cặp đấu chưa xác định đủ hai đội.',
   'Qualifying requires four complete teams': 'Cần đủ bốn đội, mỗi đội bốn người, trước khi bắt đầu vòng loại.',
 
   // Qualification
