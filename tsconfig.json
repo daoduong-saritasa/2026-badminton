@@ -9,6 +9,7 @@
   "references": [
     { "path": "./tsconfig.app.json" },
     { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.edge.json" }
+    { "path": "./tsconfig.edge.json" },
+    { "path": "./tsconfig.e2e.json" }
   ]
 }
