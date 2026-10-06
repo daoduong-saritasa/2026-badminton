@@ -36,7 +36,7 @@ function SelectValue({
  * treatment — so a form row mixing the two reads as one control strip.
  */
 const selectTriggerVariants = cva(
-  "flex w-fit items-center justify-between gap-2 rounded-field border text-[0.8125rem] font-medium whitespace-nowrap transition-colors outline-none select-none focus-visible:border-navy focus-visible:ring-[3px] focus-visible:ring-mist disabled:cursor-not-allowed disabled:border-hairline disabled:bg-well disabled:text-muted-ink aria-invalid:border-destructive data-placeholder:font-normal data-placeholder:text-muted-ink/70 data-[size=default]:h-11 data-[size=default]:py-3 data-[size=default]:pr-3 data-[size=default]:pl-3.5 data-[size=sm]:h-10 data-[size=sm]:py-2.5 data-[size=sm]:pr-2.5 data-[size=sm]:pl-3 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+  "flex w-fit items-center justify-between gap-2 rounded-field border text-base font-medium whitespace-nowrap transition-colors outline-none select-none focus-visible:border-navy focus-visible:ring-[3px] focus-visible:ring-mist disabled:cursor-not-allowed disabled:border-hairline disabled:bg-well disabled:text-muted-ink aria-invalid:border-destructive data-placeholder:font-normal data-placeholder:text-muted-ink/70 data-[size=default]:h-11 data-[size=default]:py-3 data-[size=default]:pr-3 data-[size=default]:pl-3.5 data-[size=sm]:h-11 data-[size=sm]:py-2.5 data-[size=sm]:pr-2.5 data-[size=sm]:pl-3 *:data-[slot=select-value]:line-clamp-1 *:data-[slot=select-value]:flex *:data-[slot=select-value]:items-center *:data-[slot=select-value]:gap-1.5 [&_svg]:pointer-events-none [&_svg]:shrink-0",
   {
     variants: {
       tone: {
@@ -131,7 +131,7 @@ function SelectItem({
     <SelectPrimitive.Item
       data-slot="select-item"
       className={cn(
-        "relative flex w-full cursor-pointer items-center gap-1.5 rounded-chip py-2.5 pr-8 pl-3 text-[0.8125rem] outline-hidden select-none focus:bg-mist focus:text-navy data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
+        "relative flex w-full cursor-pointer items-center gap-1.5 min-h-11 rounded-chip py-2.5 pr-8 pl-3 text-base outline-hidden select-none focus:bg-mist focus:text-navy data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 *:[span]:last:flex *:[span]:last:items-center *:[span]:last:gap-2",
         className
       )}
       {...props}

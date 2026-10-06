@@ -4,18 +4,16 @@ import { Badge } from '@/components/ui/badge'
 import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
 import { cn } from '@/lib/utils'
+import { PairDisplay, TeamIdentity } from './Participants'
 
 import {
   courtLabel,
-  fixtureLabel,
+  fixtureScheduleLabel,
   fixtureOf,
   matchPair,
   openGame,
-  pairPlayers,
   scoreText,
   sideTeamId,
-  stageRule,
-  teamName,
 } from './labels'
 
 function TicketSide({
@@ -38,17 +36,13 @@ function TicketSide({
     ? live.score[side]
     : singleGame && lastGame ? lastGame.score[side] : tally[side]
   return (
-    <div className="flex min-w-0 flex-col items-center text-center">
-      <p className="max-w-full [overflow-wrap:anywhere] text-[0.9375rem] font-medium tracking-[-0.027em]">
-        {teamName(snapshot, sideTeamId(fixture, side))}
-      </p>
-      <p className="mt-1 max-w-full [overflow-wrap:anywhere] text-xs text-muted-ink">
-        {pairPlayers(snapshot, matchPair(match, side))}
-      </p>
+    <div className="grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4">
+      <TeamIdentity snapshot={snapshot} teamId={sideTeamId(fixture, side)} className="text-base" />
+      <PairDisplay snapshot={snapshot} pair={matchPair(match, side)} compact className="col-start-1 row-start-2 mt-1" />
       <strong
         className={cn(
-          'numeric mt-4 block w-full min-w-0 rounded-[14px] text-[clamp(3rem,18vw,4.375rem)]/[1.35] font-bold tracking-[-0.057em] shadow-[inset_0_1px_0_rgb(255_255_255/0.53)]',
-          side === 'a' ? 'bg-peach' : 'bg-ice',
+          'numeric col-start-2 row-span-2 row-start-1 min-w-[3.5rem] text-right text-4xl font-bold leading-none tracking-[-0.06em]',
+          match.state === 'playing' ? 'text-navy' : 'text-muted-ink',
         )}
       >
         {match.state === 'unstarted' ? '–' : formatNumber(value)}
@@ -74,52 +68,48 @@ export function MatchTicket({
   return (
     <article
       className={cn(
-        'ticket lift-card rounded-card border-t-[5px] bg-white p-[1.625rem] shadow-card',
+        'ticket rounded-card border border-line border-t-4 bg-white p-5 shadow-card',
         match.court === 2 ? 'border-t-cyan' : 'border-t-orange',
       )}
-      aria-label={match.court ? courtLabel(snapshot, match.court) : messages.common.fixtureMatch(fixtureLabel(fixture), match.matchNumber)}
+      aria-label={match.court ? courtLabel(snapshot, match.court) : messages.common.fixtureMatch(fixtureScheduleLabel(snapshot, fixture), match.matchNumber)}
     >
-      <div className="mb-7 flex items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-2.5">
-          <h3 className="text-sm font-semibold">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex min-w-0 flex-wrap items-center gap-2.5">
+          <h3 className="text-base font-semibold [overflow-wrap:anywhere]">
             {match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending}
           </h3>
           <span
             className={cn(
-              'shrink-0 rounded-pill px-2.5 py-1 text-xs font-semibold',
-              'bg-well text-muted-ink',
+              'text-xs font-medium text-muted-ink',
             )}
           >
-            {fixtureLabel(fixture)}
+            {fixtureScheduleLabel(snapshot, fixture)} · {messages.common.matchNumber(match.matchNumber)}
           </span>
         </div>
         <Badge variant="status" className={match.state === 'playing' ? 'text-navy' : 'text-muted-ink'}>
           {status}
         </Badge>
       </div>
-      <div className="grid grid-cols-[minmax(0,1fr)_0.75rem_minmax(0,1fr)] items-center gap-1.5 sm:gap-3">
+      <div className="grid gap-4">
         <TicketSide match={match} side="a" snapshot={snapshot} />
-        <span className="mt-[1.875rem] text-center text-xl opacity-40" aria-hidden="true">:</span>
         <TicketSide match={match} side="b" snapshot={snapshot} />
       </div>
-      <div className="tear -mx-[1.625rem] -mb-[1.625rem] mt-[1.9375rem] px-[1.625rem] pt-5 pb-[1.1875rem]">
-        <small className="text-xs text-muted-ink">
-          {messages.common.matchNumber(match.matchNumber)}
-          {fixture ? ` · ${stageRule(fixture.stage)}` : ''}
-        </small>
-        <p className="mt-[7px] text-xs/[1.6]">
-          {match.state === 'playing' && live && fixture?.stage === 'final' ? (
-            <span className="font-medium">
-              {messages.ticket.gameTally(live.gameNumber, scoreText(matchGameTally(match.games)))}
+      {nextLabel || (match.state === 'playing' && live && fixture !== undefined && gamesToWinMatch(fixture.stage) === 2) ? (
+        <div className="-mx-5 -mb-5 mt-4 rounded-b-card border-t border-hairline bg-well px-5 py-3">
+          <p className="text-xs/[1.6]">
+            {match.state === 'playing' && live && fixture !== undefined && gamesToWinMatch(fixture.stage) === 2 ? (
+              <span className="font-medium">
+                {messages.ticket.gameTally(live.gameNumber, scoreText(matchGameTally(match.games)))}
             </span>
           ) : null}
           {nextLabel ? (
-            <span className="text-muted-ink">
-              {match.state === 'playing' && live && fixture?.stage === 'final' ? ' · ' : ''}{messages.ticket.upNext}: {nextLabel}
+            <span className="text-muted-ink [overflow-wrap:anywhere]">
+              {match.state === 'playing' && live && fixture !== undefined && gamesToWinMatch(fixture.stage) === 2 ? ' · ' : ''}{messages.ticket.upNext}: {nextLabel}
             </span>
           ) : null}
         </p>
-      </div>
+        </div>
+      ) : null}
     </article>
   )
 }

@@ -53,7 +53,7 @@ test('the organizer starts qualifying, which locks the roster', async ({ page, p
   await page.getByRole('button', { name: messages.organizer.qualifying.review }).click()
   const confirm = page.getByRole('alertdialog', { name: messages.organizer.qualifying.title })
   await confirm.getByRole('button', { name: messages.organizer.qualifying.confirm }).click()
-  await expect(page.getByText(messages.organizer.stageBadge(messages.app.stage.groups))).toBeVisible()
+  await expect(confirm).not.toBeVisible()
 
   await openOrganizerSection(page, 'teams')
   await expect(page.getByText(messages.setup.lockedTitle)).toBeVisible()

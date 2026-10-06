@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, ArrowLeft, KeyRound, RefreshCw } from 'lucide-react'
+import { AlertCircle, ArrowLeft, KeyRound, RefreshCw, ListOrdered, Trophy, Volleyball } from 'lucide-react'
 
 import { fetchTournament, subscribeTournament } from '@/data/tournament'
 import { getStaffAccess } from '@/data/staff'
@@ -29,14 +29,7 @@ type AppView = PublicView | StaffView
 const tournamentQueryKey = ['tournament'] as const
 const staffQueryKey = ['staff-access'] as const
 
-/*
- * Underlined tabs: a hairline rule with a 3px orange bar under the active tab.
- * The `line` variant already renders the bar; these override its colour, weight
- * and offset so it overlaps the rule rather than sitting 5px below it. The list
- * never scrolls: on narrow screens the tabs share the row equally and long labels
- * wrap inside their tab, so the rule and the active bar always stay in view.
- */
-const tabTriggerClass = 'h-auto min-h-11 min-w-0 flex-1 whitespace-normal rounded-none px-0 pb-3 text-center text-[0.8125rem] leading-tight text-muted-ink sm:min-w-[4.375rem] sm:flex-none data-active:font-semibold data-active:text-ink after:inset-x-0 after:-bottom-px after:h-[3px] after:rounded-[3px] after:bg-orange'
+const tabTriggerClass = 'min-h-14 min-w-0 flex-1 flex-col gap-1 whitespace-normal rounded-field px-2 py-2 text-center text-xs font-medium text-muted-ink hover:bg-peach hover:text-navy data-active:bg-orange data-active:text-white data-active:hover:bg-orange data-active:hover:text-white after:hidden sm:flex-row sm:gap-2 sm:text-sm'
 
 function defaultView(stage: TournamentStage): PublicView {
   if (stage === 'knockouts' || stage === 'completed') return 'knockouts'
@@ -45,10 +38,13 @@ function defaultView(stage: TournamentStage): PublicView {
 
 function LoadingScreen() {
   return (
-    <main className="grid min-h-svh place-items-center px-6 text-center">
-      <div>
-        <span className="brand-mark" aria-hidden="true" />
-        <p className="mt-5 text-sm font-medium">{messages.app.loading}</p>
+    <main className="app-shell" aria-busy="true" aria-label={messages.app.loading}>
+      <span className="brand-mark" aria-hidden="true" />
+      <p className="mt-5 text-sm font-medium" role="status">{messages.app.loading}</p>
+      <div className="loading-skeleton mt-8 h-14 rounded-field" />
+      <div className="mt-6 grid gap-4 md:grid-cols-2" aria-hidden="true">
+        <div className="loading-skeleton h-72 rounded-card" />
+        <div className="loading-skeleton h-72 rounded-card" />
       </div>
     </main>
   )
@@ -87,8 +83,7 @@ function SetupRequiredScreen({
   return (
     <main className="app-shell">
       <header className="mb-8">
-        <p className="text-xs font-semibold tracking-[0.08em] text-muted-ink">{messages.app.setupEyebrow}</p>
-        <h1 className="mt-2 text-2xl font-extrabold tracking-tight"><span className="brand-mark" aria-hidden="true" />{messages.app.setupHeading}</h1>
+        <h1 className="text-2xl font-extrabold tracking-tight"><span className="brand-mark" aria-hidden="true" />{messages.app.setupHeading}</h1>
         <p className="ml-[2.5625rem] mt-2 text-xs text-muted-ink">{messages.app.setupNote}</p>
       </header>
       {isOrganizer ? (
@@ -209,7 +204,7 @@ export default function App() {
             <StaffMenu role={staffAccess.role} onSignedOut={handleSignedOut} />
           </div>
           <div className="mt-6">
-            <h1 className="text-[clamp(1.5rem,5vw,2rem)] font-extrabold tracking-[-0.0433em]">
+            <h1 className="text-[clamp(1.5rem,5vw,2rem)] font-extrabold tracking-[-0.0433em] [overflow-wrap:anywhere]">
               <span className="brand-mark" aria-hidden="true" />
               {snapshot.tournament.name}
             </h1>
@@ -233,14 +228,16 @@ export default function App() {
   ]
 
   return (
-    <div className="app-shell">
-      <header className="mb-8 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:gap-5">
+    <div className="app-shell public-shell">
+      <a className="skip-link" href="#tournament-content">{messages.app.skipToContent}</a>
+      <header className="mb-6 grid grid-cols-[minmax(0,1fr)_auto] items-start gap-3 sm:gap-5">
         <div className="min-w-0">
-          <h1 className="text-[clamp(1.4375rem,4vw,1.875rem)] font-extrabold tracking-[-0.0433em]">
+          <h1 className="text-[clamp(1.4375rem,4vw,1.875rem)] font-extrabold tracking-[-0.0433em] [overflow-wrap:anywhere]">
             <span className="brand-mark" aria-hidden="true" />
             {snapshot.tournament.name}
           </h1>
-          <p className="ml-[2.5625rem] mt-[7px] text-xs text-muted-ink">
+          <p className="mt-2 flex items-center gap-2 text-sm text-muted-ink">
+            <span className="size-2 rounded-full bg-navy" aria-hidden="true" />
             {messages.app.stage[snapshot.tournament.stage]}
           </p>
         </div>
@@ -258,21 +255,19 @@ export default function App() {
         )}
       </header>
 
-      <Tabs value={view} onValueChange={handleViewChange} className="gap-8">
-        <TabsList variant="line" className="w-full items-stretch justify-start gap-3 rounded-none p-0 group-data-horizontal/tabs:h-auto sm:gap-[1.375rem]">
+      <Tabs value={view} onValueChange={handleViewChange} className="gap-6">
+        <TabsList variant="default" className="court-navigation w-full items-stretch gap-1 rounded-card p-1.5 group-data-horizontal/tabs:h-auto">
           {tabs.map((tab) => (
             <TabsTrigger className={tabTriggerClass} key={tab.value} value={tab.value}>
+              {tab.value === 'matches' ? <Volleyball className="size-5" aria-hidden="true" /> : null}
+              {tab.value === 'standings' ? <ListOrdered className="size-5" aria-hidden="true" /> : null}
+              {tab.value === 'knockouts' ? <Trophy className="size-5" aria-hidden="true" /> : null}
               {tab.label}
             </TabsTrigger>
           ))}
         </TabsList>
-        {viewContent}
+        <main id="tournament-content" tabIndex={-1}>{viewContent}</main>
       </Tabs>
-
-      <footer className="mt-[2.625rem] flex flex-wrap justify-between gap-4 text-xs text-muted-ink">
-        <span>{messages.app.scoringRule}</span>
-        <span aria-live="polite">{tournamentQuery.isFetching ? messages.app.updating : messages.app.liveReady}</span>
-      </footer>
 
       <StaffAccessDialog
         open={staffDialogOpen}

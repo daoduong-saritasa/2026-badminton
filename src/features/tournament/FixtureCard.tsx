@@ -3,18 +3,17 @@ import type { Side, TeamFixture, TournamentSnapshot } from '@/domain/types'
 import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
 import { cn } from '@/lib/utils'
+import { PairLines } from './PairLines'
+import { TeamIdentity } from './Participants'
 
 import {
-  fixtureLabel,
+  fixtureScheduleLabel,
   fixtureMatches,
   fixtureScore,
   isDrawnFixture,
-  matchPair,
   matchResultText,
-  pairPlayers,
   sideTeamId,
   stageRule,
-  teamName,
 } from './labels'
 
 /**
@@ -45,16 +44,17 @@ export function FixtureCard({
   return (
     <article
       className={cn(
-        'ticket rounded-card p-6',
-        final ? 'bg-navy text-white shadow-final' : 'border border-line bg-white',
+        'ticket rounded-card p-4 sm:p-5',
+        final ? 'border border-navy-soft bg-mist shadow-final' : 'border border-line bg-white',
       )}
     >
-      <h3 className="flex items-center gap-2.5 text-[0.9375rem] font-semibold">
-        {label ?? fixtureLabel(fixture)}
+      <h3 className="flex flex-wrap items-center gap-2.5 text-[0.9375rem] font-semibold">
+        {label ?? fixtureScheduleLabel(snapshot, fixture)}
+        {matches.some((match) => match.state === 'playing') ? <span className="text-xs font-semibold text-navy">{messages.matchState.playing}</span> : null}
         {drawn ? <span className="rounded-pill bg-well px-2 py-0.5 text-xs font-semibold text-muted-ink">{messages.fixtures.drawn}</span> : null}
       </h3>
       {stage && stage !== 'qualifying' ? (
-        <p className={cn('mt-1 mb-4 text-xs', final ? 'text-navy-soft' : 'text-muted-ink')}>{stageRule(stage)}</p>
+        <p className="mt-1 mb-4 text-xs text-muted-ink">{stageRule(stage)}</p>
       ) : <div className="mb-4" />}
       <div className="space-y-2">
         {sides.map((side) => {
@@ -64,15 +64,17 @@ export function FixtureCard({
             <div
               className={cn(
                 'grid grid-cols-[minmax(0,1fr)_2.125rem] items-center gap-2.5 rounded-chip px-3 py-2 text-[0.8125rem] font-medium',
-                won && (final ? 'bg-white/10' : 'bg-navy/5'),
+                won ? 'bg-peach' : 'bg-white/70',
               )}
               key={side}
             >
-              <span className="min-w-0 [overflow-wrap:anywhere]">
-                {teamId === null ? placeholders?.[side] ?? messages.common.toBeDecided : teamName(snapshot, teamId)}
-                {won ? <span className={cn('ml-2 text-xs font-semibold', final ? 'text-cyan' : 'text-navy')}>{messages.fixtures.winner}</span> : null}
-              </span>
-              <strong className={cn('numeric grid h-9 place-items-center rounded-chip text-[1.375rem] font-normal', final ? 'bg-white/[0.07] text-navy-soft' : 'bg-well text-dim-ink')}>
+              <div className="min-w-0">
+                {teamId === null ? (
+                  <span className="text-muted-ink">{placeholders?.[side] ?? messages.common.toBeDecided}</span>
+                ) : <TeamIdentity snapshot={snapshot} teamId={teamId} className="text-sm" />}
+                {won ? <span className="mt-2 block text-xs font-semibold text-navy">{messages.fixtures.winner}</span> : null}
+              </div>
+              <strong className="numeric grid h-9 place-items-center rounded-chip bg-white text-2xl font-bold text-navy">
                 {matches.length === 0 ? '–' : formatNumber(tally[side])}
               </strong>
             </div>
@@ -80,21 +82,19 @@ export function FixtureCard({
         })}
       </div>
       {matches.length > 0 ? (
-        <ol className={cn('mt-4 border-t pt-2', final ? 'border-white/25' : 'border-hairline')}>
+        <ol className="mt-4 border-t border-hairline pt-2">
           {matches.map((match) => (
-            <li className="grid gap-0.5 py-2 text-xs" key={match.id}>
+            <li className="grid gap-0.5 border-b border-hairline py-4 text-xs last:border-b-0" key={match.id}>
               <span className="flex flex-wrap justify-between gap-2">
                 <span className="font-semibold">{messages.common.matchNumber(match.matchNumber)}</span>
-                <span className={final ? 'text-navy-soft' : 'text-muted-ink'}>{matchResultText(snapshot, match)}</span>
+                <span className="text-muted-ink">{matchResultText(snapshot, match)}</span>
               </span>
-              <span className={cn('[overflow-wrap:anywhere]', final ? 'text-white/65' : 'text-muted-ink')}>
-                {messages.common.versus(pairPlayers(snapshot, matchPair(match, 'a')), pairPlayers(snapshot, matchPair(match, 'b')))}
-              </span>
+              <PairLines snapshot={snapshot} match={match} className="mt-3" />
             </li>
           ))}
         </ol>
       ) : (
-        <p className={cn('mt-4 text-xs', final ? 'text-navy-soft' : 'text-muted-ink')}>{messages.fixtures.matchesPending}</p>
+        <p className="mt-4 text-xs text-muted-ink">{messages.fixtures.matchesPending}</p>
       )}
     </article>
   )

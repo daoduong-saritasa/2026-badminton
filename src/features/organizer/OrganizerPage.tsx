@@ -511,11 +511,9 @@ function OrganizerOverview({
   const scheduledMatches = eligibleMatches.filter((match) => match.court !== null).length
   const completedMatches = eligibleMatches.filter((match) => match.state === 'completed').length
   const teamsReady = snapshot.teams.length === 4 && snapshot.players.length === 16
-  const next = !teamsReady
-    ? { section: 'teams' as const, text: messages.organizer.overview.setupTeams }
-    : inSetup
-      ? { section: null, text: messages.organizer.overview.readyToStart }
-      : { section: 'matches' as const, text: messages.organizer.overview.manageMatches }
+  const next = teamsReady
+    ? { section: null, text: messages.organizer.overview.readyToStart }
+    : { section: 'teams' as const, text: messages.organizer.overview.setupTeams }
   const metrics = [
     { label: messages.organizer.overview.teams, value: `${snapshot.teams.length}/4`, section: 'teams' as const, icon: Users },
     ...(!inSetup ? [
@@ -526,10 +524,10 @@ function OrganizerOverview({
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-card bg-navy text-white shadow-final">
+      {inSetup ? <section className="overflow-hidden rounded-card bg-orange text-white shadow-final">
         <div className="grid gap-6 p-6 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end sm:p-7">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-navy-soft">{messages.organizer.overview.heading}</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.08em] text-white">{messages.organizer.overview.heading}</p>
             <p className="mt-3 max-w-2xl text-lg/[1.45] font-semibold">{next.text}</p>
           </div>
           {next.section ? (
@@ -538,7 +536,7 @@ function OrganizerOverview({
             </Button>
           ) : null}
         </div>
-      </section>
+      </section> : null}
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {metrics.map(({ label, value, section, icon: Icon }) => (
@@ -607,25 +605,24 @@ export function OrganizerPage({ snapshot, resetGeneration, selectedSection, onSe
     <main className="view-enter space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-x-6 gap-y-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.08em] text-orange">{messages.organizer.stageBadge(messages.app.stage[snapshot.tournament.stage])}</p>
-          <h2 className="mt-1 text-[1.625rem] font-semibold tracking-[-0.036em]">{messages.organizer.heading}</h2>
+          <h2 className="text-[1.625rem] font-semibold tracking-[-0.036em]">{messages.organizer.heading}</h2>
         </div>
         <StageProgressMeter snapshot={snapshot} />
       </div>
 
-      <nav className="-mx-5 overflow-x-auto px-5 sm:mx-0 sm:px-0" aria-label={messages.organizer.navigationLabel}>
-        <div className="flex min-w-max gap-2 border-b border-line pb-3">
+      <nav className="min-w-0" aria-label={messages.organizer.navigationLabel}>
+        <div className="grid grid-cols-3 gap-2 border-b border-line pb-3 sm:flex sm:flex-wrap">
           {navigation.map(({ value, label, icon: Icon }) => (
             <button
               type="button"
-              className={`flex min-h-11 items-center gap-2 rounded-pill px-4 text-sm font-semibold transition-colors ${
-                section === value ? 'bg-navy text-white' : 'text-muted-ink hover:bg-white hover:text-ink'
+              className={`flex min-h-12 min-w-0 items-center justify-center gap-2 rounded-pill px-2 text-sm sm:px-4 font-semibold transition-colors ${
+                section === value ? 'bg-orange text-white' : 'text-muted-ink hover:bg-white hover:text-ink'
               }`}
               aria-current={section === value ? 'page' : undefined}
               key={value}
               onClick={() => { if (value === 'scoring') onOpenScoring(); else onSectionChange(value) }}
             >
-              <Icon className="size-4" aria-hidden="true" />{label}
+              <Icon className="size-4 shrink-0" aria-hidden="true" /><span>{label}</span>
             </button>
           ))}
         </div>

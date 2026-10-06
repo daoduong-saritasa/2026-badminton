@@ -2,30 +2,26 @@ import type { FixtureMatch, TournamentSnapshot } from '@/domain/types'
 import { messages } from '@/i18n/vi'
 import { cn } from '@/lib/utils'
 
-import { matchPair, pairPlayers } from './labels'
+import { fixtureOf, matchPair, sideTeamId } from './labels'
+import { PairDisplay, TeamIdentity } from './Participants'
 
-/**
- * A match's two pairs on separate lines, side A first, so they read in the
- * same order as the fixture's teams. One line says neither is assigned yet.
- */
 export function PairLines({ snapshot, match, className }: {
   snapshot: TournamentSnapshot
   match: FixtureMatch
   className?: string
 }) {
+  const fixture = fixtureOf(snapshot, match)
   if (match.pairA === null && match.pairB === null) {
-    return <p className={cn('text-[0.8125rem] text-muted-ink', className)}>{messages.pairAssignment.notAssigned}</p>
+    return <p className={cn('rounded-field border border-dashed border-line px-3 py-2 text-xs text-muted-ink', className)}>{messages.pairAssignment.notAssigned}</p>
   }
   return (
-    <ul className={cn('min-w-0 space-y-0.5 text-[0.8125rem]', className)}>
-      {(['a', 'b'] as const).map((side) => {
-        const pair = matchPair(match, side)
-        return (
-          <li className={cn('[overflow-wrap:anywhere]', pair ? 'font-medium text-ink' : 'text-muted-ink')} key={side}>
-            {pair ? pairPlayers(snapshot, pair) : messages.pairAssignment.notAssigned}
-          </li>
-        )
-      })}
+    <ul className={cn('grid min-w-0 gap-3', className)}>
+      {(['a', 'b'] as const).map((side) => (
+        <li className="min-w-0" key={side}>
+          <TeamIdentity snapshot={snapshot} teamId={sideTeamId(fixture, side)} className="mb-1 text-sm" />
+          <PairDisplay snapshot={snapshot} pair={matchPair(match, side)} compact />
+        </li>
+      ))}
     </ul>
   )
 }

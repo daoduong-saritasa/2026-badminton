@@ -1,27 +1,41 @@
 import { useState } from 'react'
 
-import type { Court, FixtureMatch, Side, TeamFixture, TournamentSnapshot, UUID } from '@/domain/types'
+import type { Court, FixtureMatch, TournamentSnapshot, UUID } from '@/domain/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { messages } from '@/i18n/vi'
 
 import {
-  courtLabel,
-  fixtureLabel,
-  fixtureMatches,
   fixtureOf,
-  fixtureScore,
+  fixtureScheduleLabel,
   isDeciderEligible,
-  isDrawnFixture,
-  matchLabel,
-  matchResultText,
-  pairPlayers,
-  scoreText,
   sideTeamId,
   teamName,
 } from './labels'
 import { MatchTicket } from './MatchTicket'
+import { FixtureCard } from './FixtureCard'
+import { MatchSummary } from './MatchSummary'
+import { SeedLegend } from './Participants'
 
 const courts: readonly Court[] = [1, 2]
+
+function PlayingFixtures({ snapshot }: { snapshot: TournamentSnapshot }) {
+  const playingIds = new Set(snapshot.matches.filter((match) => match.state === 'playing').map((match) => match.fixtureId))
+  const fixtures = snapshot.fixtures.filter((fixture) => playingIds.has(fixture.id))
+  if (fixtures.length === 0) return null
+  return (
+    <div className="border-l-4 border-orange bg-white px-4 py-3">
+      <p className="text-sm font-semibold text-navy">{messages.matchState.playing}</p>
+      <ul className="mt-2 space-y-2">
+        {fixtures.map((fixture) => (
+          <li className="text-sm [overflow-wrap:anywhere]" key={fixture.id}>
+            <span className="font-semibold">{fixtureScheduleLabel(snapshot, fixture)}</span>
+            <span className="mt-0.5 block text-muted-ink">{messages.common.versus(teamName(snapshot, fixture.teamAId), teamName(snapshot, fixture.teamBId))}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}
 
 function teams(snapshot: TournamentSnapshot, match: FixtureMatch): string {
   const fixture = fixtureOf(snapshot, match)
@@ -38,80 +52,17 @@ function currentMatch(snapshot: TournamentSnapshot, court: Court): FixtureMatch 
     ?? waiting(snapshot).find((match) => match.court === court)
 }
 
-function StageChip({ snapshot, match }: { snapshot: TournamentSnapshot; match: FixtureMatch }) {
-  return (
-    <span className="rounded-pill bg-well px-2 py-0.5 text-xs font-semibold text-muted-ink">
-      {matchLabel(snapshot, match)}
-    </span>
-  )
-}
-
-/**
- * One team's fixtures in playing order. Each match shows its saved pairs, or
- * that a side is not assigned yet.
- */
 function TeamSchedule({ snapshot, teamId }: { snapshot: TournamentSnapshot; teamId: UUID }) {
   const fixtures = snapshot.fixtures.filter((fixture) => fixture.teamAId === teamId || fixture.teamBId === teamId)
-  const ownSide = (fixture: TeamFixture): Side => (fixture.teamAId === teamId ? 'a' : 'b')
-  const otherSide = (fixture: TeamFixture): Side => (ownSide(fixture) === 'a' ? 'b' : 'a')
-
   return (
     <div>
-      <h2 className="mb-[1.125rem] text-sm font-medium">{messages.publicView.teamSchedule(teamName(snapshot, teamId))}</h2>
+      <h2 className="sr-only">{messages.publicView.teamSchedule(teamName(snapshot, teamId))}</h2>
       {fixtures.length === 0 ? (
-        <p className="rounded-card border border-dashed border-rule bg-white/60 p-8 text-center text-[0.8125rem] text-muted-ink">
-          {messages.publicView.noFixtures}
-        </p>
+        <p className="rounded-card border border-dashed border-rule bg-white/60 p-8 text-center text-sm text-muted-ink">{messages.publicView.noFixtures}</p>
       ) : (
-        <ol className="rounded-card border border-ink/5 bg-white px-5 shadow-card">
-          {fixtures.map((fixture) => {
-            const matches = fixtureMatches(snapshot, fixture.id)
-            const score = fixtureScore(snapshot, fixture.id)
-            return (
-              <li className="border-t border-hairline py-4 first:border-t-0" key={fixture.id}>
-                <div className="flex flex-wrap items-center justify-between gap-2.5">
-                  <span className="flex min-w-0 flex-wrap items-center gap-2.5">
-                    <span className="rounded-pill bg-well px-2 py-0.5 text-xs font-semibold text-muted-ink">{fixtureLabel(fixture)}</span>
-                    <span className="min-w-0 text-[0.8125rem] font-medium [overflow-wrap:anywhere]">
-                      {messages.publicView.opponent(teamName(snapshot, sideTeamId(fixture, otherSide(fixture))))}
-                    </span>
-                  </span>
-                  {matches.some((match) => match.state === 'completed') ? (
-                    <span className="numeric text-xs font-semibold">
-                      {scoreText({ a: score[ownSide(fixture)], b: score[otherSide(fixture)] })}
-                      {isDrawnFixture(snapshot, fixture) ? ` · ${messages.fixtures.drawn}` : ''}
-                    </span>
-                  ) : null}
-                </div>
-                {matches.length === 0 ? (
-                  <p className="mt-2 text-xs text-muted-ink">{messages.fixtures.matchesPending}</p>
-                ) : (
-                  <ul className="mt-2 space-y-1.5">
-                    {matches.filter((match) => isDeciderEligible(snapshot, match)).map((match) => {
-                      const own = ownSide(fixture) === 'a' ? match.pairA : match.pairB
-                      const other = ownSide(fixture) === 'a' ? match.pairB : match.pairA
-                      return (
-                        <li className="grid gap-0.5 text-xs" key={match.id}>
-                          <span className="flex flex-wrap justify-between gap-2">
-                            <span className="font-semibold">
-                              {messages.common.matchNumber(match.matchNumber)}
-                              {' · '}
-                              {match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending}
-                            </span>
-                            <span className="text-muted-ink">{matchResultText(snapshot, match)}</span>
-                          </span>
-                          <span className="text-muted-ink [overflow-wrap:anywhere]">
-                            {messages.common.versus(pairPlayers(snapshot, own), pairPlayers(snapshot, other))}
-                          </span>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                )}
-              </li>
-            )
-          })}
-        </ol>
+        <div className="grid gap-4 md:grid-cols-2">
+          {fixtures.map((fixture) => <FixtureCard key={fixture.id} snapshot={snapshot} fixture={fixture} />)}
+        </div>
       )}
     </div>
   )
@@ -134,7 +85,7 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
 
   const nextLabel = (court: Court | null) => {
     const next = upcoming.find((match) => match.court === court)
-    return next ? teams(snapshot, next) : undefined
+    return next ? `${messages.common.fixtureMatch(fixtureScheduleLabel(snapshot, fixtureOf(snapshot, next)), next.matchNumber)} · ${teams(snapshot, next)}` : undefined
   }
 
   const filter = (
@@ -151,19 +102,24 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
 
   if (selectedTeamId !== null) {
     return (
-      <section className="view-enter space-y-[2.125rem]">
+      <section className="view-enter space-y-6">
         {filter}
+        <SeedLegend />
+        {!isSetup ? <PlayingFixtures snapshot={snapshot} /> : null}
         <TeamSchedule snapshot={snapshot} teamId={selectedTeamId} />
       </section>
     )
   }
 
   return (
-    <section className="view-enter space-y-[2.125rem]">
+    <section className="view-enter space-y-6">
       {filter}
+      <SeedLegend />
       <div>
-        <h2 className="mb-[1.125rem] text-sm font-medium">{messages.publicView.playingNow}</h2>
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="mb-4">
+          <h2 className="text-lg font-semibold tracking-tight">{messages.publicView.playingNow}</h2>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2">
           {current.map((match) => <MatchTicket match={match} snapshot={snapshot} nextLabel={nextLabel(match.court)} key={match.id} />)}
         </div>
         {current.length === 0 ? (
@@ -171,38 +127,25 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
             <p className="text-sm font-semibold text-ink">
               {isSetup ? messages.publicView.setupInProgress : messages.publicView.noCourtMatches}
             </p>
-            {isSetup ? <p className="mx-auto mt-2 max-w-md text-xs/[1.6] text-muted-ink">{messages.publicView.setupInProgressDescription}</p> : null}
           </div>
         ) : null}
       </div>
       {upcoming.length > 0 ? (
         <div>
-          <h2 className="mb-[1.125rem] text-sm font-medium">{messages.publicView.upcoming}</h2>
-          <ol className="rounded-card border border-ink/5 bg-white px-5 shadow-card">
+          <h2 className="mb-3 text-lg font-semibold tracking-tight">{messages.publicView.upcoming}</h2>
+          <ol className="grid gap-x-8 md:grid-cols-2">
             {upcoming.slice(0, 6).map((match) => (
-              <li className="grid gap-x-3 gap-y-1.5 border-t border-hairline py-4 text-xs first:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" key={match.id}>
-                <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{teams(snapshot, match)}</span>
-                <span className="flex flex-wrap items-center gap-2.5 text-xs text-muted-ink">
-                  <StageChip snapshot={snapshot} match={match} />
-                  {match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending}
-                </span>
-              </li>
+              <li className="min-w-0" key={match.id}><MatchSummary snapshot={snapshot} match={match} compact /></li>
             ))}
           </ol>
         </div>
       ) : null}
       {completed.length > 0 ? (
         <div>
-          <h2 className="mb-[1.125rem] text-sm font-medium">{messages.publicView.recentResults}</h2>
-          <ol className="rounded-card border border-ink/5 bg-white px-5 shadow-card">
+          <h2 className="mb-3 text-lg font-semibold tracking-tight">{messages.publicView.recentResults}</h2>
+          <ol className="grid gap-x-8 md:grid-cols-2">
             {completed.map((match) => (
-              <li className="grid gap-1 border-t border-hairline py-4 text-xs first:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-3" key={match.id}>
-                <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{teams(snapshot, match)}</span>
-                <span className="flex flex-wrap items-center gap-2.5 text-muted-ink">
-                  <StageChip snapshot={snapshot} match={match} />
-                  {matchResultText(snapshot, match)}
-                </span>
-              </li>
+              <li className="min-w-0" key={match.id}><MatchSummary snapshot={snapshot} match={match} /></li>
             ))}
           </ol>
         </div>

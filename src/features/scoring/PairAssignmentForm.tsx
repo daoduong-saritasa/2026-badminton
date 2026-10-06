@@ -81,10 +81,6 @@ function stageAppearances(snapshot: TournamentSnapshot, stage: FixtureStage, pla
     .length
 }
 
-/**
- * A one-line player button: the name, then a badge with the matches the player
- * has in this stage. A player on court elsewhere gets a red dot.
- */
 function PlayerChoice({ player, selected, played, overLimit, playing, onClick }: {
   player: TeamPlayer
   selected: boolean
@@ -98,13 +94,13 @@ function PlayerChoice({ player, selected, played, overLimit, playing, onClick }:
       type="button"
       aria-pressed={selected}
       className={cn(
-        'flex h-11 min-w-0 items-center gap-2 rounded-field border px-3 text-left text-[0.8125rem] transition-colors',
+        'flex min-h-11 min-w-0 items-center gap-2 rounded-field border px-3 py-2 text-left text-sm transition-colors',
         selected ? 'border-navy bg-mist font-semibold text-navy ring-1 ring-navy' : 'border-line bg-white text-ink hover:bg-well',
       )}
       onClick={onClick}
     >
       {playing ? <span className="size-2 shrink-0 rounded-full bg-destructive" aria-hidden="true" /> : null}
-      <span className="min-w-0 flex-1 truncate">{player.name}</span>
+      <span className="seed-name min-w-0 flex-1 [overflow-wrap:anywhere]" data-seed={player.seed}>{player.name}</span>
       <span
         aria-hidden="true"
         className={cn(

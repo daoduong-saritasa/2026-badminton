@@ -42,6 +42,14 @@ export function fixtureLabel(fixture: TeamFixture | undefined): string {
   return messages.stages[fixture.stage]
 }
 
+export function fixtureScheduleLabel(snapshot: TournamentSnapshot, fixture: TeamFixture | undefined): string {
+  const stage = fixtureLabel(fixture)
+  if (fixture?.stage !== 'qualifying') return stage
+  const qualifying = snapshot.fixtures.filter((candidate) => candidate.stage === 'qualifying')
+  const index = qualifying.findIndex((candidate) => candidate.id === fixture.id)
+  return index < 0 ? stage : `${stage} · ${messages.common.fixtureOrder(index + 1, qualifying.length)}`
+}
+
 /** "Chạm 21, cách 2 điểm, tối đa 30 · Thắng 2 ván": the game rules a stage plays under. */
 export function stageRule(stage: FixtureStage): string {
   const { target, cap } = gameRules(stage)
@@ -62,9 +70,9 @@ export function teamNames(snapshot: TournamentSnapshot, teamIds: readonly UUID[]
   return teamIds.map((teamId) => teamName(snapshot, teamId)).join(', ')
 }
 
-/** "Vòng loại · Trận 2": which contest a match belongs to, for lists and labels. */
+/** The stage, qualifying fixture position, and match number for lists and labels. */
 export function matchLabel(snapshot: TournamentSnapshot, match: FixtureMatch): string {
-  return messages.common.fixtureMatch(fixtureLabel(fixtureOf(snapshot, match)), match.matchNumber)
+  return messages.common.fixtureMatch(fixtureScheduleLabel(snapshot, fixtureOf(snapshot, match)), match.matchNumber)
 }
 
 export function scoreText(score: Score): string {

@@ -25,6 +25,7 @@ export const messages = {
     unknownFixture: 'Cuộc đối đầu không xác định',
     unknownMatch: 'Trận không xác định',
     matchNumber: (matchNumber: number) => `Trận ${formatNumber(matchNumber)}`,
+    fixtureOrder: (position: number, total: number) => `Cuộc đối đầu ${formatNumber(position)}/${formatNumber(total)}`,
     fixtureMatch: (fixture: string, matchNumber: number) => `${fixture} · Trận ${formatNumber(matchNumber)}`,
     gameNumber: (gameNumber: number) => `Ván ${formatNumber(gameNumber)}`,
     seed: (seed: number) => `Hạt giống ${formatNumber(seed)}`,
@@ -62,7 +63,6 @@ export const messages = {
 
   organizer: {
     heading: 'Điều hành giải',
-    stageBadge: (stage: string) => `Giai đoạn: ${stage}`,
     progress: 'trận đã xong',
     returnToTournament: 'Xem giải đấu',
     navigationLabel: 'Khu vực điều hành',
@@ -77,7 +77,6 @@ export const messages = {
       heading: 'Tiếp theo',
       setupTeams: 'Thêm đủ 4 đội để tiếp tục.',
       readyToStart: 'Mọi thứ đã sẵn sàng cho vòng loại.',
-      manageMatches: 'Xếp sân, xếp cặp, bắt đầu trận hoặc cập nhật kết quả.',
       open: 'Xem ngay',
       teams: 'Đội tham dự',
       scheduled: 'Trận đã xếp sân',
@@ -271,11 +270,11 @@ export const messages = {
   },
 
   app: {
+    skipToContent: 'Đến nội dung giải đấu',
     fallbackTitle: 'Giải cầu lông',
     loading: 'Đang tải giải đấu…',
     unavailableTitle: 'Không tải được giải đấu',
     retry: 'Thử lại',
-    setupEyebrow: 'Thiết lập giải',
     setupHeading: 'Tạo giải đấu',
     setupNote: 'Đăng nhập bằng PIN điều hành để bắt đầu.',
     enterPinHeading: 'Đăng nhập để tạo giải',
@@ -293,9 +292,6 @@ export const messages = {
       scoring: 'Ghi điểm',
       organizer: 'Điều hành',
     },
-    scoringRule: 'Cách 2 điểm · Chạm 21, tối đa 30 · Tranh hạng ba: chạm 15, tối đa 21 · Tranh vé: chạm 11, tối đa 15',
-    updating: 'Đang cập nhật…',
-    liveReady: 'Đang theo dõi trực tiếp',
   },
 
   staff: {
@@ -348,7 +344,6 @@ export const messages = {
     courtPending: 'Chưa xếp sân',
     noCourtMatches: 'Chưa có trận nào được xếp sân.',
     setupInProgress: 'Đang chuẩn bị giải',
-    setupInProgressDescription: 'Lịch thi đấu sẽ hiện ở đây khi đã sẵn sàng.',
     teamFilter: 'Lọc theo đội',
     allTeams: 'Tất cả đội',
     teamSchedule: (team: string) => `Lịch thi đấu của ${team}`,
@@ -464,11 +459,10 @@ export const messages = {
     playOn: (teams: string, places: number) =>
       `${teams} vẫn bằng nhau nên đánh tiếp để giành ${formatNumber(places)} suất.`,
     placementHeading: 'Tranh hạng',
-    placementDescription:
-      'Hai đội vào chung kết gặp nhau; hai đội còn lại tranh hạng ba. Tranh hạng ba đấu xong trước khi chung kết bắt đầu.',
+    placementDescription: 'Tranh hạng ba kết thúc trước khi chung kết bắt đầu.',
     awaitingFinalist: 'Đội vào chung kết',
     awaitingThirdPlace: 'Đội tranh hạng ba',
-    matchesPending: 'Các trận hiện ở đây khi cuộc đối đầu được mở để xếp cặp.',
+    matchesPending: 'Chưa có trận.',
     winner: 'Thắng',
     positionsHeading: 'Thứ hạng chung cuộc',
     position: (position: number) => `Hạng ${formatNumber(position)}`,
@@ -476,6 +470,7 @@ export const messages = {
   },
 
   results: {
+    gameScores: 'Điểm từng ván',
     completed: 'Kết quả đã ghi',
     showWalkovers: (count: number) => `Xử thắng một trận chưa có kết quả (${formatNumber(count)})`,
     hideWalkovers: 'Ẩn các trận chưa có kết quả',

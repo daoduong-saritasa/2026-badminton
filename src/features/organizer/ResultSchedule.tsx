@@ -12,6 +12,7 @@ import {
   teamName,
 } from '@/features/tournament/labels'
 import { messages } from '@/i18n/vi'
+import { PairLines } from '@/features/tournament/PairLines'
 
 export interface ResultScheduleProps {
   snapshot: TournamentSnapshot
@@ -31,8 +32,8 @@ function MatchRow({
 }) {
   const fixture = fixtureOf(snapshot, match)
   return (
-    <li className="flex flex-wrap items-center justify-between gap-3 py-3 first:pt-0 last:pb-0">
-      <span className="min-w-0">
+    <li className="flex flex-wrap items-center justify-between gap-3 py-5 first:pt-0 last:pb-0">
+      <div className="min-w-0 flex-1">
         <span className="block text-sm font-semibold [overflow-wrap:anywhere]">
           {messages.common.versus(teamName(snapshot, sideTeamId(fixture, 'a')), teamName(snapshot, sideTeamId(fixture, 'b')))}
         </span>
@@ -41,8 +42,9 @@ function MatchRow({
           {match.court === null ? '' : ` · ${courtLabel(snapshot, match.court)}`}
           {` · ${matchResultText(snapshot, match)}`}
         </span>
-      </span>
-      <Button variant="outline" size="sm" onClick={() => onSelect(match.id)}>
+        <PairLines snapshot={snapshot} match={match} className="mt-3" />
+      </div>
+      <Button variant="outline" size="sm" className="w-full sm:w-auto" onClick={() => onSelect(match.id)}>
         {actionLabel}
       </Button>
     </li>
@@ -77,7 +79,7 @@ export function ResultSchedule({ snapshot, onSelect }: ResultScheduleProps) {
       )}
 
       <div className="mt-6 border-t border-hairline pt-4">
-        <Button variant="ghost" className="-ml-3" aria-expanded={showOpen} onClick={() => setShowOpen((value) => !value)}>
+        <Button variant="ghost" className="-ml-3 h-auto min-h-11 max-w-full justify-start whitespace-normal py-3 text-left" aria-expanded={showOpen} onClick={() => setShowOpen((value) => !value)}>
           {showOpen ? messages.results.hideWalkovers : messages.results.showWalkovers(open.length)}
         </Button>
         {showOpen ? (

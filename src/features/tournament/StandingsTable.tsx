@@ -7,6 +7,7 @@ import { messages } from '@/i18n/vi'
 import { cn } from '@/lib/utils'
 
 import { FixtureCard } from './FixtureCard'
+import { PlayerIdentity, SeedLegend, TeamIdentity } from './Participants'
 import { fixtureMatches, teamName } from './labels'
 
 type QualificationStatus =
@@ -59,7 +60,7 @@ function QualifyingStandings({ snapshot }: { snapshot: TournamentSnapshot }) {
   const anyShared = standings.some(sharedRank)
 
   return (
-    <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
+    <section className="rounded-card border border-ink/5 bg-white p-4 sm:p-6 shadow-card">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-[0.9375rem] font-semibold">{messages.fixtures.standingsHeading}</h3>
         <span
@@ -72,46 +73,72 @@ function QualifyingStandings({ snapshot }: { snapshot: TournamentSnapshot }) {
           {statusText(status)}
         </span>
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead className="w-14 pl-0">{messages.fixtures.columns.rank}</TableHead>
-            <TableHead>{messages.fixtures.columns.team}</TableHead>
-            <TableHead className="text-right">{messages.fixtures.columns.matchWins}</TableHead>
-            <TableHead className="text-right">{messages.fixtures.columns.pointsScored}</TableHead>
-            <TableHead className="text-right">{messages.fixtures.columns.pointsConceded}</TableHead>
-            <TableHead className="pr-0 text-right">{messages.fixtures.columns.pointDifference}</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {standings.map((standing) => {
-            const shared = sharedRank(standing)
-            const separatedBy = standing.separatedBy
-            return (
-              <TableRow className="border-t border-hairline first:border-t-0" key={standing.teamId}>
-                <TableCell className="numeric pl-0 font-semibold">
-                  {formatNumber(standing.rank)}
-                  {shared ? <span className="ml-1 text-muted-ink" aria-label={messages.fixtures.unseparated}>=</span> : null}
-                </TableCell>
-                <TableCell className="min-w-36 whitespace-normal">
-                  <span className="block font-medium [overflow-wrap:anywhere]">{teamName(snapshot, standing.teamId)}</span>
-                  {shared ? (
-                    <span className="mt-0.5 block text-xs text-muted-ink">{messages.fixtures.unseparated}</span>
-                  ) : separatedBy !== null && separatedBy !== 'match-wins' ? (
-                    <span className="mt-0.5 block text-xs text-muted-ink">{messages.fixtures.separatedBy[separatedBy]}</span>
-                  ) : null}
-                </TableCell>
-                <TableCell className="numeric text-right font-semibold">{formatNumber(standing.matchWins)}</TableCell>
-                <TableCell className="numeric text-right">{formatNumber(standing.pointsScored)}</TableCell>
-                <TableCell className="numeric text-right">{formatNumber(standing.pointsConceded)}</TableCell>
-                <TableCell className="numeric pr-0 text-right">
-                  {standing.pointDifference > 0 ? '+' : ''}{formatNumber(standing.pointDifference)}
-                </TableCell>
-              </TableRow>
-            )
-          })}
-        </TableBody>
-      </Table>
+      <ol className="space-y-3 sm:hidden">
+        {standings.map((standing) => (
+          <li className="rounded-field bg-well p-4" key={standing.teamId}>
+            <div className="flex items-start gap-3">
+              <span className="numeric flex size-8 shrink-0 items-center justify-center rounded-chip bg-mist font-bold text-navy">
+                {formatNumber(standing.rank)}{sharedRank(standing) ? '=' : ''}
+              </span>
+              <div className="min-w-0">
+                <TeamIdentity snapshot={snapshot} teamId={standing.teamId} className="text-sm" />
+                {sharedRank(standing) ? <p className="mt-1 text-xs text-muted-ink">{messages.fixtures.unseparated}</p> : null}
+                {!sharedRank(standing) && standing.separatedBy !== null && standing.separatedBy !== 'match-wins' ? (
+                  <p className="mt-1 text-xs text-muted-ink">{messages.fixtures.separatedBy[standing.separatedBy]}</p>
+                ) : null}
+              </div>
+            </div>
+            <dl className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 text-xs text-muted-ink">
+              <div><dt>{messages.fixtures.columns.matchWins}</dt><dd className="numeric mt-1 text-lg font-semibold text-ink">{formatNumber(standing.matchWins)}</dd></div>
+              <div><dt>{messages.fixtures.columns.pointDifference}</dt><dd className="numeric mt-1 text-lg font-semibold text-ink">{standing.pointDifference > 0 ? '+' : ''}{formatNumber(standing.pointDifference)}</dd></div>
+              <div><dt>{messages.fixtures.columns.pointsScored}</dt><dd className="numeric mt-1 font-semibold text-ink">{formatNumber(standing.pointsScored)}</dd></div>
+              <div><dt>{messages.fixtures.columns.pointsConceded}</dt><dd className="numeric mt-1 font-semibold text-ink">{formatNumber(standing.pointsConceded)}</dd></div>
+            </dl>
+          </li>
+        ))}
+      </ol>
+      <div className="hidden sm:block">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="w-14 pl-0">{messages.fixtures.columns.rank}</TableHead>
+              <TableHead>{messages.fixtures.columns.team}</TableHead>
+              <TableHead className="text-right">{messages.fixtures.columns.matchWins}</TableHead>
+              <TableHead className="text-right">{messages.fixtures.columns.pointsScored}</TableHead>
+              <TableHead className="text-right">{messages.fixtures.columns.pointsConceded}</TableHead>
+              <TableHead className="pr-0 text-right">{messages.fixtures.columns.pointDifference}</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {standings.map((standing) => {
+              const shared = sharedRank(standing)
+              const separatedBy = standing.separatedBy
+              return (
+                <TableRow className="border-t border-hairline first:border-t-0" key={standing.teamId}>
+                  <TableCell className="numeric pl-0 font-semibold">
+                    {formatNumber(standing.rank)}
+                    {shared ? <span className="ml-1 text-muted-ink" aria-label={messages.fixtures.unseparated}>=</span> : null}
+                  </TableCell>
+                  <TableCell className="min-w-36 whitespace-normal">
+                    <TeamIdentity snapshot={snapshot} teamId={standing.teamId} className="text-sm" />
+                    {shared ? (
+                      <span className="mt-0.5 block text-xs text-muted-ink">{messages.fixtures.unseparated}</span>
+                    ) : separatedBy !== null && separatedBy !== 'match-wins' ? (
+                      <span className="mt-0.5 block text-xs text-muted-ink">{messages.fixtures.separatedBy[separatedBy]}</span>
+                    ) : null}
+                  </TableCell>
+                  <TableCell className="numeric text-right font-semibold">{formatNumber(standing.matchWins)}</TableCell>
+                  <TableCell className="numeric text-right">{formatNumber(standing.pointsScored)}</TableCell>
+                  <TableCell className="numeric text-right">{formatNumber(standing.pointsConceded)}</TableCell>
+                  <TableCell className="numeric pr-0 text-right">
+                    {standing.pointDifference > 0 ? '+' : ''}{formatNumber(standing.pointDifference)}
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      </div>
       {anyShared ? <p className="mt-4 text-xs text-muted-ink">{messages.fixtures.unseparatedNote}</p> : null}
     </section>
   )
@@ -121,7 +148,7 @@ export function FinalPositions({ snapshot }: { snapshot: TournamentSnapshot }) {
   const positions = finalPositions(snapshot.fixtures, snapshot.matches)
   if (positions === null) return null
   return (
-    <section className="rounded-card border border-line bg-white p-6">
+    <section className="rounded-card border border-line bg-white p-4 sm:p-6">
       <h3 className="mb-4 text-[0.9375rem] font-semibold">{messages.fixtures.positionsHeading}</h3>
       <ol className="space-y-2">
         {positions.map((teamId, index) => (
@@ -137,45 +164,35 @@ export function FinalPositions({ snapshot }: { snapshot: TournamentSnapshot }) {
 
 const seeds: readonly Seed[] = [1, 2]
 
-/** Seed 1 reads as the filled chip, seed 2 as the light one; the label carries the meaning. */
-function seedTone(seed: Seed): string {
-  return seed === 1 ? 'bg-navy text-white' : 'bg-mist text-navy'
-}
-
-/** Each team with its players listed under their seed. */
 function TeamRoster({ snapshot }: { snapshot: TournamentSnapshot }) {
   return (
-    <section className="rounded-card border border-line bg-white p-6">
-      <h3 className="mb-4 text-[0.9375rem] font-semibold">{messages.fixtures.teamsHeading}</h3>
-      <div className="grid gap-5 sm:grid-cols-2">
+    <section>
+      <h3 className="mb-4 text-lg font-semibold">{messages.fixtures.teamsHeading}</h3>
+      <div className="grid gap-x-8 sm:grid-cols-2">
         {snapshot.teams.map((team) => {
           const players = snapshot.players
             .filter((player) => player.teamId === team.id)
             .toSorted((first, second) => first.name.localeCompare(second.name, 'vi'))
           return (
-            <div className="min-w-0" key={team.id}>
-              <h4 className="mb-2 text-[0.8125rem] font-semibold [overflow-wrap:anywhere]">{team.name}</h4>
+            <article className="min-w-0 border-t border-line py-5" key={team.id}>
+              <h4 className="text-lg font-bold [overflow-wrap:anywhere]">{team.name}</h4>
               {players.length === 0 ? (
-                <p className="text-xs text-muted-ink">{messages.fixtures.noPlayers}</p>
+                <p className="mt-3 text-sm text-muted-ink">{messages.fixtures.noPlayers}</p>
               ) : (
-                <dl className="space-y-2">
+                <div className="mt-4 grid grid-cols-2 gap-4">
                   {seeds.map((seed) => (
-                    <div className="grid gap-1" key={seed}>
-                      <dt>
-                        <span className={cn('inline-block rounded-chip px-2 py-0.5 text-xs font-bold', seedTone(seed))}>
-                          {messages.common.seed(seed)}
-                        </span>
-                      </dt>
-                      {players
-                        .filter((player) => player.seed === seed)
-                        .map((player) => (
-                          <dd className="pl-2 text-[0.8125rem] [overflow-wrap:anywhere]" key={player.id}>{player.name}</dd>
+                    <div key={seed}>
+                      <p className="mb-2 text-xs font-medium text-muted-ink">{messages.common.seed(seed)}</p>
+                      <ul className="space-y-2">
+                        {players.filter((player) => player.seed === seed).map((player) => (
+                          <li key={player.id}><PlayerIdentity snapshot={snapshot} playerId={player.id} showSeed={false} /></li>
                         ))}
+                      </ul>
                     </div>
                   ))}
-                </dl>
+                </div>
               )}
-            </div>
+            </article>
           )
         })}
       </div>
@@ -186,9 +203,8 @@ function TeamRoster({ snapshot }: { snapshot: TournamentSnapshot }) {
 export function StandingsTable({ snapshot }: { snapshot: TournamentSnapshot }) {
   return (
     <section className="view-enter space-y-6">
-      <div>
-        <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.fixtures.qualifyingHeading}</h2>
-      </div>
+      <h2 className="sr-only">{messages.fixtures.qualifyingHeading}</h2>
+      <SeedLegend />
       <QualifyingStandings snapshot={snapshot} />
       <div className="grid gap-6 md:grid-cols-2">
         {snapshot.fixtures

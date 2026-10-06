@@ -14,6 +14,7 @@ import {
 } from './scoring-state'
 import { PairAssignmentForm } from './PairAssignmentForm'
 import { PairLines } from '@/features/tournament/PairLines'
+import { PairDisplay, SeedLegend } from '@/features/tournament/Participants'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -302,32 +303,13 @@ function ScoringSurface({
   const tally = matchGameTally(match.games)
 
   return (
-    <main className="score-viewport grid grid-rows-[2.75rem_minmax(0,1fr)_auto] gap-2 overflow-hidden bg-background">
+    <main className="score-viewport scoring-surface grid gap-3 bg-background">
       <div className="flex items-center justify-between gap-3">
         <Button variant="outline" size="sm" onClick={onExit}>
           <ArrowLeft /> {messages.scoring.back}
         </Button>
-        <div className="flex items-center gap-1 rounded-pill border border-line bg-white p-1 shadow-float">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="min-w-22"
-            disabled={actionPending || state.status === 'saving' || state.status === 'failed' || !state.hasOwnership}
-            onClick={() => undoMutation.mutate()}
-          >
-            <RotateCcw /> {messages.scoring.undo}
-          </Button>
-          <Button
-            size="sm"
-            className="min-w-22"
-            disabled={state.status !== 'reviewing' || actionPending}
-            onClick={() => confirmMutation.mutate()}
-          >
-            {messages.scoring.confirm}
-          </Button>
-        </div>
         <div className="flex items-center gap-3">
-          <span className="hidden text-right text-xs font-semibold sm:block">
+          <span className="min-w-0 text-right text-xs font-semibold [overflow-wrap:anywhere]">
             {match.court ? courtLabel(snapshot, match.court) : '–'}
             <span className="block font-normal text-muted-ink">
               {gamesToWinMatch(state.stage) === 2 ? messages.scoring.gameStatus(state.gameNumber, scoreText(tally)) : stageRule(state.stage)}
@@ -346,31 +328,49 @@ function ScoringSurface({
         </div>
       </div>
 
-      <div className="grid min-h-0 grid-cols-2 gap-2">
+      <div className="score-panels grid min-h-0 gap-3">
         {screenOrder.map((side) => (
           <button
             type="button"
             key={side}
             className={cn(
-              'grid min-h-0 touch-manipulation select-none grid-rows-[auto_1fr_auto] place-items-center rounded-[1.75rem] border px-4 pt-[1.375rem] pb-3.5 transition-colors disabled:cursor-default',
-              side === 'a' ? 'border-navy-soft bg-mist text-navy' : 'border-peach-line bg-peach text-ink',
+              'score-panel grid min-h-0 touch-manipulation select-none rounded-card border p-5 transition-colors disabled:cursor-default',
+              side === 'a' ? 'border-peach-line border-t-4 border-t-orange bg-peach text-ink' : 'border-line border-t-4 border-t-cyan bg-ice text-ink',
             )}
             disabled={disabled}
             aria-label={messages.scoring.addPoint(pairPlayers(snapshot, matchPair(match, side)))}
             onClick={() => handlePoint(side)}
           >
-            <span className="max-w-full [overflow-wrap:anywhere] text-[clamp(0.9375rem,2.4vw,1.625rem)]/[1.35] font-semibold tracking-[-0.023em]">
-              {pairPlayers(snapshot, matchPair(match, side))}
-            </span>
-            <strong className="numeric self-center pr-[0.07em] text-[clamp(5rem,28dvh,16rem)] font-bold leading-none tracking-[-0.08em]">
+            <PairDisplay snapshot={snapshot} pair={matchPair(match, side)} className="max-w-full" />
+            <strong className="score-number numeric font-bold leading-none tracking-[-0.07em]">
               {formatNumber(state.score[side])}
             </strong>
-            <small className="text-[0.8125rem] opacity-75">
+            <small className="score-team max-w-full text-sm opacity-80 [overflow-wrap:anywhere]">
               {teamName(snapshot, sideTeamId(fixture, side))}
               {gamesToWinMatch(state.stage) === 2 ? ` · ${formatNumber(tally[side])}` : ''}
             </small>
           </button>
         ))}
+      </div>
+
+      <div className="score-actions grid grid-cols-2 gap-3">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="min-w-22"
+          disabled={actionPending || state.status === 'saving' || state.status === 'failed' || !state.hasOwnership}
+          onClick={() => undoMutation.mutate()}
+        >
+          <RotateCcw /> {messages.scoring.undo}
+        </Button>
+        <Button
+          size="sm"
+          className="min-w-22"
+          disabled={state.status !== 'reviewing' || actionPending}
+          onClick={() => confirmMutation.mutate()}
+        >
+          {messages.scoring.confirm}
+        </Button>
       </div>
 
       <div className="min-h-8 self-center text-center text-[0.8125rem] text-navy" aria-live="polite">
@@ -496,6 +496,7 @@ function MatchPicker({
         </Button>
         <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.scoring.pickHeading}</h2>
       </div>
+      <SeedLegend />
       {playing.length > 0 ? (
         <section className="rounded-card border border-ink/5 bg-white px-5 py-2 shadow-card">
           <h3 className="pt-3 text-sm font-semibold">{messages.scoring.resumeHeading}</h3>
