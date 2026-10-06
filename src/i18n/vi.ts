@@ -356,6 +356,12 @@ export const messages = {
       gameRule: 'Mỗi ván phải thắng cách ít nhất 2 điểm, trừ khi chạm điểm tối đa.',
       gameExamples: 'Ví dụ ở điểm tối đa: 21–20 thắng ở tranh hạng ba; 30–29 thắng ở vòng loại và chung kết; 15–14 thắng ở trận tranh vé.',
       formatHeading: 'Thể thức',
+      detailsHeading: 'Luật chi tiết',
+      stageDetails: 'Xem thể thức và cách xếp cặp',
+      scoringDetails: 'Ví dụ khi chạm điểm tối đa',
+      pairingSummary: 'Khi được gọi thi đấu, báo cặp của đội cho trọng tài. Cả hai đội phải có cặp được lưu trước khi bắt đầu.',
+      pairingReminder: 'Có thể đổi cặp trước trận. Khi trận đã bắt đầu, không đổi người.',
+      pairingDetails: 'Xem quy định xếp cặp và ngoại lệ',
       rowLabels: {
         who: 'Đội tham gia',
         fixture: 'Cuộc đối đầu',
@@ -365,6 +371,7 @@ export const messages = {
       stages: [
         {
           name: 'Vòng loại',
+          overview: 'Mỗi đội gặp 3 đội còn lại. Hai trận cùng lúc, có thể hòa 1–1.',
           who: 'Mỗi đội gặp 3 đội còn lại. Xếp hạng theo số trận thắng.',
           fixture: '2 trận đánh cùng lúc trên 2 sân. Có thể hòa 1–1.',
           match: '1 ván, chạm 21, tối đa 30.',
@@ -372,6 +379,7 @@ export const messages = {
         },
         {
           name: 'Tranh hạng ba',
+          overview: 'Đội thắng 2 trận trước giành hạng ba. Trận 3 chỉ đánh khi 1–1.',
           who: 'Hai đội không vào chung kết.',
           fixture: 'Đội thắng 2 trận trước giành hạng ba. Trận 1 và 2 đánh cùng lúc; trận 3 chỉ đánh khi 1–1.',
           match: 'Thắng 2 ván, mỗi ván chạm 15, tối đa 21.',
@@ -379,6 +387,7 @@ export const messages = {
         },
         {
           name: 'Chung kết',
+          overview: 'Đội thắng 2 trận trước vô địch. Bắt đầu sau khi tranh hạng ba kết thúc.',
           who: 'Hai đội giành suất qua vòng loại và trận tranh vé, nếu có. Chung kết bắt đầu sau khi tranh hạng ba kết thúc.',
           fixture: 'Đội thắng 2 trận trước vô địch. Trận 1 và 2 đánh cùng lúc; trận 3 chỉ đánh khi 1–1.',
           match: 'Thắng 2 ván, mỗi ván chạm 21, tối đa 30.',
