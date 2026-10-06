@@ -15,20 +15,20 @@ export type OpenPage = (device?: keyof typeof devices) => Promise<Page>
 export const test = base.extend<{ pins: StaffPins; freshTournament: void; openPage: OpenPage }>({
   // Playwright requires an object pattern as the first fixture argument.
   // oxlint-disable-next-line no-empty-pattern
-  pins: async ({}, use) => {
-    await use(staffPins())
+  pins: async ({}, provide) => {
+    await provide(staffPins())
   },
   freshTournament: [
     // oxlint-disable-next-line no-empty-pattern
-    async ({}, use) => {
+    async ({}, provide) => {
       await resetProgress()
-      await use()
+      await provide()
     },
     { auto: true },
   ],
-  openPage: async ({ browser }, use, testInfo) => {
+  openPage: async ({ browser }, provide, testInfo) => {
     const contexts: BrowserContext[] = []
-    await use(async (device) => {
+    await provide(async (device) => {
       const { baseURL, locale } = testInfo.project.use
       const options: BrowserContextOptions = device ? { ...devices[device], baseURL, locale } : { ...testInfo.project.use }
       const context = await browser.newContext(options)
