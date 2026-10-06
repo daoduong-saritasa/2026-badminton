@@ -43,9 +43,9 @@ reset against a database
 - [x] `tests/e2e/support/roster.ts`: `readRoster()` via `get_tournament_snapshot`; `staffPins()` from the environment (amended 2026-10-06: `staffPins()` lives in `support/pins.ts`; `support/api.ts` holds the typed RPC client and `support/test.ts` the reset fixture)
 - [ ] `tests/e2e/fixtures/`: typed seed builders on the existing RPCs that assign pairs by seed and enter results, per PLAN.md → "Seeding"; one builder per tie shape in scenario 5
 - [x] `tests/e2e/support/staff.ts`: page helpers to open staff access, enter a PIN, and sign out, with labels from `src/i18n/vi.ts`
-- [ ] Verify `staff-pin` and `rotate-pin` respond on the running stack; if not, stop and ask the user to run `supabase functions serve`
+- [x] Verify `staff-pin` and `rotate-pin` respond on the running stack; if not, stop and ask the user to run `supabase functions serve` (both served by `supabase start`; staff-access rotation tests exercise `rotate-pin`)
 - [x] `tests/e2e/public-view.spec.ts` — PLAN.md → "Scenarios" 1 (amended 2026-10-06: the user's tournament always exists, so this covers a tournament in setup rather than no tournament)
-- [ ] `tests/e2e/staff-access.spec.ts` — scenario 2; restore both PINs in `afterEach` through `rotate-pin`
+- [x] `tests/e2e/staff-access.spec.ts` — scenario 2; restore both PINs in `afterEach` through `rotate-pin`
 - [ ] `tests/e2e/pair-assignment.spec.ts` — scenario 3
 - [ ] `tests/e2e/live-scoring.spec.ts` — scenario 4, on the `phone` project, with a second context for the public view
 - [ ] `tests/e2e/qualification.spec.ts` — scenario 5

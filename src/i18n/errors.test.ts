@@ -26,6 +26,11 @@ describe('errorMessage', () => {
     expect(errorMessage(new Error('Organizer access required'))).toBe('Cần quyền điều hành.')
   })
 
+  it('translates staff PIN failures raised by the client', () => {
+    expect(errorMessage(new Error('The staff PIN is incorrect'))).toBe('Mã PIN không đúng.')
+    expect(errorMessage(new Error('Enter a PIN containing 4 to 12 digits'))).toBe('Mã PIN phải có 4 đến 12 chữ số.')
+  })
+
   it('accepts a plain string and a PostgREST-shaped object', () => {
     expect(errorMessage('Court is occupied')).toBe('Sân này đang có trận khác thi đấu.')
     expect(errorMessage({ message: 'Court is occupied' })).toBe('Sân này đang có trận khác thi đấu.')

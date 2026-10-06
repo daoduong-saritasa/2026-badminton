@@ -89,6 +89,10 @@ const serverMessages: Record<string, string> = {
   'Unknown staff role': 'Vai trò không hợp lệ.',
   'Invalid rate-limit bucket': 'Yêu cầu không hợp lệ.',
   'Service role required': 'Thao tác này chỉ chạy được từ công cụ quản trị.',
+  'The staff PIN is incorrect': 'Mã PIN không đúng.',
+  'Enter a PIN containing 4 to 12 digits': 'Mã PIN phải có 4 đến 12 chữ số.',
+  'The staff PIN could not be rotated': 'Chưa đổi được mã PIN. Hãy thử lại.',
+  'Staff access is unavailable': 'Chưa đăng nhập được. Hãy thử lại sau.',
   'Unknown tournament mutation': 'Thao tác không được hỗ trợ.',
 }
 
