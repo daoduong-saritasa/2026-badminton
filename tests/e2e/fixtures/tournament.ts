@@ -35,6 +35,14 @@ export function pairLabel(snapshot: Snapshot, pair: Pair): string {
   return `${playerName(snapshot, pair.player1Id)} / ${playerName(snapshot, pair.player2Id)}`
 }
 
+/** The saved pair on one side of a match, as the interface writes it. */
+export function matchPairLabel(snapshot: Snapshot, match: Match, side: Side): string {
+  const player1Id = side === 'a' ? match.pair_a_player_1_id : match.pair_b_player_1_id
+  const player2Id = side === 'a' ? match.pair_a_player_2_id : match.pair_b_player_2_id
+  if (!player1Id || !player2Id) throw new Error(`Match ${match.id} side ${side} has no saved pair`)
+  return pairLabel(snapshot, { player1Id, player2Id })
+}
+
 export function fixtureMatches(snapshot: Snapshot, fixtureId: string): Match[] {
   return snapshot.matches
     .filter((match) => match.fixture_id === fixtureId)
