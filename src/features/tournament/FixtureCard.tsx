@@ -51,10 +51,10 @@ export function FixtureCard({
     >
       <h3 className="flex items-center gap-2.5 text-[0.9375rem] font-semibold">
         {label ?? fixtureLabel(fixture)}
-        {drawn ? <span className="rounded-pill bg-well px-2 py-0.5 text-[0.625rem] font-semibold text-muted-ink">{messages.fixtures.drawn}</span> : null}
+        {drawn ? <span className="rounded-pill bg-well px-2 py-0.5 text-xs font-semibold text-muted-ink">{messages.fixtures.drawn}</span> : null}
       </h3>
-      {stage ? (
-        <p className={cn('mt-1 mb-4 text-[0.625rem]', final ? 'text-navy-soft' : 'text-muted-ink')}>{stageRule(stage)}</p>
+      {stage && stage !== 'qualifying' ? (
+        <p className={cn('mt-1 mb-4 text-xs', final ? 'text-navy-soft' : 'text-muted-ink')}>{stageRule(stage)}</p>
       ) : <div className="mb-4" />}
       <div className="space-y-2">
         {sides.map((side) => {
@@ -70,7 +70,7 @@ export function FixtureCard({
             >
               <span className="min-w-0 [overflow-wrap:anywhere]">
                 {teamId === null ? placeholders?.[side] ?? messages.common.toBeDecided : teamName(snapshot, teamId)}
-                {won ? <span className={cn('ml-2 text-[0.625rem] font-semibold', final ? 'text-cyan' : 'text-navy')}>{messages.fixtures.winner}</span> : null}
+                {won ? <span className={cn('ml-2 text-xs font-semibold', final ? 'text-cyan' : 'text-navy')}>{messages.fixtures.winner}</span> : null}
               </span>
               <strong className={cn('numeric grid h-9 place-items-center rounded-chip text-[1.375rem] font-normal', final ? 'bg-white/[0.07] text-navy-soft' : 'bg-well text-dim-ink')}>
                 {matches.length === 0 ? '–' : formatNumber(tally[side])}
@@ -82,7 +82,7 @@ export function FixtureCard({
       {matches.length > 0 ? (
         <ol className={cn('mt-4 border-t pt-2', final ? 'border-white/25' : 'border-hairline')}>
           {matches.map((match) => (
-            <li className="grid gap-0.5 py-2 text-[0.6875rem]" key={match.id}>
+            <li className="grid gap-0.5 py-2 text-xs" key={match.id}>
               <span className="flex flex-wrap justify-between gap-2">
                 <span className="font-semibold">{messages.common.matchNumber(match.matchNumber)}</span>
                 <span className={final ? 'text-navy-soft' : 'text-muted-ink'}>{matchResultText(snapshot, match)}</span>
@@ -94,7 +94,7 @@ export function FixtureCard({
           ))}
         </ol>
       ) : (
-        <p className={cn('mt-4 text-[0.6875rem]', final ? 'text-navy-soft' : 'text-muted-ink')}>{messages.fixtures.matchesPending}</p>
+        <p className={cn('mt-4 text-xs', final ? 'text-navy-soft' : 'text-muted-ink')}>{messages.fixtures.matchesPending}</p>
       )}
     </article>
   )

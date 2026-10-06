@@ -41,7 +41,7 @@ function TicketSide({
       <p className="max-w-full [overflow-wrap:anywhere] text-[0.9375rem] font-medium tracking-[-0.027em]">
         {teamName(snapshot, sideTeamId(fixture, side))}
       </p>
-      <p className="mt-1 max-w-full [overflow-wrap:anywhere] text-[0.6875rem] text-muted-ink">
+      <p className="mt-1 max-w-full [overflow-wrap:anywhere] text-xs text-muted-ink">
         {pairPlayers(snapshot, matchPair(match, side))}
       </p>
       <strong
@@ -85,7 +85,7 @@ export function MatchTicket({
           </h3>
           <span
             className={cn(
-              'shrink-0 rounded-pill px-2.5 py-1 text-[0.625rem] font-semibold',
+              'shrink-0 rounded-pill px-2.5 py-1 text-xs font-semibold',
               'bg-well text-muted-ink',
             )}
           >
@@ -102,7 +102,7 @@ export function MatchTicket({
         <TicketSide match={match} side="b" snapshot={snapshot} />
       </div>
       <div className="tear -mx-[1.625rem] -mb-[1.625rem] mt-[1.9375rem] px-[1.625rem] pt-5 pb-[1.1875rem]">
-        <small className="text-[0.625rem] text-muted-ink">
+        <small className="text-xs text-muted-ink">
           {messages.common.matchNumber(match.matchNumber)}
           {fixture ? ` · ${stageRule(fixture.stage)}` : ''}
         </small>

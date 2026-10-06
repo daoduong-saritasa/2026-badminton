@@ -8,13 +8,13 @@ const badgeVariants = cva(
   {
     variants: {
       variant: {
-        default: "bg-navy px-3 py-1.5 text-[0.625rem] text-white",
-        secondary: "bg-mist px-3 py-1.5 text-[0.625rem] font-semibold text-navy",
+        default: "bg-navy px-3 py-1.5 text-xs text-white",
+        secondary: "bg-mist px-3 py-1.5 text-xs font-semibold text-navy",
         destructive:
-          "bg-[#fdeceb] px-3 py-1.5 text-[0.625rem] text-[#a32118]",
+          "bg-[#fdeceb] px-3 py-1.5 text-xs text-[#a32118]",
         outline:
-          "border-navy-soft bg-mist px-3.5 py-2.5 text-[0.625rem] text-navy",
-        ghost: "px-3 py-1.5 text-[0.625rem] text-muted-ink hover:bg-mist",
+          "border-navy-soft bg-mist px-3.5 py-2.5 text-xs text-navy",
+        ghost: "px-3 py-1.5 text-xs text-muted-ink hover:bg-mist",
         link: "text-navy underline-offset-4 hover:underline",
         /*
          * Match state. A dot plus a label rather than a bordered chip — it sits
@@ -22,7 +22,7 @@ const badgeVariants = cva(
          * there reads as clutter.
          */
         status:
-          "gap-[0.4375rem] px-0 text-[0.6875rem] font-normal text-navy before:size-1.5 before:rounded-full before:bg-current before:content-['']",
+          "gap-[0.4375rem] px-0 text-xs font-normal text-navy before:size-1.5 before:rounded-full before:bg-current before:content-['']",
       },
     },
     defaultVariants: {

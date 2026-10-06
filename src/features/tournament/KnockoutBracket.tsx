@@ -25,7 +25,7 @@ export function DrawOutcomeList({ snapshot }: { snapshot: TournamentSnapshot }) 
   if (matchups.length === 0) return null
   return (
     <div>
-      <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.fixtures.drawOutcomesHeading}</h4>
+      <h4 className="text-xs font-semibold text-muted-ink">{messages.fixtures.drawOutcomesHeading}</h4>
       <ul className="mt-2 space-y-1 text-[0.8125rem]">
         {matchups.map((matchup) => <li key={matchup}>{messages.fixtures.matchupDrawn(matchup)}</li>)}
       </ul>
@@ -44,7 +44,6 @@ function QualificationPlayoffs({ snapshot }: { snapshot: TournamentSnapshot }) {
     <section className="space-y-4">
       <div>
         <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.fixtures.playoffHeading}</h2>
-        <p className="mt-2 text-xs text-muted-ink">{messages.fixtures.playoffDescription}</p>
       </div>
       {rounds.map((round) => (
         <div className="space-y-3" key={round.id}>

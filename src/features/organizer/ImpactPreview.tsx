@@ -87,7 +87,7 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
   return (
     <div className="max-h-[50dvh] space-y-4 overflow-y-auto pr-1">
       <section>
-        <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.impact.games}</h4>
+        <h4 className="text-xs font-semibold text-muted-ink">{messages.impact.games}</h4>
         <Row
           label={corrected ? matchLabel(after, corrected) : messages.common.unknownMatch}
           before={gamesText(matchById(before, matchId))}
@@ -97,7 +97,7 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
 
       {changedMatches.length + removedMatches.length > 0 ? (
         <section>
-          <h4 className="text-[0.6875rem] font-semibold text-muted-ink">
+          <h4 className="text-xs font-semibold text-muted-ink">
             {messages.impact.affectedMatches(changedMatches.length + removedMatches.length)}
           </h4>
           {changedMatches.map((match) => (
@@ -115,7 +115,7 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
       ) : null}
 
       <section>
-        <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.impact.fixtures}</h4>
+        <h4 className="text-xs font-semibold text-muted-ink">{messages.impact.fixtures}</h4>
         {fixtures.map((fixture) => (
           <Row
             key={fixture.id}
@@ -127,7 +127,7 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
       </section>
 
       <section>
-        <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.impact.placements}</h4>
+        <h4 className="text-xs font-semibold text-muted-ink">{messages.impact.placements}</h4>
         <Row
           label={messages.stages.final}
           before={placementText(before, 'final')}
@@ -142,7 +142,7 @@ export function ImpactPreview({ impact, matchId }: { impact: MutationImpact; mat
 
       {consequences && (consequences.finalistConfirmationRevoked || clearedPairs.length > 0) ? (
         <section>
-          <h4 className="text-[0.6875rem] font-semibold text-muted-ink">{messages.impact.consequencesHeading}</h4>
+          <h4 className="text-xs font-semibold text-muted-ink">{messages.impact.consequencesHeading}</h4>
           <ul className="mt-1.5 space-y-1 text-[0.75rem]">
             {consequences.finalistConfirmationRevoked ? <li>{messages.impact.finalistsRevoked}</li> : null}
             {clearedPairs.map((label) => (

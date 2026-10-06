@@ -39,7 +39,7 @@ function currentMatch(snapshot: TournamentSnapshot, court: Court): FixtureMatch 
 
 function StageChip({ snapshot, match }: { snapshot: TournamentSnapshot; match: FixtureMatch }) {
   return (
-    <span className="rounded-pill bg-well px-2 py-0.5 text-[0.625rem] font-semibold text-muted-ink">
+    <span className="rounded-pill bg-well px-2 py-0.5 text-xs font-semibold text-muted-ink">
       {matchLabel(snapshot, match)}
     </span>
   )
@@ -70,7 +70,7 @@ function TeamSchedule({ snapshot, teamId }: { snapshot: TournamentSnapshot; team
               <li className="border-t border-hairline py-4 first:border-t-0" key={fixture.id}>
                 <div className="flex flex-wrap items-center justify-between gap-2.5">
                   <span className="flex min-w-0 flex-wrap items-center gap-2.5">
-                    <span className="rounded-pill bg-well px-2 py-0.5 text-[0.625rem] font-semibold text-muted-ink">{fixtureLabel(fixture)}</span>
+                    <span className="rounded-pill bg-well px-2 py-0.5 text-xs font-semibold text-muted-ink">{fixtureLabel(fixture)}</span>
                     <span className="min-w-0 text-[0.8125rem] font-medium [overflow-wrap:anywhere]">
                       {messages.publicView.opponent(teamName(snapshot, sideTeamId(fixture, otherSide(fixture))))}
                     </span>
@@ -83,14 +83,14 @@ function TeamSchedule({ snapshot, teamId }: { snapshot: TournamentSnapshot; team
                   ) : null}
                 </div>
                 {matches.length === 0 ? (
-                  <p className="mt-2 text-[0.6875rem] text-muted-ink">{messages.fixtures.matchesPending}</p>
+                  <p className="mt-2 text-xs text-muted-ink">{messages.fixtures.matchesPending}</p>
                 ) : (
                   <ul className="mt-2 space-y-1.5">
                     {matches.filter((match) => isDeciderEligible(snapshot, match)).map((match) => {
                       const own = ownSide(fixture) === 'a' ? match.pairA : match.pairB
                       const other = ownSide(fixture) === 'a' ? match.pairB : match.pairA
                       return (
-                        <li className="grid gap-0.5 text-[0.6875rem]" key={match.id}>
+                        <li className="grid gap-0.5 text-xs" key={match.id}>
                           <span className="flex flex-wrap justify-between gap-2">
                             <span className="font-semibold">
                               {messages.common.matchNumber(match.matchNumber)}
@@ -119,16 +119,17 @@ function TeamSchedule({ snapshot, teamId }: { snapshot: TournamentSnapshot; team
 export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
   const [teamFilter, setTeamFilter] = useState<UUID | 'all'>('all')
   const selectedTeamId = snapshot.teams.some((team) => team.id === teamFilter) ? teamFilter : null
-  const current = courts
+  const isSetup = snapshot.tournament.stage === 'setup'
+  // Courts survive a progress reset, so during setup they describe no real schedule.
+  const current = isSetup ? [] : courts
     .map((court) => currentMatch(snapshot, court))
     .filter((match): match is FixtureMatch => match !== undefined)
   const visibleIds = new Set(current.map((match) => match.id))
-  const upcoming = waiting(snapshot).filter((match) => !visibleIds.has(match.id))
+  const upcoming = isSetup ? [] : waiting(snapshot).filter((match) => !visibleIds.has(match.id))
   const completed = snapshot.matches
     .filter((match) => match.state === 'completed')
     .toReversed()
     .slice(0, 6)
-  const isSetup = snapshot.tournament.stage === 'setup'
 
   const nextLabel = (court: Court | null) => {
     const next = upcoming.find((match) => match.court === court)
@@ -180,7 +181,7 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
             {upcoming.slice(0, 6).map((match) => (
               <li className="grid gap-x-3 gap-y-1.5 border-t border-hairline py-4 text-xs first:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" key={match.id}>
                 <span className="min-w-0 [overflow-wrap:anywhere] font-medium">{teams(snapshot, match)}</span>
-                <span className="flex flex-wrap items-center gap-2.5 text-[0.6875rem] text-muted-ink">
+                <span className="flex flex-wrap items-center gap-2.5 text-xs text-muted-ink">
                   <StageChip snapshot={snapshot} match={match} />
                   {match.court ? messages.common.court(match.court) : messages.publicView.courtPending}
                 </span>
