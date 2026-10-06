@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 
 import { messages } from '../../src/i18n/vi.ts'
 import {
+  assignCourt,
   clearStandings,
   decideQualifying,
   fixtureMatches,
@@ -56,10 +57,13 @@ async function withResetEnabled(body: () => Promise<void>): Promise<void> {
 
 test('a progress reset from the maintenance command clears play, keeps the roster, and reloads open pages', async ({ page, pins }) => {
   const organizer = await signInStaff(pins.organizer)
-  await startQualifying(organizer)
+  const started = await startQualifying(organizer)
+  const [scheduled] = fixtureMatches(started, fixturesIn(started, 'qualifying')[0].id)
+  await assignCourt(organizer, scheduled.id, 2)
   await decideQualifying(organizer, clearStandings)
   const { snapshot: played } = await readState()
   const courts = new Map(played.matches.map((match) => [match.id, match.court]))
+  expect(courts.get(scheduled.id)).toBe(2)
   const roster = await readRoster()
 
   await page.goto('/')
