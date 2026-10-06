@@ -57,13 +57,13 @@ export function MatchPickerView({ snapshot, onSelect, onExit, onAssign, onStart,
         {upcoming.length === 0 ? (
           <p className="py-4 text-sm text-muted-ink">{messages.scoring.noMatch}</p>
         ) : (
-          <ul className="divide-y divide-hairline">
+          <ul className="divide-y divide-line">
             {groupByFixture(upcoming).map(({ fixtureId, matches }) => {
               const fixture = snapshot.fixtures.find((candidate) => candidate.id === fixtureId)
               const fixtureTeams = messages.common.versus(teamName(snapshot, sideTeamId(fixture, 'a')), teamName(snapshot, sideTeamId(fixture, 'b')))
               const paired = matches.every((match) => match.pairA !== null && match.pairB !== null)
               return (
-                <li className="py-4" aria-label={`${fixtureLabel(fixture)} · ${fixtureTeams}`} key={fixtureId}>
+                <li className="py-6" aria-label={`${fixtureLabel(fixture)} · ${fixtureTeams}`} key={fixtureId}>
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[0.9375rem] font-semibold [overflow-wrap:anywhere]">{fixtureTeams}</p>
@@ -73,18 +73,18 @@ export function MatchPickerView({ snapshot, onSelect, onExit, onAssign, onStart,
                       <Users /> {messages.pairAssignment.open}
                     </Button>
                   </div>
-                  <ul className="mt-3 space-y-3 border-l-2 border-hairline pl-3 sm:pl-4">
+                  <ul className="mt-4 divide-y divide-hairline">
                     {matches.map((match) => (
-                      <li className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-x-3 gap-y-1" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
-                        <p className="text-sm font-semibold">
+                      <li className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-x-4 gap-y-4 py-5 first:pt-0 last:pb-0" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
+                        <p className="w-fit rounded-field bg-well px-2.5 py-1 text-sm font-semibold">
                           {messages.common.matchNumber(match.matchNumber)}
                           <span className="font-normal text-muted-ink"> · {match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending}</span>
                         </p>
                         <p data-guide={match.matchNumber === 1 ? 'blocked' : undefined} className="text-right text-xs text-muted-ink">
                           {startBlocker(snapshot, match) ? messages.scoring.startBlocked[startBlocker(snapshot, match) ?? 'pairs'] : null}
                         </p>
-                        <PairLines snapshot={snapshot} match={match} />
-                        <Button className="w-full" disabled={startBlocker(snapshot, match) !== null || startPending} onClick={() => onStart(match.id)}>
+                        <PairLines snapshot={snapshot} match={match} className="col-span-2 sm:col-span-1" />
+                        <Button className="col-start-2 w-full" disabled={startBlocker(snapshot, match) !== null || startPending} onClick={() => onStart(match.id)}>
                           <Play /> {messages.scoring.start}
                         </Button>
                       </li>

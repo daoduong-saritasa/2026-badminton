@@ -58,7 +58,7 @@ export function ScoreTrackerView({ snapshot, match, state, sidesSwapped, screenO
             data-guide={side === 'a' ? 'point' : undefined}
             className={cn(
               'score-panel grid min-h-0 touch-manipulation select-none rounded-card border p-5 transition-colors disabled:cursor-default',
-              side === 'a' ? 'border-peach-line border-t-4 border-t-orange bg-peach text-ink' : 'border-line border-t-4 border-t-cyan bg-ice text-ink',
+              side === 'a' ? 'border-peach-line bg-peach text-ink' : 'border-line bg-ice text-ink',
             )}
             disabled={disabled}
             aria-label={messages.scoring.addPoint(pairPlayers(snapshot, matchPair(match, side)))}

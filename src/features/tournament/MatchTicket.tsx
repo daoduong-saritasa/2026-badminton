@@ -68,8 +68,7 @@ export function MatchTicket({
   return (
     <article
       className={cn(
-        'ticket rounded-card border border-line border-t-4 bg-white p-5 shadow-card',
-        match.court === 2 ? 'border-t-cyan' : 'border-t-orange',
+        'ticket rounded-card border border-line bg-white p-5 shadow-card',
       )}
       aria-label={match.court ? courtLabel(snapshot, match.court) : messages.common.fixtureMatch(fixtureScheduleLabel(snapshot, fixture), match.matchNumber)}
     >
