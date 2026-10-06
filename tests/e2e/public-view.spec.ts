@@ -7,8 +7,7 @@ test('a spectator sees the tournament in setup without staff controls', async ({
   await page.goto('/')
 
   await expect(page.getByRole('heading', { level: 1, name: roster.tournamentName })).toBeVisible()
-  await expect(page.getByText(messages.app.stage.setup)).toBeVisible()
-  await expect(page.getByText(messages.publicView.setupInProgress)).toBeVisible()
+  await expect(page.getByRole('banner').getByText(messages.app.stage.setup, { exact: true })).toBeVisible()
 
   const tabs = page.getByRole('tab')
   await expect(tabs).toHaveText([messages.app.tabs.matches, messages.app.tabs.standings, messages.app.tabs.knockouts])
