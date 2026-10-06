@@ -29,31 +29,6 @@ message catalogue. User-facing strings are written inline in roughly a dozen com
 check that Be Vietnam Pro covers every diacritic used — it was chosen for this, but nothing
 verifies it.
 
-## Reset tournament status for end-to-end testing
-
-There is no way to return a tournament to the start, so the full flow can only be exercised
-once per database. Rehearsing an event, or reproducing a bug that appears in the knockout
-stage, currently means resetting the database by hand.
-
-`reopen_tournament` is the closest existing command and is deliberately narrow: it requires
-stage `completed`, clears only the final match result, and returns the tournament to
-`knockouts`. Nothing rewinds to `groups` or `setup`.
-
-Reset is also blocked from the other direction: `save_setup` refuses once
-`tournament.setup_locked_at` is set or any match has left `unstarted`.
-
-**Open decisions:**
-
-- Whether this is a staff-facing command or a maintenance script. A destructive reset behind
-  the staff PIN is a real hazard at a live event — the PIN is shared among referees.
-- Whether reset means "wipe results, keep pairs" or "wipe everything back to an empty setup".
-  These are different commands and both are useful.
-- Whether it should exist in production at all, or be restricted to local and staging
-  databases. Gating on a database setting rather than a UI affordance is the safer shape.
-
-Any version needs a confirmation step that names what will be destroyed, and a mutation log
-entry, like every other command.
-
 ## Flexible pair count
 
 The tournament is fixed at six to eight pairs in two groups, and the group split must be
@@ -133,3 +108,8 @@ it should not become the source of the favicon by accident.
 - Which formats to ship. An SVG favicon alone leaves older browsers and iOS home screens
   with nothing, so a PNG set and a web app manifest may be in scope — that decision turns
   on whether anyone is expected to install the app to a home screen.
+
+## Local database and end-to-end tests
+
+Planned in `specs/e2e-tests/PLAN.md`. The suite runs against a local Supabase stack used
+only for end-to-end testing, so it never touches production data.
