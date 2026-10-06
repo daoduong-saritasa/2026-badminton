@@ -14,11 +14,16 @@ export async function submitPin(page: Page, pin: string): Promise<void> {
   await dialog.getByRole('button', { name: messages.staff.continueAction }).click()
 }
 
+const workspaceHeading: Record<StaffRole, string> = {
+  organizer: messages.organizer.heading,
+  referee: messages.scoring.pickHeading,
+}
+
 /** Signs in with `pin` and waits for the workspace that role lands on. */
 export async function signIn(page: Page, pin: string, role: StaffRole): Promise<void> {
   await submitPin(page, pin)
   await expect(page.getByRole('dialog', { name: messages.staff.accessTitle })).toBeHidden()
-  await expect(staffMenuButton(page, role)).toBeVisible()
+  await expect(page.getByRole('heading', { name: workspaceHeading[role], exact: true })).toBeVisible()
 }
 
 export function staffMenuButton(page: Page, role: StaffRole) {
