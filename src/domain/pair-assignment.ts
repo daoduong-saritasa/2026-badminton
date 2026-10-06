@@ -2,6 +2,7 @@ import type {
   FixtureStage,
   Pair,
   PairAssignmentIssue,
+  PairDraft,
   PairingRule,
   Side,
   TeamPlayer,
@@ -73,6 +74,40 @@ export function validatePairAssignment(
   }
 
   return issues
+}
+
+/** The snapshot as it would read once every draft is saved. */
+export function applyPairDrafts(
+  snapshot: TournamentSnapshot,
+  drafts: readonly PairDraft[],
+): TournamentSnapshot {
+  return {
+    ...snapshot,
+    matches: snapshot.matches.map((match) => {
+      const own = drafts.filter((draft) => draft.matchId === match.id)
+      if (own.length === 0) return match
+      return {
+        ...match,
+        pairA: own.find((draft) => draft.side === 'a')?.pair ?? match.pairA,
+        pairB: own.find((draft) => draft.side === 'b')?.pair ?? match.pairB,
+      }
+    }),
+  }
+}
+
+/**
+ * Issues for each draft, checked together: a draft is validated against the
+ * other drafts as well as the saved pairs they leave in place.
+ */
+export function validatePairDrafts(
+  snapshot: TournamentSnapshot,
+  drafts: readonly PairDraft[],
+): Array<{ draft: PairDraft; issues: PairAssignmentIssue[] }> {
+  const projected = applyPairDrafts(snapshot, drafts)
+  return drafts.map((draft) => ({
+    draft,
+    issues: validatePairAssignment(projected, draft.matchId, draft.side, draft.pair),
+  }))
 }
 
 export function qualifyingPairings(

@@ -68,6 +68,13 @@ export interface PairAssignmentIssue {
   overridable: boolean
 }
 
+/** A pair staff picked for one side of one match, not yet saved. */
+export interface PairDraft {
+  matchId: UUID
+  side: Side
+  pair: Pair
+}
+
 export type FixtureStage =
   | 'qualifying'
   | 'qualification-playoff'

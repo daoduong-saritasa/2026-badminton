@@ -17,6 +17,15 @@ export interface CommandPayloads {
    * qualifying-reuse rules but never the duplicate or playing-player guards.
    */
   assign_pair: { matchId: UUID; side: Side; ruleException: boolean } & Pair
+  /**
+   * Saves several pairs of one fixture at once, or none; expects the fixture
+   * version, and each assignment carries its match's version.
+   */
+  assign_fixture_pairs: {
+    fixtureId: UUID
+    ruleException: boolean
+    assignments: Array<{ matchId: UUID; matchVersion: number; side: Side } & Pair>
+  }
   start_match: { matchId: UUID }
   take_over: { matchId: UUID }
   add_point: { matchId: UUID; side: Side }
