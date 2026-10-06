@@ -55,6 +55,9 @@ reset against a database
 - [x] Fix each defect the suite exposes, per PLAN.md → "Defects found"; one commit per defect: wrong-PIN message (`c25fa01`), ambiguous `version` in `team_correction_block_code` (`5cbe11a`, applied to the local stack with `psql`)
 - [x] Ask the user to run `SUPABASE_TELEMETRY_DISABLED=1 npm exec supabase -- gen types typescript --local > src/lib/database.types.ts`; diff against the hand-maintained version and fix every application type error the diff causes, per PLAN.md → "Generated types" (same 83 tables, columns, and functions as the hand-maintained file; generated types are looser: check-constrained columns are `string`, `get_staff_access` returns `Json`; no application change needed)
 
+- [x] `(amended 2026-10-06)` Fresh review P2: move PIN restoration in `tests/e2e/staff-access.spec.ts` into fixture teardown so it runs after a timeout
+- [x] `(amended 2026-10-06)` Fresh review P2: assert the exact wrong-PIN message in `tests/e2e/staff-access.spec.ts`
+- [x] `(amended 2026-10-06)` Fresh review residual: assign a court before the reset in `tests/e2e/maintenance-reset.spec.ts` so court retention is actually checked
 **Phase gate (hard):**
 - [ ] `npm run typecheck`
 - [ ] `npx vitest related --run --exclude 'tests/integration/**' <changed files>`
