@@ -53,6 +53,8 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 
 - [x] (amended 2026-10-07) Remove colored card strips in `MatchTicket.tsx` and `ScoreTrackerView.tsx`; separate fixture headers, matches, and team pairs in `OrganizerPage.tsx`, `MatchPickerView.tsx`, and `PairLines.tsx`. Verify shared layouts on phone and desktop.
 
+- [x] (amended 2026-10-07) Remove the next-match preview from `MatchTicket.tsx` and its label computation in `TournamentPage.tsx`; retain current game tally.
+
 **Phase gate (hard):**
 - [x] Run `npm run typecheck` project-wide.
 - [x] Run `npm run test:related -- <changed source files from the phase diff>`; record pass, failure, and skip counts (2026-10-07: 7 passed, 0 failed, 0 skipped). If integration setup lacks the prohibited Supabase socket, defer only that blocked verification with substitute evidence and STATUS debt.

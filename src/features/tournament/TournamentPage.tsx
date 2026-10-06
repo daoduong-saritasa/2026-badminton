@@ -5,10 +5,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { messages } from '@/i18n/vi'
 
 import {
-  fixtureOf,
   fixtureScheduleLabel,
   isDeciderEligible,
-  sideTeamId,
   teamName,
 } from './labels'
 import { MatchTicket } from './MatchTicket'
@@ -35,11 +33,6 @@ function PlayingFixtures({ snapshot }: { snapshot: TournamentSnapshot }) {
       </ul>
     </div>
   )
-}
-
-function teams(snapshot: TournamentSnapshot, match: FixtureMatch): string {
-  const fixture = fixtureOf(snapshot, match)
-  return messages.common.versus(teamName(snapshot, sideTeamId(fixture, 'a')), teamName(snapshot, sideTeamId(fixture, 'b')))
 }
 
 /** Snapshot order is fixture order then match number, which is the playing order. */
@@ -83,11 +76,6 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
     .toReversed()
     .slice(0, 6)
 
-  const nextLabel = (court: Court | null) => {
-    const next = upcoming.find((match) => match.court === court)
-    return next ? `${messages.common.fixtureMatch(fixtureScheduleLabel(snapshot, fixtureOf(snapshot, next)), next.matchNumber)} · ${teams(snapshot, next)}` : undefined
-  }
-
   const filter = (
     <Select value={selectedTeamId ?? 'all'} onValueChange={(value) => setTeamFilter(value)}>
       <SelectTrigger className="w-full sm:w-64" aria-label={messages.publicView.teamFilter}>
@@ -120,7 +108,7 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
           <h2 className="text-lg font-semibold tracking-tight">{messages.publicView.playingNow}</h2>
         </div>
         <div className="grid gap-4 md:grid-cols-2">
-          {current.map((match) => <MatchTicket match={match} snapshot={snapshot} nextLabel={nextLabel(match.court)} key={match.id} />)}
+          {current.map((match) => <MatchTicket match={match} snapshot={snapshot} key={match.id} />)}
         </div>
         {current.length === 0 ? (
           <div className="rounded-card border border-dashed border-rule bg-white/60 px-6 py-10 text-center">
