@@ -37,14 +37,14 @@ reset against a database
 - [x] Add `@playwright/test` to `devDependencies`; install Chromium with `npx playwright install chromium`
 - [x] `playwright.config.ts`: `testDir: 'tests/e2e'`, `workers: 1`, `fullyParallel: false`, projects `desktop` (Desktop Chrome) and `phone` (Pixel 7); `webServer` runs `vite` with `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` from `localStatus()` per PLAN.md → "Target safety" (amended 2026-10-06: the phone project runs `*.phone.spec.ts`)
 - [x] `package.json`: add `"test:e2e": "playwright test"`; `vitest.config.ts`: exclude `tests/e2e/**`; `tsconfig.node.json`: include `playwright.config.ts` and `tests/e2e/**/*.ts`; `.gitignore`: add `test-results/` and `playwright-report/` (amended 2026-10-06: new `tsconfig.e2e.json` with bundler resolution instead of `tsconfig.node.json`, whose `nodenext` resolution rejects the extensionless imports in `src/i18n/vi.ts`)
-- [ ] `tests/e2e/global-setup.ts`: refuse unless the API host is `127.0.0.1` or `localhost`; require `E2E_ORGANIZER_PIN` and `E2E_REFEREE_PIN`; check the roster shape (four teams, four players each, two per seed); write the roster snapshot to `test-results/roster.json`
-- [ ] `tests/e2e/global-teardown.ts`: fail the run if `readRoster()` differs from the snapshot
-- [ ] `tests/e2e/support/reset.ts`: `resetProgress()` runs `runMaintenance` for `enable`, `reset --mode progress`, then `disable` (in `finally`), with `BADMINTON_MAINTENANCE_URL` and the service-role key from `localStatus()`; `io.confirm` returns the phrase parsed from its prompt (judgment call: avoids exporting `parseTarget`)
-- [ ] `tests/e2e/support/roster.ts`: `readRoster()` via `get_tournament_snapshot`; `staffPins()` from the environment
+- [x] `tests/e2e/global-setup.ts`: refuse unless the API host is `127.0.0.1` or `localhost`; require `E2E_ORGANIZER_PIN` and `E2E_REFEREE_PIN`; check the roster shape (four teams, four players each, two per seed); write the roster snapshot to `test-results/roster.json` (amended 2026-10-06: also signs in with both PINs; PINs read from the environment or the `E2E_` keys of `.env.local` only)
+- [x] `tests/e2e/global-teardown.ts`: fail the run if `readRoster()` differs from the snapshot
+- [x] `tests/e2e/support/reset.ts`: `resetProgress()` runs `runMaintenance` for `enable`, `reset --mode progress`, then `disable` (in `finally`), with `BADMINTON_MAINTENANCE_URL` and the service-role key from `localStatus()`; `io.confirm` returns the phrase parsed from its prompt (judgment call: avoids exporting `parseTarget`)
+- [x] `tests/e2e/support/roster.ts`: `readRoster()` via `get_tournament_snapshot`; `staffPins()` from the environment (amended 2026-10-06: `staffPins()` lives in `support/pins.ts`; `support/api.ts` holds the typed RPC client and `support/test.ts` the reset fixture)
 - [ ] `tests/e2e/fixtures/`: typed seed builders on the existing RPCs that assign pairs by seed and enter results, per PLAN.md → "Seeding"; one builder per tie shape in scenario 5
-- [ ] `tests/e2e/support/staff.ts`: page helpers to open staff access, enter a PIN, and sign out, with labels from `src/i18n/vi.ts`
+- [x] `tests/e2e/support/staff.ts`: page helpers to open staff access, enter a PIN, and sign out, with labels from `src/i18n/vi.ts`
 - [ ] Verify `staff-pin` and `rotate-pin` respond on the running stack; if not, stop and ask the user to run `supabase functions serve`
-- [ ] `tests/e2e/public-view.spec.ts` — PLAN.md → "Scenarios" 1
+- [x] `tests/e2e/public-view.spec.ts` — PLAN.md → "Scenarios" 1 (amended 2026-10-06: the user's tournament always exists, so this covers a tournament in setup rather than no tournament)
 - [ ] `tests/e2e/staff-access.spec.ts` — scenario 2; restore both PINs in `afterEach` through `rotate-pin`
 - [ ] `tests/e2e/pair-assignment.spec.ts` — scenario 3
 - [ ] `tests/e2e/live-scoring.spec.ts` — scenario 4, on the `phone` project, with a second context for the public view
