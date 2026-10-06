@@ -50,7 +50,6 @@ function WalkoverForm({ snapshot, resetGeneration, matchId, onClose }: ResultEdi
   const match = snapshot.matches.find((candidate) => candidate.id === matchId)
   const fixture = match ? fixtureOf(snapshot, match) : undefined
   const [winnerSide, setWinnerSide] = useState<Side>('a')
-  const [confirmOpen, setConfirmOpen] = useState(false)
   const mutation = useMutation({
     mutationFn: () => {
       if (!match) throw new Error(messages.results.matchGone)
@@ -61,10 +60,7 @@ function WalkoverForm({ snapshot, resetGeneration, matchId, onClose }: ResultEdi
         payload: { matchId, winnerSide },
       })
     },
-    onSuccess: () => {
-      setConfirmOpen(false)
-      onClose()
-    },
+    onSuccess: onClose,
   })
   const winnerName = teamName(snapshot, sideTeamId(fixture, winnerSide))
 
@@ -81,25 +77,14 @@ function WalkoverForm({ snapshot, resetGeneration, matchId, onClose }: ResultEdi
           </SelectContent>
         </Select>
       </div>
-      {mutation.isError ? <p className="text-sm text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
+      <p className="text-[0.8125rem] text-muted-ink">{messages.results.walkoverConsequence(winnerName)}</p>
+      {mutation.isError ? <p className="text-[0.8125rem] text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
       <DialogFooter>
         <Button variant="outline" onClick={onClose}>{messages.common.cancel}</Button>
-        <Button disabled={mutation.isPending} onClick={() => setConfirmOpen(true)}>{messages.results.walkover}</Button>
+        <Button disabled={mutation.isPending} onClick={() => mutation.mutate()}>
+          {mutation.isPending ? messages.common.saving : messages.results.confirmWalkover}
+        </Button>
       </DialogFooter>
-      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{messages.results.confirmWalkoverTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{messages.results.walkoverConsequence(winnerName)}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction disabled={mutation.isPending} onClick={() => mutation.mutate()}>
-              {mutation.isPending ? messages.common.saving : messages.results.confirmWalkover}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </>
   )
 }
@@ -166,7 +151,7 @@ function CorrectionForm({ snapshot, resetGeneration, matchId, onClose }: ResultE
       <div className="space-y-3">
         {games.map((game, index) => (
           <div className="grid grid-cols-[3rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-3" key={index}>
-            <span className="text-[0.6875rem] text-muted-ink">{messages.common.gameNumber(index + 1)}</span>
+            <span className="text-xs text-muted-ink">{messages.common.gameNumber(index + 1)}</span>
             {(['a', 'b'] as const).map((side) => (
               <Input
                 key={side}
@@ -183,7 +168,7 @@ function CorrectionForm({ snapshot, resetGeneration, matchId, onClose }: ResultE
           </div>
         ))}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className={winnerSide ? 'text-[0.6875rem] text-muted-ink' : 'text-[0.6875rem] text-destructive'}>
+          <p className={winnerSide ? 'text-xs text-muted-ink' : 'text-xs text-destructive'}>
             {messages.results.scoreHint(target, cap, bestOfThree)}
           </p>
           {bestOfThree && games.length === 2 ? (
@@ -260,7 +245,7 @@ export function ResultEditor(props: ResultEditorProps) {
         <p className="truncate text-[0.8125rem] font-medium">
           {messages.common.versus(teamName(snapshot, sideTeamId(fixture, 'a')), teamName(snapshot, sideTeamId(fixture, 'b')))}
         </p>
-        <p className="mt-0.5 text-[0.6875rem] text-muted-ink">{matchLabel(snapshot, match)}</p>
+        <p className="mt-0.5 text-xs text-muted-ink">{matchLabel(snapshot, match)}</p>
       </div>
 
       {isCorrection ? <CorrectionForm {...props} /> : <WalkoverForm {...props} />}

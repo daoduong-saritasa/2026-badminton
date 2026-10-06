@@ -29,6 +29,7 @@ export interface Fixture {
   team_a_id: string | null
   team_b_id: string | null
   playoff_round_id: string | null
+  version: number
 }
 
 export interface Match {
@@ -158,5 +159,19 @@ export async function matchCommand(
   const { resetGeneration, snapshot } = await readState()
   const version = expectedVersion ?? findMatch(snapshot, matchId).version
   const body = mutation(version, { matchId, ...payload }, crypto.randomUUID(), resetGeneration)
+  return parse<Receipt>(operation, await rpc(operation, body, session))
+}
+
+/** Runs a command guarded by one fixture's version; `fixtureId` joins the payload. */
+export async function fixtureCommand(
+  session: LocalSession,
+  operation: string,
+  fixtureId: string,
+  payload: Record<string, unknown>,
+): Promise<Receipt> {
+  const { resetGeneration, snapshot } = await readState()
+  const fixture = snapshot.fixtures.find((candidate) => candidate.id === fixtureId)
+  if (!fixture) throw new Error(`Fixture ${fixtureId} is not in the snapshot`)
+  const body = mutation(fixture.version, { fixtureId, ...payload }, crypto.randomUUID(), resetGeneration)
   return parse<Receipt>(operation, await rpc(operation, body, session))
 }

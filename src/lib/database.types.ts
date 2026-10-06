@@ -414,6 +414,15 @@ export type Database = {
         }
         Returns: Json
       }
+      assign_fixture_pairs: {
+        Args: {
+          p_expected_version: number
+          p_payload: Json
+          p_request_id: string
+          p_reset_generation: number
+        }
+        Returns: Json
+      }
       assign_pair: {
         Args: {
           p_expected_version: number

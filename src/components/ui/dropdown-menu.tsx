@@ -169,7 +169,7 @@ function DropdownMenuLabel({
       data-slot="dropdown-menu-label"
       data-inset={inset}
       className={cn(
-        "px-3 pt-1.5 pb-2 text-[0.625rem] font-normal tracking-[0.08em] text-muted-ink uppercase data-inset:pl-7",
+        "px-3 pt-1.5 pb-2 text-xs font-normal tracking-[0.08em] text-muted-ink uppercase data-inset:pl-7",
         className
       )}
       {...props}
@@ -198,7 +198,7 @@ function DropdownMenuShortcut({
     <span
       data-slot="dropdown-menu-shortcut"
       className={cn(
-        "ml-auto text-[0.625rem] tracking-widest text-muted-ink group-focus/dropdown-menu-item:text-navy",
+        "ml-auto text-xs tracking-widest text-muted-ink group-focus/dropdown-menu-item:text-navy",
         className
       )}
       {...props}

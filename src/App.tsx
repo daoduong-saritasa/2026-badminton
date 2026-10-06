@@ -13,7 +13,7 @@ import { errorMessage } from '@/i18n/errors'
 import { messages } from '@/i18n/vi'
 import { StaffMenu } from '@/features/staff/StaffMenu'
 import { ScoreTracker } from '@/features/scoring/ScoreTracker'
-import { OrganizerPage } from '@/features/organizer/OrganizerPage'
+import { OrganizerPage, type OrganizerSection } from '@/features/organizer/OrganizerPage'
 import { SetupForm } from '@/features/organizer/SetupForm'
 import { KnockoutBracket } from '@/features/tournament/KnockoutBracket'
 import { StandingsTable } from '@/features/tournament/StandingsTable'
@@ -87,7 +87,7 @@ function SetupRequiredScreen({
   return (
     <main className="app-shell">
       <header className="mb-8">
-        <p className="text-[0.625rem] font-semibold tracking-[0.08em] text-muted-ink">{messages.app.setupEyebrow}</p>
+        <p className="text-xs font-semibold tracking-[0.08em] text-muted-ink">{messages.app.setupEyebrow}</p>
         <h1 className="mt-2 text-2xl font-extrabold tracking-tight"><span className="brand-mark" aria-hidden="true" />{messages.app.setupHeading}</h1>
         <p className="ml-[2.5625rem] mt-2 text-xs text-muted-ink">{messages.app.setupNote}</p>
       </header>
@@ -105,7 +105,7 @@ function SetupRequiredScreen({
   )
 }
 
-function renderView(snapshot: TournamentSnapshot, resetGeneration: number, view: AppView, onStartScoring: () => void) {
+function renderView(snapshot: TournamentSnapshot, view: AppView) {
   switch (view) {
     case 'matches':
       return <TournamentPage snapshot={snapshot} />
@@ -114,15 +114,16 @@ function renderView(snapshot: TournamentSnapshot, resetGeneration: number, view:
     case 'knockouts':
       return <KnockoutBracket snapshot={snapshot} />
     case 'scoring':
-      return null
     case 'organizer':
-      return <OrganizerPage snapshot={snapshot} resetGeneration={resetGeneration} onStartScoring={onStartScoring} />
+      // Staff views render outside the public tabs.
+      return null
   }
 }
 
 export default function App() {
   const queryClient = useQueryClient()
   const [selectedView, setSelectedView] = useState<AppView | null>(null)
+  const [organizerSection, setOrganizerSection] = useState<OrganizerSection>('overview')
   const [staffDialogOpen, setStaffDialogOpen] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const tournamentQuery = useQuery({ queryKey: tournamentQueryKey, queryFn: fetchTournament })
@@ -192,9 +193,10 @@ export default function App() {
   const handleSignedOut = () => {
     queryClient.setQueryData(staffQueryKey, null)
     setSelectedView(null)
+    setOrganizerSection('overview')
   }
   if (view === 'scoring' && staffAccess) {
-    return <ScoreTracker snapshot={snapshot} resetGeneration={tournamentState.resetGeneration} role={staffAccess.role} onExit={() => setSelectedView('matches')} />
+    return <ScoreTracker snapshot={snapshot} resetGeneration={tournamentState.resetGeneration} role={staffAccess.role} onExit={() => setSelectedView(isOrganizer ? 'organizer' : 'matches')} />
   }
   if (view === 'organizer' && staffAccess) {
     return (
@@ -217,12 +219,14 @@ export default function App() {
         <OrganizerPage
           snapshot={snapshot}
           resetGeneration={tournamentState.resetGeneration}
-          onStartScoring={() => setSelectedView('scoring')}
+          selectedSection={organizerSection}
+          onSectionChange={setOrganizerSection}
+          onOpenScoring={() => setSelectedView('scoring')}
         />
       </div>
     )
   }
-  const viewContent = renderView(snapshot, tournamentState.resetGeneration, view, () => setSelectedView('scoring'))
+  const viewContent = renderView(snapshot, view)
   const tabs: { value: PublicView; label: string }[] = [
     { value: 'matches', label: messages.app.tabs.matches },
     { value: 'standings', label: messages.app.tabs.standings },

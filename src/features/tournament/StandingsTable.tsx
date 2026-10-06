@@ -64,7 +64,7 @@ function QualifyingStandings({ snapshot }: { snapshot: TournamentSnapshot }) {
         <h3 className="text-[0.9375rem] font-semibold">{messages.fixtures.standingsHeading}</h3>
         <span
           className={cn(
-            'rounded-pill px-2.5 py-1 text-[0.625rem] font-semibold',
+            'rounded-pill px-2.5 py-1 text-xs font-semibold',
             status.kind === 'confirmed' ? 'bg-navy text-white' : status.kind === 'provisional' ? 'bg-well text-muted-ink' : 'bg-peach text-ink',
           )}
           role="status"
@@ -96,9 +96,9 @@ function QualifyingStandings({ snapshot }: { snapshot: TournamentSnapshot }) {
                 <TableCell className="min-w-36 whitespace-normal">
                   <span className="block font-medium [overflow-wrap:anywhere]">{teamName(snapshot, standing.teamId)}</span>
                   {shared ? (
-                    <span className="mt-0.5 block text-[0.625rem] text-muted-ink">{messages.fixtures.unseparated}</span>
+                    <span className="mt-0.5 block text-xs text-muted-ink">{messages.fixtures.unseparated}</span>
                   ) : separatedBy !== null && separatedBy !== 'match-wins' ? (
-                    <span className="mt-0.5 block text-[0.625rem] text-muted-ink">{messages.fixtures.separatedBy[separatedBy]}</span>
+                    <span className="mt-0.5 block text-xs text-muted-ink">{messages.fixtures.separatedBy[separatedBy]}</span>
                   ) : null}
                 </TableCell>
                 <TableCell className="numeric text-right font-semibold">{formatNumber(standing.matchWins)}</TableCell>
@@ -112,7 +112,7 @@ function QualifyingStandings({ snapshot }: { snapshot: TournamentSnapshot }) {
           })}
         </TableBody>
       </Table>
-      {anyShared ? <p className="mt-4 text-[0.6875rem] text-muted-ink">{messages.fixtures.unseparatedNote}</p> : null}
+      {anyShared ? <p className="mt-4 text-xs text-muted-ink">{messages.fixtures.unseparatedNote}</p> : null}
     </section>
   )
 }
@@ -156,13 +156,13 @@ function TeamRoster({ snapshot }: { snapshot: TournamentSnapshot }) {
             <div className="min-w-0" key={team.id}>
               <h4 className="mb-2 text-[0.8125rem] font-semibold [overflow-wrap:anywhere]">{team.name}</h4>
               {players.length === 0 ? (
-                <p className="text-[0.6875rem] text-muted-ink">{messages.fixtures.noPlayers}</p>
+                <p className="text-xs text-muted-ink">{messages.fixtures.noPlayers}</p>
               ) : (
                 <dl className="space-y-2">
                   {seeds.map((seed) => (
                     <div className="grid gap-1" key={seed}>
                       <dt>
-                        <span className={cn('inline-block rounded-chip px-2 py-0.5 text-[0.625rem] font-bold', seedTone(seed))}>
+                        <span className={cn('inline-block rounded-chip px-2 py-0.5 text-xs font-bold', seedTone(seed))}>
                           {messages.common.seed(seed)}
                         </span>
                       </dt>
@@ -188,7 +188,6 @@ export function StandingsTable({ snapshot }: { snapshot: TournamentSnapshot }) {
     <section className="view-enter space-y-6">
       <div>
         <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.fixtures.qualifyingHeading}</h2>
-        <p className="mt-2 text-xs text-muted-ink">{messages.fixtures.qualifyingDescription}</p>
       </div>
       <QualifyingStandings snapshot={snapshot} />
       <div className="grid gap-6 md:grid-cols-2">

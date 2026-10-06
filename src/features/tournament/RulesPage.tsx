@@ -55,7 +55,7 @@ export function RulesPage() {
                 <dl className="mt-4 space-y-3 text-sm/[1.55]">
                   {rowKeys.map((key) => (
                     <div key={key}>
-                      <dt className="text-[0.6875rem] font-semibold text-muted-ink">{rules.rowLabels[key]}</dt>
+                      <dt className="text-xs font-semibold text-muted-ink">{rules.rowLabels[key]}</dt>
                       <dd className="mt-0.5">{key === 'match' ? <strong className="font-semibold">{stage[key]}</strong> : stage[key]}</dd>
                     </div>
                   ))}

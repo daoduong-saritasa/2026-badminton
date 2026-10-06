@@ -26,8 +26,11 @@ import {
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import {
+  fixtureLabel,
   fixtureOf,
+  groupByFixture,
   isStartable,
+  startBlocker,
   matchLabel,
   matchPair,
   openGame,
@@ -318,7 +321,7 @@ function ScoringSurface({
             <strong className="numeric self-center pr-[0.07em] text-[clamp(5rem,28dvh,16rem)] font-bold leading-none tracking-[-0.08em]">
               {formatNumber(state.score[side])}
             </strong>
-            <small className="text-[0.625rem] opacity-75">
+            <small className="text-[0.8125rem] opacity-75">
               {teamName(snapshot, sideTeamId(fixture, side))}
               {gamesToWinMatch(state.stage) === 2 ? ` · ${formatNumber(tally[side])}` : ''}
             </small>
@@ -326,7 +329,7 @@ function ScoringSurface({
         ))}
       </div>
 
-      <div className="min-h-8 self-center text-center text-[0.6875rem] text-navy" aria-live="polite">
+      <div className="min-h-8 self-center text-center text-[0.8125rem] text-navy" aria-live="polite">
         {state.status === 'saving' ? messages.scoring.savingPoint : null}
         {failed ? (
           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -401,8 +404,8 @@ function MatchPicker({
   const upcoming = upcomingMatches(snapshot)
   const [startMatchId, setStartMatchId] = useState<UUID | null>(null)
   const startMatch = upcoming.find((match) => match.id === startMatchId && isStartable(match))
-  // The match outlives `assignOpen` so the dialog keeps its content while closing.
-  const [assignMatchId, setAssignMatchId] = useState<UUID | null>(null)
+  // The fixture outlives `assignOpen` so the dialog keeps its content while closing.
+  const [assignFixtureId, setAssignFixtureId] = useState<UUID | null>(null)
   const [assignOpen, setAssignOpen] = useState(false)
 
   const startMutation = useMutation({
@@ -419,16 +422,21 @@ function MatchPicker({
   })
 
   const row = (match: FixtureMatch, action: React.ReactNode) => (
-    <li className="grid gap-2.5 border-t border-hairline py-4 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" key={match.id}>
+    <li className="grid gap-3 border-t border-hairline py-4 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" key={match.id}>
       <span className="min-w-0">
-        <span className="block text-[0.6875rem] text-muted-ink">
-          {match.court ? messages.common.court(match.court) : '–'} · {matchLabel(snapshot, match)}
+        <span className="block text-[0.9375rem] font-semibold [overflow-wrap:anywhere]">
+          {messages.common.versus(teamName(snapshot, sideTeamId(fixtureOf(snapshot, match), 'a')), teamName(snapshot, sideTeamId(fixtureOf(snapshot, match), 'b')))}
         </span>
-        <span className="mt-1 block text-[0.8125rem] font-medium [overflow-wrap:anywhere]">
-          {messages.common.versus(pairPlayers(snapshot, matchPair(match, 'a')), pairPlayers(snapshot, matchPair(match, 'b')))}
+        <span className="mt-1 block text-[0.8125rem] text-muted-ink">
+          {match.court ? messages.common.court(match.court) : messages.publicView.courtPending} · {matchLabel(snapshot, match)}
+        </span>
+        <span className="mt-1 block text-[0.8125rem] [overflow-wrap:anywhere]">
+          {match.pairA || match.pairB
+            ? messages.common.versus(pairPlayers(snapshot, matchPair(match, 'a')), pairPlayers(snapshot, matchPair(match, 'b')))
+            : messages.pairAssignment.notAssigned}
         </span>
         {isPlaying(match) ? (
-          <span className="mt-1 block text-[0.6875rem] text-muted-ink">
+          <span className="mt-1 block text-[0.8125rem] text-muted-ink">
             {gamesToWinMatch(stageOf(snapshot, match)) === 2
               ? `${messages.scoring.gameStatus(liveGame(match).gameNumber, scoreText(matchGameTally(match.games)))} · `
               : ''}
@@ -444,7 +452,7 @@ function MatchPicker({
     <main className="app-shell space-y-6">
       <div className="flex items-center justify-between gap-3">
         <Button variant="outline" size="sm" onClick={onExit}>
-          <ArrowLeft /> {messages.scoring.backToMatches}
+          <ArrowLeft /> {messages.scoring.back}
         </Button>
         <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.scoring.pickHeading}</h2>
       </div>
@@ -457,26 +465,62 @@ function MatchPicker({
       <section className="rounded-card border border-ink/5 bg-white px-5 py-2 shadow-card">
         <h3 className="pt-3 text-sm font-semibold">{messages.scoring.startHeading}</h3>
         {upcoming.length === 0 ? (
-          <p className="py-4 text-[0.8125rem] text-muted-ink">{messages.scoring.noMatch}</p>
+          <p className="py-4 text-sm text-muted-ink">{messages.scoring.noMatch}</p>
         ) : (
-          <ul>
-            {upcoming.map((match) => row(match, (
-              <span className="flex flex-wrap gap-2">
-                <Button variant="outline" onClick={() => { setAssignMatchId(match.id); setAssignOpen(true) }}>
-                  <Users /> {messages.pairAssignment.open}
-                </Button>
-                <Button variant="outline" disabled={!isStartable(match) || startMutation.isPending} onClick={() => setStartMatchId(match.id)}>
-                  <Play /> {messages.scoring.start}
-                </Button>
-              </span>
-            )))}
+          <ul className="divide-y divide-hairline">
+            {groupByFixture(upcoming).map(({ fixtureId, matches }) => {
+              const fixture = snapshot.fixtures.find((candidate) => candidate.id === fixtureId)
+              const fixtureTeams = messages.common.versus(teamName(snapshot, sideTeamId(fixture, 'a')), teamName(snapshot, sideTeamId(fixture, 'b')))
+              const paired = matches.every((match) => match.pairA !== null && match.pairB !== null)
+              return (
+                <li className="py-4" aria-label={`${fixtureLabel(fixture)} · ${fixtureTeams}`} key={fixtureId}>
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-[0.9375rem] font-semibold [overflow-wrap:anywhere]">{fixtureTeams}</p>
+                      <p className="mt-0.5 text-[0.8125rem] text-muted-ink">{fixtureLabel(fixture)}</p>
+                    </div>
+                    <Button className="w-[7.5rem]" variant={paired ? 'outline' : 'default'} onClick={() => { setAssignFixtureId(fixtureId); setAssignOpen(true) }}>
+                      <Users /> {messages.pairAssignment.open}
+                    </Button>
+                  </div>
+                  <ul className="mt-3 space-y-3 border-l-2 border-hairline pl-4">
+                    {matches.map((match) => (
+                      <li className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-x-3 gap-y-1" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
+                        <p className="text-sm font-semibold">
+                          {messages.common.matchNumber(match.matchNumber)}
+                          <span className="font-normal text-muted-ink"> · {match.court ? messages.common.court(match.court) : messages.publicView.courtPending}</span>
+                        </p>
+                        <p className="text-right text-xs text-muted-ink">
+                          {startBlocker(snapshot, match) ? messages.scoring.startBlocked[startBlocker(snapshot, match) ?? 'pairs'] : null}
+                        </p>
+                        <p className="text-[0.8125rem] text-muted-ink [overflow-wrap:anywhere]">
+                          {match.pairA || match.pairB
+                            ? messages.common.versus(pairPlayers(snapshot, matchPair(match, 'a')), pairPlayers(snapshot, matchPair(match, 'b')))
+                            : messages.pairAssignment.notAssigned}
+                        </p>
+                        <Button className="w-full" disabled={startBlocker(snapshot, match) !== null || startMutation.isPending} onClick={() => setStartMatchId(match.id)}>
+                          <Play /> {messages.scoring.start}
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                </li>
+              )
+            })}
           </ul>
         )}
       </section>
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-2xl">
-          {assignMatchId ? (
-            <PairAssignmentForm snapshot={snapshot} matchId={assignMatchId} role={role} resetGeneration={resetGeneration} />
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-4xl">
+          {assignFixtureId ? (
+            <PairAssignmentForm
+              key={assignFixtureId}
+              snapshot={snapshot}
+              fixtureId={assignFixtureId}
+              role={role}
+              resetGeneration={resetGeneration}
+              onSaved={() => setAssignOpen(false)}
+            />
           ) : null}
         </DialogContent>
       </Dialog>

@@ -55,7 +55,7 @@ test('the referee PIN opens scoring but no organizer controls', async ({ page, p
   await page.goto('/')
   await signIn(page, pins.referee, 'referee')
 
-  await page.getByRole('button', { name: messages.scoring.backToMatches }).click()
+  await page.getByRole('button', { name: messages.scoring.back }).click()
 
   await staffMenuButton(page, 'referee').click()
   await expect(page.getByRole('menuitem', { name: messages.staff.openWorkspace.referee })).toBeVisible()

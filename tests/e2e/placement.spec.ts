@@ -19,7 +19,7 @@ import {
 } from './fixtures/tournament.ts'
 import { findMatch, readState, signInStaff, type Snapshot } from './support/api.ts'
 import { signIn } from './support/staff.ts'
-import { openOrganizerSection, pairDialog, pickerRow, scheduleRow, sideCard } from './support/ui.ts'
+import { fixtureRow, matchRow, openOrganizerSection, pairDialog, teamPicker } from './support/ui.ts'
 import { expect, test } from './support/test.ts'
 
 function placementMatches(snapshot: Snapshot, stage: 'third-place' | 'final') {
@@ -42,7 +42,7 @@ test('third place finishes first, a 1–1 tie goes to a free-pairing decider, an
   await page.goto('/')
   await signIn(page, pins.organizer, 'organizer')
   await openOrganizerSection(page, 'matches')
-  await scheduleRow(page, snapshot, findMatch(snapshot, finalOne.id))
+  await matchRow(page, snapshot, findMatch(snapshot, finalOne.id))
     .getByRole('button', { name: messages.organizer.schedule.startShort }).click()
   await page.getByRole('alertdialog', { name: messages.organizer.schedule.startTitle })
     .getByRole('button', { name: messages.organizer.schedule.start }).click()
@@ -65,14 +65,17 @@ test('third place finishes first, a 1–1 tie goes to a free-pairing decider, an
   const refereePage = await openPage()
   await refereePage.goto('/')
   await signIn(refereePage, pins.referee, 'referee')
-  await pickerRow(refereePage, snapshot, findMatch(snapshot, decider.id)).getByRole('button', { name: messages.pairAssignment.open }).click()
-  const card = sideCard(pairDialog(refereePage, snapshot, findMatch(snapshot, decider.id)), teamName(snapshot, deciderTeam))
-  await expect(card.getByText(messages.pairAssignment.rule.free)).toBeVisible()
+  await fixtureRow(refereePage, snapshot, findMatch(snapshot, decider.id)).getByRole('button', { name: messages.pairAssignment.open }).click()
+  const dialog = pairDialog(refereePage, snapshot, findMatch(snapshot, decider.id))
+  await expect(dialog).toContainText(messages.pairAssignment.rule.free)
+  const card = teamPicker(dialog, 3, teamName(snapshot, deciderTeam))
   for (const playerId of seed1) {
     await card.getByRole('button', { name: snapshot.players.find((player) => player.id === playerId)?.name }).click()
   }
-  await card.getByRole('button', { name: messages.pairAssignment.save }).click()
-  await expect(card.getByText(messages.pairAssignment.saved, { exact: true })).toBeVisible()
+  await dialog.getByRole('button', { name: messages.pairAssignment.save }).click()
+  await expect(dialog).toBeHidden()
+  expect([findMatch((await readState()).snapshot, decider.id).pair_a_player_1_id, findMatch((await readState()).snapshot, decider.id).pair_a_player_2_id].sort())
+    .toEqual([...seed1].sort())
 
   await playMatch(organizer, decider.id, [[15, 5], [15, 5]])
   snapshot = (await readState()).snapshot

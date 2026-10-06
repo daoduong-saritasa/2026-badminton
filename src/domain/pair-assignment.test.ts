@@ -4,6 +4,7 @@ import {
   pairingRule,
   qualifyingPairings,
   validatePairAssignment,
+  validatePairDrafts,
 } from './pair-assignment'
 import type {
   FixtureMatch,
@@ -186,5 +187,33 @@ describe('validatePairAssignment', () => {
 
     expect(validatePairAssignment(state, 'final-1', 'a', pair('a1', 'a4')))
       .toContainEqual({ code: 'player-playing', overridable: false })
+  })
+})
+
+describe('validatePairDrafts', () => {
+  it('accepts swapping both qualifying pairs to the other arrangement at once', () => {
+    const owner = fixture('qualifying')
+    const state = snapshot(
+      [owner],
+      [match(owner, 1, { pairA: pair('a1', 'a3') }), match(owner, 2, { pairA: pair('a2', 'a4') })],
+    )
+
+    const results = validatePairDrafts(state, [
+      { matchId: 'qualifying-1', side: 'a', pair: pair('a1', 'a4') },
+      { matchId: 'qualifying-2', side: 'a', pair: pair('a2', 'a3') },
+    ])
+    expect(results.map(({ issues }) => issues)).toEqual([[], []])
+  })
+
+  it('checks drafts against each other, not only against saved pairs', () => {
+    const owner = fixture('qualifying')
+    const state = snapshot([owner], [match(owner, 1), match(owner, 2)])
+
+    const [first, second] = validatePairDrafts(state, [
+      { matchId: 'qualifying-1', side: 'a', pair: pair('a1', 'a3') },
+      { matchId: 'qualifying-2', side: 'a', pair: pair('a1', 'a4') },
+    ])
+    expect(first.issues).toContainEqual({ code: 'qualifying-player-reused', overridable: true })
+    expect(second.issues).toContainEqual({ code: 'qualifying-player-reused', overridable: true })
   })
 })

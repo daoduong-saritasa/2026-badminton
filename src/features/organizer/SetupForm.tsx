@@ -148,7 +148,7 @@ export function SetupForm({ snapshot, resetGeneration }: { snapshot: TournamentS
     <section className="rounded-card border border-ink/5 bg-white p-6 shadow-card">
       <div>
         <h3 className="text-sm font-semibold">{messages.setup.heading}</h3>
-        <p className="mt-1.5 text-[0.6875rem] text-muted-ink">{messages.setup.description}</p>
+        <p className="mt-1.5 text-xs text-muted-ink">{messages.setup.description}</p>
       </div>
 
       {locked ? (

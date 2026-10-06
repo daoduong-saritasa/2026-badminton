@@ -12,7 +12,7 @@ import {
 } from './fixtures/tournament.ts'
 import { findMatch, readState, signInStaff, type Match, type Side, type Snapshot } from './support/api.ts'
 import { signIn } from './support/staff.ts'
-import { matchLabel, matchTeams, openOrganizerSection } from './support/ui.ts'
+import { matchLabel, matchRow, matchTeams, openOrganizerSection } from './support/ui.ts'
 import { expect, test } from './support/test.ts'
 
 const scoring = messages.scoring
@@ -34,8 +34,7 @@ function pointButton(page: Page, snapshot: Snapshot, match: Match, side: Side) {
 
 /** Starts `match` from the referee list and waits for the scoring surface. */
 async function startFromPicker(page: Page, snapshot: Snapshot, match: Match): Promise<void> {
-  const row = page.getByRole('listitem').filter({ hasText: matchPairLabel(snapshot, match, 'a') })
-  await row.getByRole('button', { name: scoring.start }).click()
+  await matchRow(page, snapshot, match).getByRole('button', { name: scoring.start }).click()
   await page.getByRole('alertdialog', { name: scoring.startTitle }).getByRole('button', { name: scoring.start }).click()
   await expect(pointButton(page, snapshot, match, 'a')).toBeEnabled()
 }
@@ -141,6 +140,8 @@ test('the organizer awards a walkover from the results list', async ({ page, pin
   await page.goto('/')
   await signIn(page, pins.organizer, 'organizer')
   await openOrganizerSection(page, 'results')
+  // The toggle's label ends with the open-match count; match it without the count.
+  await page.getByRole('button', { name: messages.results.showWalkovers(0).replace(/\s*\(.*\)$/, '') }).click()
   await page.getByRole('listitem')
     .filter({ hasText: matchTeams(snapshot, match) })
     .filter({ hasText: matchLabel(snapshot, match) })
@@ -149,11 +150,8 @@ test('the organizer awards a walkover from the results list', async ({ page, pin
   const dialog = page.getByRole('dialog', { name: messages.results.walkoverTitle })
   await dialog.getByRole('combobox', { name: messages.results.walkoverWinner }).click()
   await page.getByRole('option', { name: winner }).click()
-  await dialog.getByRole('button', { name: messages.results.walkover, exact: true }).click()
-  const confirm = page.getByRole('alertdialog', { name: messages.results.confirmWalkoverTitle })
-  await expect(confirm).toContainText(messages.results.walkoverConsequence(winner))
-  await confirm.getByRole('button', { name: messages.results.confirmWalkover }).click()
-  await expect(confirm).toBeHidden()
+  await expect(dialog).toContainText(messages.results.walkoverConsequence(winner))
+  await dialog.getByRole('button', { name: messages.results.confirmWalkover }).click()
   await expect(dialog).toBeHidden()
 
   await expect.poll(async () => findMatch((await readState()).snapshot, match.id))

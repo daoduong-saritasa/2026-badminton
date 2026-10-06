@@ -110,7 +110,7 @@ export function StaffMenu({
             <LogOut /> {messages.staff.signOut}
           </DropdownMenuItem>
           {signOutMutation.isError ? (
-            <p className="mx-1 mt-1 rounded-chip bg-[#fdeceb] px-3 py-2 text-[0.6875rem]/[1.5] text-[#a32118]" role="alert">
+            <p className="mx-1 mt-1 rounded-chip bg-[#fdeceb] px-3 py-2 text-xs/[1.5] text-[#a32118]" role="alert">
               {errorMessage(signOutMutation.error)}
             </p>
           ) : null}
