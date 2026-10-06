@@ -328,6 +328,7 @@ export type Database = {
       }
       tournament: {
         Row: {
+          court_names: string[]
           created_at: string
           current_playoff_round_id: string | null
           finalists_confirmed_at: string | null
@@ -341,6 +342,7 @@ export type Database = {
           version: number
         }
         Insert: {
+          court_names?: string[]
           created_at?: string
           current_playoff_round_id?: string | null
           finalists_confirmed_at?: string | null
@@ -354,6 +356,7 @@ export type Database = {
           version?: number
         }
         Update: {
+          court_names?: string[]
           created_at?: string
           current_playoff_round_id?: string | null
           finalists_confirmed_at?: string | null
@@ -490,6 +493,15 @@ export type Database = {
         Returns: Json
       }
       record_draw: {
+        Args: {
+          p_expected_version: number
+          p_payload: Json
+          p_request_id: string
+          p_reset_generation: number
+        }
+        Returns: Json
+      }
+      rename_courts: {
         Args: {
           p_expected_version: number
           p_payload: Json
