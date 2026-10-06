@@ -53,7 +53,7 @@ reset against a database
 - [x] `tests/e2e/placement.spec.ts` — scenario 7
 - [x] `tests/e2e/maintenance-reset.spec.ts` — scenario 8, progress mode only (amended 2026-10-06: runs the real `npm run maintenance` command, including a cancelled confirmation, and covers a referee mid-match)
 - [x] Fix each defect the suite exposes, per PLAN.md → "Defects found"; one commit per defect: wrong-PIN message (`c25fa01`), ambiguous `version` in `team_correction_block_code` (`5cbe11a`, applied to the local stack with `psql`)
-- [ ] Ask the user to run `SUPABASE_TELEMETRY_DISABLED=1 npm exec supabase -- gen types typescript --local > src/lib/database.types.ts`; diff against the hand-maintained version and fix every application type error the diff causes, per PLAN.md → "Generated types"
+- [x] Ask the user to run `SUPABASE_TELEMETRY_DISABLED=1 npm exec supabase -- gen types typescript --local > src/lib/database.types.ts`; diff against the hand-maintained version and fix every application type error the diff causes, per PLAN.md → "Generated types" (same 83 tables, columns, and functions as the hand-maintained file; generated types are looser: check-constrained columns are `string`, `get_staff_access` returns `Json`; no application change needed)
 
 **Phase gate (hard):**
 - [ ] `npm run typecheck`
