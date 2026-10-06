@@ -5,6 +5,7 @@ import './index.css'
 import './App.css'
 import { RulesPage } from './features/tournament/RulesPage.tsx'
 import { messages } from './i18n/vi.ts'
+import { LoadingScreen } from './components/LoadingScreen.tsx'
 
 const App = lazy(() => import('./App.tsx'))
 const GuidePage = lazy(() => import('./features/guide/GuidePage.tsx').then((module) => ({ default: module.GuidePage })))
@@ -25,7 +26,7 @@ if (isRulesPath) document.title = messages.publicView.rules.heading
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Suspense fallback={<p>{messages.app.loading}</p>}>
+    <Suspense fallback={<LoadingScreen label={isGuidePath ? messages.guide.loading : messages.app.loading} />}>
     {isGuidePath ? <GuidePage /> : isRulesPath ? (
       <RulesPage />
     ) : (

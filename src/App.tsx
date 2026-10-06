@@ -7,6 +7,7 @@ import { getStaffAccess } from '@/data/staff'
 import type { StaffAccess, TournamentSnapshot, TournamentStage } from '@/domain/types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { LoadingScreen } from '@/components/LoadingScreen'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StaffAccessDialog } from '@/features/staff/StaffAccessDialog'
 import { errorMessage } from '@/i18n/errors'
@@ -32,20 +33,6 @@ const tabTriggerClass = 'min-h-14 min-w-0 flex-1 flex-col gap-1 whitespace-norma
 function defaultView(stage: TournamentStage): PublicView {
   if (stage === 'knockouts' || stage === 'completed') return 'knockouts'
   return 'matches'
-}
-
-function LoadingScreen() {
-  return (
-    <main className="app-shell" aria-busy="true" aria-label={messages.app.loading}>
-      <span className="brand-mark" aria-hidden="true" />
-      <p className="mt-5 text-sm font-medium" role="status">{messages.app.loading}</p>
-      <div className="loading-skeleton mt-8 h-14 rounded-field" />
-      <div className="mt-6 grid gap-4 md:grid-cols-2" aria-hidden="true">
-        <div className="loading-skeleton h-72 rounded-card" />
-        <div className="loading-skeleton h-72 rounded-card" />
-      </div>
-    </main>
-  )
 }
 
 function ErrorScreen({ error, onRetry }: { error: Error; onRetry: () => void }) {

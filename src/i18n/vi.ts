@@ -9,6 +9,7 @@ import { formatNumber } from './format'
 
 export const messages = {
   guide: {
+    loading: 'Đang tải hướng dẫn…',
     heading: 'Hướng dẫn trọng tài',
     notice: 'Dữ liệu minh họa. Các bước trong hướng dẫn không ảnh hưởng đến giải thật.',
     intro: 'Xem cách xếp cặp, bắt đầu trận và ghi điểm. Nút Tiếp tự thực hiện thao tác minh họa.',
