@@ -36,12 +36,9 @@ export function matchRow(page: Page, snapshot: Snapshot, match: Match): Locator 
   return fixtureRow(page, snapshot, match).getByRole('listitem', { name: messages.common.matchNumber(match.match_number), exact: true })
 }
 
-/** The pair assignment dialog for a match's fixture. */
+/** The pair assignment dialog for a match's fixture, titled with its two teams. */
 export function pairDialog(page: Page, snapshot: Snapshot, match: Match): Locator {
-  const fixture = fixtureOf(snapshot, match)
-  return page.getByRole('dialog', {
-    name: messages.pairAssignment.title(stageLabels[fixture.stage], matchTeams(snapshot, match)),
-  })
+  return page.getByRole('dialog', { name: matchTeams(snapshot, match), exact: true })
 }
 
 /** One team's player choices for one match inside the pair assignment dialog. */

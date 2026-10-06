@@ -37,6 +37,7 @@ import {
   teamName,
 } from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
+import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
 import { cn } from '@/lib/utils'
 
@@ -79,11 +80,14 @@ function stageAppearances(snapshot: TournamentSnapshot, stage: FixtureStage, pla
     .length
 }
 
-/** A player button; selected players fill navy. The second line shows matches played and whether the player is on court. */
-function PlayerChoice({ player, selected, playedText, overLimit, playing, onClick }: {
+/**
+ * A one-line player button: the name, then a badge with the matches the player
+ * has in this stage. A player on court elsewhere gets a red dot.
+ */
+function PlayerChoice({ player, selected, played, overLimit, playing, onClick }: {
   player: TeamPlayer
   selected: boolean
-  playedText: string
+  played: { short: string; full: string }
   overLimit: boolean
   playing: boolean
   onClick: () => void
@@ -93,16 +97,23 @@ function PlayerChoice({ player, selected, playedText, overLimit, playing, onClic
       type="button"
       aria-pressed={selected}
       className={cn(
-        'flex h-full min-h-14 min-w-0 flex-col justify-center rounded-field border px-3 py-2 text-left text-[0.8125rem] font-medium transition-colors',
-        selected ? 'border-navy bg-navy text-white' : 'border-line bg-white text-ink hover:bg-well',
+        'flex h-11 min-w-0 items-center gap-2 rounded-field border px-3 text-left text-[0.8125rem] transition-colors',
+        selected ? 'border-navy bg-mist font-semibold text-navy ring-1 ring-navy' : 'border-line bg-white text-ink hover:bg-well',
       )}
       onClick={onClick}
     >
-      <span className="[overflow-wrap:anywhere]">{player.name}</span>
-      <span className={cn('mt-0.5 text-xs font-normal', selected ? 'text-white/80' : 'text-muted-ink')}>
-        <span className={cn(overLimit && 'font-semibold', overLimit && !selected && 'text-destructive')}>{playedText}</span>
-        {playing ? <span className={selected ? undefined : 'text-destructive'}> · {pa.playing}</span> : null}
+      {playing ? <span className="size-2 shrink-0 rounded-full bg-destructive" aria-hidden="true" /> : null}
+      <span className="min-w-0 flex-1 truncate">{player.name}</span>
+      <span
+        aria-hidden="true"
+        className={cn(
+          'numeric shrink-0 rounded-pill px-1.5 py-0.5 text-xs font-medium',
+          overLimit ? 'bg-[#fdeceb] text-destructive' : selected ? 'bg-navy text-white' : 'bg-well text-muted-ink',
+        )}
+      >
+        {played.short}
       </span>
+      <span className="sr-only">{played.full}{playing ? `, ${pa.playing}` : ''}</span>
     </button>
   )
 }
@@ -113,7 +124,7 @@ interface TeamPickerProps {
   picked: UUID[]
   mixed: boolean
   playing: Set<UUID>
-  playedText: (playerId: UUID) => string
+  played: (playerId: UUID) => { short: string; full: string }
   overLimit: (playerId: UUID) => boolean
   onPick: (playerIds: UUID[]) => void
 }
@@ -122,7 +133,7 @@ interface TeamPickerProps {
  * One team's pair for one match. A mixed-seed match asks for one player per
  * seed; any other match asks for two players.
  */
-function TeamPicker({ teamLabel, players, picked, mixed, playing, playedText, overLimit, onPick }: TeamPickerProps) {
+function TeamPicker({ teamLabel, players, picked, mixed, playing, played, overLimit, onPick }: TeamPickerProps) {
   const choose = (player: TeamPlayer) => {
     if (mixed) {
       const others = picked.filter((id) => players.find((candidate) => candidate.id === id)?.seed !== player.seed)
@@ -134,20 +145,20 @@ function TeamPicker({ teamLabel, players, picked, mixed, playing, playedText, ov
 
   return (
     <div role="group" aria-label={teamLabel} className="min-w-0 space-y-2">
-      <p className="text-[0.8125rem] font-semibold [overflow-wrap:anywhere]">{teamLabel}</p>
+      <p className="truncate text-xs font-semibold tracking-[0.02em] text-muted-ink">{teamLabel}</p>
       {mixed ? (
         ([1, 2] as const).map((seed) => (
-          <div className="grid grid-cols-[2.75rem_minmax(0,1fr)_minmax(0,1fr)] items-stretch gap-2" key={seed}>
-            <span className="self-center text-xs font-semibold text-muted-ink">{pa.seedShort(seed)}</span>
+          <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2" key={seed}>
+            <span className="text-xs font-semibold text-muted-ink">{pa.seedShort(seed)}</span>
             {players.filter((player) => player.seed === seed).map((player) => (
-              <PlayerChoice key={player.id} player={player} selected={picked.includes(player.id)} playedText={playedText(player.id)} overLimit={overLimit(player.id)} playing={playing.has(player.id)} onClick={() => choose(player)} />
+              <PlayerChoice key={player.id} player={player} selected={picked.includes(player.id)} played={played(player.id)} overLimit={overLimit(player.id)} playing={playing.has(player.id)} onClick={() => choose(player)} />
             ))}
           </div>
         ))
       ) : (
-        <div className="grid grid-cols-2 items-stretch gap-2">
+        <div className="grid grid-cols-2 gap-2">
           {players.map((player) => (
-            <PlayerChoice key={player.id} player={player} selected={picked.includes(player.id)} playedText={playedText(player.id)} overLimit={overLimit(player.id)} playing={playing.has(player.id)} onClick={() => choose(player)} />
+            <PlayerChoice key={player.id} player={player} selected={picked.includes(player.id)} played={played(player.id)} overLimit={overLimit(player.id)} playing={playing.has(player.id)} onClick={() => choose(player)} />
           ))}
         </div>
       )}
@@ -177,6 +188,7 @@ export function PairAssignmentForm({
   const [picks, setPicks] = useState<Record<string, UUID[]>>({})
   const [exceptionMode, setExceptionMode] = useState(false)
   const [confirmOpen, setConfirmOpen] = useState(false)
+  const [expandedDeciders, setExpandedDeciders] = useState<Set<UUID>>(new Set())
   const fixture = snapshot.fixtures.find((candidate) => candidate.id === fixtureId)
   const matches = fixture ? fixtureMatches(snapshot, fixture.id) : []
   const openMatches = matches.filter((match) => match.state === 'unstarted' && isDeciderOpen(snapshot, match))
@@ -222,10 +234,13 @@ export function PairAssignmentForm({
   const issues = validatePairDrafts(snapshot, changed).flatMap((result) => result.issues)
   // Counts include the picks in this dialog, so a player's total moves as staff choose.
   const projected = applyPairDrafts(snapshot, changed)
-  const playedText = (playerId: UUID) => {
-    if (!fixture) return ''
-    const count = stageAppearances(projected, fixture.stage, playerId)
-    return fixture.stage === 'qualifying' ? pa.played.qualifying(count) : pa.played.other(count)
+  const played = (playerId: UUID) => {
+    const count = fixture ? stageAppearances(projected, fixture.stage, playerId) : 0
+    const qualifying = fixture?.stage === 'qualifying'
+    return {
+      short: qualifying ? `${formatNumber(count)}/3` : formatNumber(count),
+      full: qualifying ? pa.played.qualifying(count) : pa.played.other(count),
+    }
   }
   // Each player plays one match per qualifying fixture, so three in all; only an exception goes past it.
   const overLimit = (playerId: UUID) => fixture?.stage === 'qualifying' && stageAppearances(projected, 'qualifying', playerId) > 3
@@ -267,9 +282,12 @@ export function PairAssignmentForm({
       ? pa.rule.qualifying
       : openMatches.some(isMixed) ? pa.rule['mixed-seed'] : pa.rule.free
   const header = (
-    <DialogHeader className="pr-6">
-      <DialogTitle>{fixture ? pa.title(fixtureLabel(fixture), teams) : pa.open}</DialogTitle>
-      {ruleText ? <DialogDescription className="text-[0.8125rem]">{ruleText}</DialogDescription> : null}
+    <DialogHeader className="shrink-0 border-b border-hairline px-5 pt-5 pb-4 pr-12 sm:px-6">
+      <DialogTitle className="text-base/snug [overflow-wrap:anywhere]">{fixture ? teams : pa.open}</DialogTitle>
+      <DialogDescription className="text-[0.8125rem]">
+        {fixture ? fixtureLabel(fixture) : null}
+        {ruleText ? ` · ${ruleText}` : null}
+      </DialogDescription>
     </DialogHeader>
   )
 
@@ -278,35 +296,56 @@ export function PairAssignmentForm({
     : (fixture.stage === 'third-place' || fixture.stage === 'final') && snapshot.tournament.finalistsConfirmedAt === null
       ? pa.awaitingFinalists
       : openMatches.length === 0 ? pa.locked : null
-  if (unavailable) return <>{header}<p className="text-[0.8125rem] text-muted-ink">{unavailable}</p></>
+  if (unavailable) {
+    return <>{header}<p className="px-5 py-5 text-[0.8125rem] text-muted-ink sm:px-6">{unavailable}</p></>
+  }
+
+  // A decider that may never be played stays folded until it is needed or already has pairs.
+  const folded = (match: FixtureMatch) =>
+    match.matchNumber === 3
+    && !isDeciderEligible(snapshot, match)
+    && !expandedDeciders.has(match.id)
+    && sides.every((side) => picked(match, side).length === 0)
 
   return (
     <>
       {header}
-      <div className="space-y-4">
+      <div className="min-h-0 flex-1 divide-y divide-hairline overflow-y-auto px-5 sm:px-6">
         {openMatches.map((match) => (
-          <section className="rounded-card border border-line bg-white p-4 sm:p-5" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
-            <h3 className="mb-3 text-sm font-semibold">
-              {messages.common.matchNumber(match.matchNumber)}
-              {match.court ? <span className="font-normal text-muted-ink"> · {messages.common.court(match.court)}</span> : null}
-              {!isDeciderEligible(snapshot, match) ? <span className="font-normal text-muted-ink"> · {messages.scoring.startBlocked.decider}</span> : null}
-            </h3>
-            <div className="grid gap-5 sm:grid-cols-2">
-              {sides.map((side) => {
-                const source = sourceOf(match, side)
-                if (source) {
-                  const pair = toPair(picked(match, side))
-                  return (
-                    <div className="min-w-0 space-y-2" key={side}>
-                      <p className="text-[0.8125rem] font-semibold [overflow-wrap:anywhere]">{teamName(snapshot, sideTeamId(fixture, side))}</p>
-                      <p className="rounded-field bg-well px-3 py-3 text-[0.8125rem]">
-                        <span className="block font-medium">{pair ? pairPlayers(snapshot, pair) : pa.notAssigned}</span>
-                        <span className="mt-0.5 block text-xs text-muted-ink">{pa.remainingOf(source.matchNumber)}</span>
-                      </p>
-                    </div>
-                  )
-                }
-                return (
+          <section className="py-5" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
+            <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+              <h3 className="text-sm font-semibold">
+                {messages.common.matchNumber(match.matchNumber)}
+                {match.court ? <span className="font-normal text-muted-ink"> · {messages.common.court(match.court)}</span> : null}
+              </h3>
+              {!isDeciderEligible(snapshot, match) ? <span className="text-xs text-muted-ink">{messages.scoring.startBlocked.decider}</span> : null}
+            </div>
+            {folded(match) ? (
+              <Button
+                variant="outline"
+                className="mt-3"
+                onClick={() => setExpandedDeciders((current) => new Set([...current, match.id]))}
+              >
+                {pa.prepareDecider}
+              </Button>
+            ) : sides.some((side) => sourceOf(match, side)) ? (
+              <div className="mt-2">
+                <p className="text-xs text-muted-ink">{pa.remainingOf(sourceOf(match, 'a')?.matchNumber ?? sourceOf(match, 'b')?.matchNumber ?? 1)}</p>
+                <dl className="mt-2 space-y-1.5 text-[0.8125rem]">
+                  {sides.map((side) => {
+                    const pair = toPair(picked(match, side))
+                    return (
+                      <div className="flex flex-wrap gap-x-2" key={side}>
+                        <dt className="text-muted-ink">{teamName(snapshot, sideTeamId(fixture, side))}:</dt>
+                        <dd className="font-medium">{pair ? pairPlayers(snapshot, pair) : pa.notAssigned}</dd>
+                      </div>
+                    )
+                  })}
+                </dl>
+              </div>
+            ) : (
+              <div className="mt-3 grid gap-4 sm:grid-cols-2 sm:gap-6">
+                {sides.map((side) => (
                   <TeamPicker
                     key={side}
                     teamLabel={teamName(snapshot, sideTeamId(fixture, side))}
@@ -314,40 +353,41 @@ export function PairAssignmentForm({
                     picked={picked(match, side)}
                     mixed={isMixed(match) && !exceptionMode}
                     playing={playing}
-                    playedText={playedText}
+                    played={played}
                     overLimit={overLimit}
                     onPick={(playerIds) => setPicks((existing) => ({ ...existing, [key(match.id, side)]: playerIds }))}
                   />
-                )
-              })}
-            </div>
+                ))}
+              </div>
+            )}
           </section>
         ))}
       </div>
 
-      {issueTexts.length > 0 ? (
-        <ul className="space-y-1 text-[0.8125rem] text-destructive" role="status">
-          {issueTexts.map((text) => <li key={text}>{text}</li>)}
-          {needsException && role !== 'organizer' ? <li>{pa.organizerOnly}</li> : null}
-        </ul>
-      ) : null}
-      {mutation.isError ? <p className="text-[0.8125rem] text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
-
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {role === 'organizer' && openMatches.some(isMixed) ? (
-          <Button type="button" variant="link" className="h-auto px-0" onClick={() => { setExceptionMode((value) => !value); setPicks({}) }}>
-            {exceptionMode ? pa.hideException : pa.showException}
-          </Button>
-        ) : <span />}
-        {needsException && role === 'organizer' ? (
-          <Button variant="outline" disabled={mutation.isPending} onClick={() => setConfirmOpen(true)}>
-            {pa.saveException}
-          </Button>
-        ) : (
-          <Button disabled={changed.length === 0 || issues.length > 0 || mutation.isPending} onClick={() => mutation.mutate(false)}>
-            {mutation.isPending ? messages.common.saving : pa.save}
-          </Button>
-        )}
+      <div className="shrink-0 space-y-2 border-t border-hairline bg-white px-5 py-3 sm:px-6">
+        {issueTexts.length > 0 ? (
+          <ul className="space-y-0.5 text-[0.8125rem] text-destructive" role="status">
+            {issueTexts.map((text) => <li key={text}>{text}</li>)}
+            {needsException && role !== 'organizer' ? <li>{pa.organizerOnly}</li> : null}
+          </ul>
+        ) : null}
+        {mutation.isError ? <p className="text-[0.8125rem] text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
+        <div className="flex items-center justify-between gap-3">
+          {role === 'organizer' && openMatches.some(isMixed) ? (
+            <Button type="button" variant="link" className="h-auto min-w-0 px-0 whitespace-normal text-left" onClick={() => { setExceptionMode((value) => !value); setPicks({}) }}>
+              {exceptionMode ? pa.hideException : pa.showException}
+            </Button>
+          ) : <span />}
+          {needsException && role === 'organizer' ? (
+            <Button variant="outline" className="shrink-0" disabled={mutation.isPending} onClick={() => setConfirmOpen(true)}>
+              {pa.saveException}
+            </Button>
+          ) : (
+            <Button className="shrink-0 px-6" disabled={changed.length === 0 || issues.length > 0 || mutation.isPending} onClick={() => mutation.mutate(false)}>
+              {mutation.isPending ? messages.common.saving : pa.save}
+            </Button>
+          )}
+        </div>
       </div>
 
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>

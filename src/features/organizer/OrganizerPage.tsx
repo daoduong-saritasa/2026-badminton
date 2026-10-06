@@ -190,7 +190,7 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
                   <Users /> {messages.pairAssignment.open}
                 </Button>
               </div>
-              <ul className="mt-3 space-y-3 border-l-2 border-hairline pl-4">
+              <ul className="mt-3 space-y-3 border-l-2 border-hairline pl-3 sm:pl-4">
                 {matches.map((match) => (
                   <li className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-x-3 gap-y-1 md:grid-cols-[minmax(0,1fr)_9rem_7.5rem]" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
                     <p className="col-start-1 row-start-1 text-sm font-semibold">{messages.common.matchNumber(match.matchNumber)}</p>
@@ -231,7 +231,7 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
       {startMutation.isError ? <p className="mt-3 text-[0.8125rem] text-destructive" role="alert">{errorMessage(startMutation.error)}</p> : null}
 
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
-        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-4xl">
+        <DialogContent className="flex max-h-[calc(100dvh-1.5rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
           {assignFixtureId ? (
             <PairAssignmentForm
               key={assignFixtureId}

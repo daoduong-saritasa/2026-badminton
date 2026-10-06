@@ -213,7 +213,6 @@ export default function App() {
               <span className="brand-mark" aria-hidden="true" />
               {snapshot.tournament.name}
             </h1>
-            <p className="ml-[2.5625rem] mt-2 text-sm text-muted-ink">{messages.app.stage[snapshot.tournament.stage]}</p>
           </div>
         </header>
         <OrganizerPage

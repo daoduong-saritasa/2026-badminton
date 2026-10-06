@@ -173,13 +173,13 @@ export const messages = {
 
   pairAssignment: {
     open: 'Xếp cặp',
-    title: (fixture: string, teams: string) => `${fixture} · ${teams}`,
     rule: {
       qualifying: 'Mỗi cặp 1 hạt giống 1 + 1 hạt giống 2; mỗi người đánh một trận.',
       'mixed-seed': 'Mỗi cặp 1 hạt giống 1 + 1 hạt giống 2.',
       free: 'Chọn bất kỳ hai người trong đội.',
     },
     seedShort: (seed: number) => `HG${formatNumber(seed)}`,
+    prepareDecider: 'Xếp cặp trước cho trận 3',
     remainingOf: (matchNumber: number) => `Hai người không đánh trận ${formatNumber(matchNumber)}`,
     playing: 'Đang thi đấu',
     played: {
