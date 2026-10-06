@@ -14,7 +14,7 @@ export function createGuideTour(render: (index: number | null) => void) {
     nextBtnText: messages.guide.next, prevBtnText: messages.guide.back, doneBtnText: messages.guide.done,
     showButtons: ['previous', 'next', 'close'],
     onPopoverRender: (popover) => {
-      popover.closeButton.textContent = messages.guide.close
+      popover.closeButton.replaceChildren()
       popover.closeButton.setAttribute('aria-label', messages.guide.close)
       const request = generation
       requestAnimationFrame(() => {
