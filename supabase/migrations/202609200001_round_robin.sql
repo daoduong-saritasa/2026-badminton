@@ -407,7 +407,7 @@ join public.teams as second_team
 where tournament.singleton;
 
 insert into public.team_fixtures (tournament_id, stage)
-select tournament.id, stage
+select tournament.id, placement.stage
 from public.tournament as tournament
 cross join (values ('third-place'), ('final')) as placement(stage)
 where tournament.singleton;
