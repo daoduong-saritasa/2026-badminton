@@ -49,7 +49,7 @@ reset against a database
 - [x] `tests/e2e/pair-assignment.spec.ts` — scenario 3 (amended 2026-10-06: also covers starting qualifying from the organizer overview)
 - [x] `tests/e2e/live-scoring.spec.ts` — scenario 4, on the `phone` project, with a second context for the public view (amended 2026-10-06: file is `live-scoring.phone.spec.ts` so the `phone` project picks it up)
 - [x] `tests/e2e/qualification.spec.ts` — scenario 5
-- [ ] `tests/e2e/result-correction.spec.ts` — scenario 6
+- [x] `tests/e2e/result-correction.spec.ts` — scenario 6 (amended 2026-10-06: also covers a correction that revokes finalist confirmation)
 - [ ] `tests/e2e/placement.spec.ts` — scenario 7
 - [ ] `tests/e2e/maintenance-reset.spec.ts` — scenario 8, progress mode only
 - [ ] Fix each defect the suite exposes, per PLAN.md → "Defects found"; one commit per defect
