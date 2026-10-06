@@ -47,7 +47,7 @@ reset against a database
 - [x] `tests/e2e/public-view.spec.ts` — PLAN.md → "Scenarios" 1 (amended 2026-10-06: the user's tournament always exists, so this covers a tournament in setup rather than no tournament)
 - [x] `tests/e2e/staff-access.spec.ts` — scenario 2; restore both PINs in `afterEach` through `rotate-pin`
 - [x] `tests/e2e/pair-assignment.spec.ts` — scenario 3 (amended 2026-10-06: also covers starting qualifying from the organizer overview)
-- [ ] `tests/e2e/live-scoring.spec.ts` — scenario 4, on the `phone` project, with a second context for the public view
+- [x] `tests/e2e/live-scoring.spec.ts` — scenario 4, on the `phone` project, with a second context for the public view (amended 2026-10-06: file is `live-scoring.phone.spec.ts` so the `phone` project picks it up)
 - [ ] `tests/e2e/qualification.spec.ts` — scenario 5
 - [ ] `tests/e2e/result-correction.spec.ts` — scenario 6
 - [ ] `tests/e2e/placement.spec.ts` — scenario 7
