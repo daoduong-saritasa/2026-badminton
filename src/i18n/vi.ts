@@ -228,6 +228,7 @@ export const messages = {
     startBody: (court: string) => `Trận bắt đầu trên ${court.toLowerCase()}. Thiết bị này sẽ dùng để ghi điểm.`,
     starting: 'Đang bắt đầu…',
     undo: 'Hoàn tác',
+    swapSides: 'Đổi bên',
     confirm: 'Kết thúc ván',
     savingPoint: 'Đang lưu điểm…',
     useLatestScore: 'Dùng tỉ số mới nhất',

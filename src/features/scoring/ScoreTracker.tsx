@@ -1,6 +1,6 @@
 import { useEffect, useReducer, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, Play, RefreshCw, RotateCcw, ShieldAlert, Users } from 'lucide-react'
+import { ArrowLeft, ArrowLeftRight, Play, RefreshCw, RotateCcw, ShieldAlert, Users } from 'lucide-react'
 
 import { canScore } from '@/data/staff'
 import { fetchTournament, mutateTournament } from '@/data/tournament'
@@ -100,6 +100,28 @@ async function latestMatch(matchId: string, resetGeneration: number): Promise<Pl
   return match
 }
 
+/**
+ * Whether this device shows side B on the left for a match. Stored per device
+ * so a reload keeps the referee's view; storage may be unavailable, in which
+ * case the default order applies.
+ */
+function readSidesSwapped(matchId: UUID): boolean {
+  try {
+    return window.localStorage.getItem(`badminton:sides-swapped:${matchId}`) === '1'
+  } catch {
+    return false
+  }
+}
+
+function writeSidesSwapped(matchId: UUID, swapped: boolean): void {
+  try {
+    if (swapped) window.localStorage.setItem(`badminton:sides-swapped:${matchId}`, '1')
+    else window.localStorage.removeItem(`badminton:sides-swapped:${matchId}`)
+  } catch {
+    // The view still swaps for this visit; it just is not remembered.
+  }
+}
+
 function ScoringSurface({
   match,
   snapshot,
@@ -119,6 +141,14 @@ function ScoringSurface({
   const fixture = fixtureOf(snapshot, match)
   const [takeoverOpen, setTakeoverOpen] = useState(false)
   const [actionFailure, setActionFailure] = useState<string | null>(null)
+  const [sidesSwapped, setSidesSwapped] = useState(() => readSidesSwapped(match.id))
+  const screenOrder: readonly Side[] = sidesSwapped ? ['b', 'a'] : ['a', 'b']
+  const toggleSides = () => {
+    setSidesSwapped((current) => {
+      writeSidesSwapped(match.id, !current)
+      return !current
+    })
+  }
 
   useEffect(() => {
     dispatch({
@@ -295,16 +325,28 @@ function ScoringSurface({
             {messages.scoring.confirm}
           </Button>
         </div>
-        <span className="hidden text-right text-xs font-semibold sm:block">
-          {match.court ? messages.common.court(match.court) : '–'}
-          <span className="block font-normal text-muted-ink">
-            {gamesToWinMatch(state.stage) === 2 ? messages.scoring.gameStatus(state.gameNumber, scoreText(tally)) : stageRule(state.stage)}
+        <div className="flex items-center gap-3">
+          <span className="hidden text-right text-xs font-semibold sm:block">
+            {match.court ? messages.common.court(match.court) : '–'}
+            <span className="block font-normal text-muted-ink">
+              {gamesToWinMatch(state.stage) === 2 ? messages.scoring.gameStatus(state.gameNumber, scoreText(tally)) : stageRule(state.stage)}
+            </span>
           </span>
-        </span>
+          <Button
+            variant="outline"
+            size="icon-sm"
+            aria-label={messages.scoring.swapSides}
+            aria-pressed={sidesSwapped}
+            title={messages.scoring.swapSides}
+            onClick={toggleSides}
+          >
+            <ArrowLeftRight />
+          </Button>
+        </div>
       </div>
 
       <div className="grid min-h-0 grid-cols-2 gap-2">
-        {(['a', 'b'] as const).map((side) => (
+        {screenOrder.map((side) => (
           <button
             type="button"
             key={side}
@@ -360,7 +402,7 @@ function ScoringSurface({
           <AlertDialogHeader>
             <AlertDialogTitle>{messages.scoring.confirmTitle(state.gameNumber)}</AlertDialogTitle>
             <AlertDialogDescription>
-              {messages.scoring.confirmBody(state.score.a, state.score.b)}
+              {messages.scoring.confirmBody(state.score[screenOrder[0]], state.score[screenOrder[1]])}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
