@@ -63,6 +63,8 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 
 - [x] (amended 2026-10-07) Center scores and the winner label vertically beside the team and pair block in `MatchSummary.tsx`.
 
+- [x] (amended 2026-10-07) Audit rules since the first published page against domain logic, migrations, and approved pair-assignment decisions; clarify scoring, fixture outcomes, placement gates, and playoff cutoffs in `RulesPage.tsx` and `vi.ts`.
+
 **Phase gate (hard):**
 - [x] Run `npm run typecheck` project-wide.
 - [x] Run `npm run test:related -- <changed source files from the phase diff>`; record pass, failure, and skip counts (2026-10-07: 7 passed, 0 failed, 0 skipped). If integration setup lacks the prohibited Supabase socket, defer only that blocked verification with substitute evidence and STATUS debt.
@@ -93,3 +95,4 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 - Guide spacing refinement passed the full 390px/1280px browser matrix, typecheck, build, and 7 related tests (0 failed, 0 skipped). Lint reported five existing Fast Refresh warnings.
 - Neutral card strips and schedule spacing passed the full guide browser matrix at 390px/1280px. A separate fictional-data organizer preview confirmed neutral ticket borders and no horizontal overflow at both widths.
 - Expanded score targets and top-bar save feedback passed the complete phone/desktop guide matrix, typecheck, build, and 7 related tests (0 failed, 0 skipped). Browser measurements confirmed identical idle/saving score-area bounds at 390×844, 1200×520, and 1280×900.
+- Rules audit compared the first published page history with current scoring, pair assignment, standings, playoff resolution, placement gates, and SQL. Revised copy passed phone/desktop expanded-section checks, direct scoring-example assertions, typecheck/build, and 7 related tests (0 failed, 0 skipped).
