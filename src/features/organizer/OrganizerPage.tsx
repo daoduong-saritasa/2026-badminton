@@ -43,8 +43,6 @@ import {
   isDeciderEligible,
   startBlocker,
   matchLabel,
-  matchPair,
-  pairPlayers,
   sideTeamId,
   teamName,
   teamNames,
@@ -53,6 +51,7 @@ import {
 import { errorMessage } from '@/i18n/errors'
 import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
+import { PairLines } from '@/features/tournament/PairLines'
 import { ResultEditor } from './ResultEditor'
 import { ResultSchedule } from './ResultSchedule'
 import { SetupForm } from './SetupForm'
@@ -130,13 +129,6 @@ function teams(snapshot: TournamentSnapshot, match: FixtureMatch): string {
   return messages.common.versus(teamName(snapshot, sideTeamId(fixture, 'a')), teamName(snapshot, sideTeamId(fixture, 'b')))
 }
 
-function pairsText(snapshot: TournamentSnapshot, match: FixtureMatch): string {
-  const pairA = matchPair(match, 'a')
-  const pairB = matchPair(match, 'b')
-  if (!pairA && !pairB) return messages.pairAssignment.notAssigned
-  return messages.common.versus(pairPlayers(snapshot, pairA), pairPlayers(snapshot, pairB))
-}
-
 /**
  * Matches waiting to be played. Choosing a court saves it at once; pairs are
  * assigned per fixture in a dialog; starting a match asks first because it
@@ -197,7 +189,7 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
                     <p className="col-start-2 row-start-1 text-right text-xs text-muted-ink md:col-start-3">
                       {startBlocker(snapshot, match) ? messages.scoring.startBlocked[startBlocker(snapshot, match) ?? 'pairs'] : null}
                     </p>
-                    <p className="col-span-2 row-start-2 text-[0.8125rem] text-muted-ink [overflow-wrap:anywhere] md:col-span-1 md:col-start-1">{pairsText(snapshot, match)}</p>
+                    <PairLines snapshot={snapshot} match={match} className="col-span-2 row-start-2 md:col-span-1 md:col-start-1" />
                     <div className="col-start-1 row-start-3 md:col-start-2 md:row-start-2">
                     <Select
                       value={match.court === null ? '' : String(match.court)}

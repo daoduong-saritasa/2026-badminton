@@ -13,6 +13,7 @@ import {
   type SaveFailureReason,
 } from './scoring-state'
 import { PairAssignmentForm } from './PairAssignmentForm'
+import { PairLines } from '@/features/tournament/PairLines'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -423,18 +424,14 @@ function MatchPicker({
 
   const row = (match: FixtureMatch, action: React.ReactNode) => (
     <li className="grid gap-3 border-t border-hairline py-4 first:border-t-0 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center" key={match.id}>
-      <span className="min-w-0">
+      <div className="min-w-0">
         <span className="block text-[0.9375rem] font-semibold [overflow-wrap:anywhere]">
           {messages.common.versus(teamName(snapshot, sideTeamId(fixtureOf(snapshot, match), 'a')), teamName(snapshot, sideTeamId(fixtureOf(snapshot, match), 'b')))}
         </span>
         <span className="mt-1 block text-[0.8125rem] text-muted-ink">
           {match.court ? messages.common.court(match.court) : messages.publicView.courtPending} · {matchLabel(snapshot, match)}
         </span>
-        <span className="mt-1 block text-[0.8125rem] [overflow-wrap:anywhere]">
-          {match.pairA || match.pairB
-            ? messages.common.versus(pairPlayers(snapshot, matchPair(match, 'a')), pairPlayers(snapshot, matchPair(match, 'b')))
-            : messages.pairAssignment.notAssigned}
-        </span>
+        <PairLines snapshot={snapshot} match={match} className="mt-1" />
         {isPlaying(match) ? (
           <span className="mt-1 block text-[0.8125rem] text-muted-ink">
             {gamesToWinMatch(stageOf(snapshot, match)) === 2
@@ -443,7 +440,7 @@ function MatchPicker({
             {scoreText(liveGame(match).score)}
           </span>
         ) : null}
-      </span>
+      </div>
       {action}
     </li>
   )
@@ -493,11 +490,7 @@ function MatchPicker({
                         <p className="text-right text-xs text-muted-ink">
                           {startBlocker(snapshot, match) ? messages.scoring.startBlocked[startBlocker(snapshot, match) ?? 'pairs'] : null}
                         </p>
-                        <p className="text-[0.8125rem] text-muted-ink [overflow-wrap:anywhere]">
-                          {match.pairA || match.pairB
-                            ? messages.common.versus(pairPlayers(snapshot, matchPair(match, 'a')), pairPlayers(snapshot, matchPair(match, 'b')))
-                            : messages.pairAssignment.notAssigned}
-                        </p>
+                        <PairLines snapshot={snapshot} match={match} />
                         <Button className="w-full" disabled={startBlocker(snapshot, match) !== null || startMutation.isPending} onClick={() => setStartMatchId(match.id)}>
                           <Play /> {messages.scoring.start}
                         </Button>
