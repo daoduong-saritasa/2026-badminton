@@ -189,7 +189,7 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
               </div>
               <ul className="mt-3 space-y-3 border-l-2 border-hairline pl-3 sm:pl-4">
                 {matches.map((match) => (
-                  <li className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-x-3 gap-y-1 md:grid-cols-[minmax(0,1fr)_9rem_7.5rem]" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
+                  <li className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-x-3 gap-y-1 md:grid-cols-[minmax(0,1fr)_14rem_7.5rem]" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
                     <p className="col-start-1 row-start-1 text-sm font-semibold">{messages.common.matchNumber(match.matchNumber)}</p>
                     <p className="col-start-2 row-start-1 text-right text-xs text-muted-ink md:col-start-3">
                       {startBlocker(snapshot, match) ? messages.scoring.startBlocked[startBlocker(snapshot, match) ?? 'pairs'] : null}
