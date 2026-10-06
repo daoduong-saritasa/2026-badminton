@@ -13,8 +13,8 @@ never start the stack.
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — End-to-end suite: in-progress
+- Current phase: 1 — done
+- Phase 1 — End-to-end suite: done
 - Verification debt: none
 
 ## Phase 1 — End-to-end suite
@@ -59,8 +59,8 @@ reset against a database
 - [x] `(amended 2026-10-06)` Fresh review P2: assert the exact wrong-PIN message in `tests/e2e/staff-access.spec.ts`
 - [x] `(amended 2026-10-06)` Fresh review residual: assign a court before the reset in `tests/e2e/maintenance-reset.spec.ts` so court retention is actually checked
 **Phase gate (hard):**
-- [ ] `npm run typecheck`
-- [ ] `npx vitest related --run --exclude 'tests/integration/**' <changed files>`
+- [x] `npm run typecheck` (exit 0)
+- [x] `npx vitest related --run --exclude 'tests/integration/**' <changed files>` (14 files, 158 passed, 0 skipped; 6 integration files excluded)
 
 **Review checklist (user, at PR review):**
 - [ ] With the stack up and both PIN variables set, run `npm run test:e2e` and confirm it passes
@@ -72,6 +72,6 @@ and ask before push/PR. Review checklist goes into the PR description.
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] `npx vitest run --exclude 'tests/integration/**'`
-- [ ] `npm run test:e2e` — needs the user's stack running; `[~]` if it is down
-- [ ] `npm run build`
+- [x] `npx vitest run --exclude 'tests/integration/**'` (14 files, 158 passed, 0 skipped; 6 integration files excluded)
+- [x] `npm run test:e2e` — 26 passed
+- [x] `npm run build` (exit 0; existing chunk-size warning)
