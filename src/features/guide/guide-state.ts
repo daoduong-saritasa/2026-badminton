@@ -42,8 +42,8 @@ const examples: Partial<GuideStep>[] = [
   { screen: 'score', target: 'point', stage: 'final', score: { a: 20, b: 18 } },
   { screen: 'score', target: 'confirmation', stage: 'final', score: { a: 21, b: 18 }, status: 'reviewing', dialog: 'result' },
   { screen: 'score', target: 'game', stage: 'final', gameNumber: 2 },
-  { screen: 'score', target: 'save', status: 'failed', score: { a: 5, b: 3 } },
-  { screen: 'score', target: 'retry', status: 'failed', score: { a: 5, b: 3 } },
+  { screen: 'score', target: 'save', status: 'failed', score: { a: 6, b: 3 } },
+  { screen: 'score', target: 'retry', status: 'failed', score: { a: 6, b: 3 } },
   { screen: 'score', target: 'point', score: { a: 6, b: 3 } },
   { screen: 'score', target: 'takeover', score: { a: 8, b: 6 }, ownership: false },
   { screen: 'score', target: 'confirmation', score: { a: 8, b: 6 }, ownership: false, dialog: 'takeover' },
@@ -61,6 +61,16 @@ export function guideExample(index: number) {
   const step = guideSteps[index]
   if (!step) throw new RangeError('Unknown guide step')
   const snapshot = guideSnapshot(step.stage, step.assigned)
+  if (index === 3) {
+    snapshot.teams.push({ id: 'guide-c', name: 'Đội Gió' }, { id: 'guide-d', name: 'Đội Sao' })
+    snapshot.players.push(...snapshot.players.map((player) => ({ ...player, id: player.id.replace('guide-a', 'guide-c').replace('guide-b', 'guide-d'), teamId: player.teamId === 'guide-a' ? 'guide-c' : 'guide-d' })))
+    snapshot.fixtures.push({ id: 'guide-active-fixture', stage: 'qualifying', teamAId: 'guide-c', teamBId: 'guide-d', version: 1 })
+    snapshot.matches.push({ ...snapshot.matches[0], id: 'guide-active-match', fixtureId: 'guide-active-fixture', court: 2, state: 'playing',
+      pairA: { player1Id: 'guide-c-0', player2Id: 'guide-c-2' }, pairB: { player1Id: 'guide-d-0', player2Id: 'guide-d-2' },
+      games: [{ gameNumber: 1, score: { a: 8, b: 6 }, confirmedAt: null }],
+    })
+    snapshot.matches[1].court = null
+  }
   const match = snapshot.matches[0]
   match.state = step.completed ? 'completed' : step.screen === 'score' ? 'playing' : 'unstarted'
   match.games = step.gameNumber === 2 ? [{ gameNumber: 1, score: { a: 21, b: 18 }, confirmedAt: '2026-10-07T00:00:00Z' }] : []

@@ -356,7 +356,7 @@ export function PairAssignmentView({
               {pa.saveException}
             </Button>
           ) : (
-            <Button className="shrink-0 px-6" disabled={changed.length === 0 || issues.length > 0 || pending} onClick={() => save(false)}>
+            <Button data-guide="pairs-saved" className="shrink-0 px-6" disabled={changed.length === 0 || issues.length > 0 || pending} onClick={() => save(false)}>
               {pending ? messages.common.saving : pa.save}
             </Button>
           )}

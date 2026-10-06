@@ -32,9 +32,17 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 - [x] In `scripts/verify-referee-guide.ts`, fail on Supabase HTTP/WebSocket activity, compare seeded staff-session and scoring-preference storage before/after, and verify reload resets progress; never navigate to the live tournament during isolation checks.
 - [ ] Run `npm run dev -- --host 127.0.0.1 --port 5181 --strictPort` if no preview exists, then `node --experimental-strip-types scripts/verify-referee-guide.ts`; resolve missing targets, stale overlays, unreachable controls, and horizontal overflow.
 
+- [x] (amended 2026-10-07) Wait for stable popover geometry in `scripts/verify-referee-guide.ts` before viewport assertions.
+
+- [x] (amended 2026-10-07) Share `MatchPickerView.tsx` between `ScoreTracker.tsx` and `GuidePage.tsx`; show both upcoming and active fictional matches.
+- [x] (amended 2026-10-07) Own arrow-key navigation in `guide-tour.ts` so rapid Back restores the correct state.
+
+- [x] (amended 2026-10-07) Target the actual save button in `PairAssignmentView.tsx`; preserve the optimistic score across retry in `guide-state.ts` and its test.
+- [x] (amended 2026-10-07) Distinguish Vite development sockets from Supabase sockets in `scripts/verify-referee-guide.ts`.
+
 **Phase gate (hard):**
-- [ ] Run `npm run typecheck` project-wide.
-- [ ] Run `npm run test:related -- <changed source files from the phase diff>`; record pass, failure, and skip counts. If integration setup lacks the prohibited Supabase socket, defer only that blocked verification with substitute evidence and STATUS debt.
+- [x] Run `npm run typecheck` project-wide.
+- [x] Run `npm run test:related -- <changed source files from the phase diff>`; record pass, failure, and skip counts (2026-10-07: 7 passed, 0 failed, 0 skipped). If integration setup lacks the prohibited Supabase socket, defer only that blocked verification with substitute evidence and STATUS debt.
 
 **Review checklist (user, at PR review):**
 - [ ] Open `/guide` and `/guide/` directly and reload; confirm the fictional-data notice and optional Start control.

@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, KeyRound, Play, Users } from 'lucide-react'
+import { ArrowLeft, KeyRound } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { PairAssignmentView } from '@/features/scoring/PairAssignmentView'
 import { ScoreTrackerView, ScoreConfirmationView } from '@/features/scoring/ScoreTrackerView'
 import { StaffAccessView } from '@/features/staff/StaffAccessView'
-import { PairLines } from '@/features/tournament/PairLines'
-import { courtLabel, startBlocker } from '@/features/tournament/labels'
+import { MatchPickerView } from '@/features/scoring/MatchPickerView'
 import { messages } from '@/i18n/vi'
 import { guidePicks } from './guide-data'
 import { guideExample, guideSteps } from './guide-state'
@@ -49,26 +48,13 @@ export function GuidePage() {
       <Button ref={startButton} onClick={handleStart} disabled={index !== null}>{visited ? messages.guide.restart : messages.guide.start}</Button>
     </section>
     <div className="guide-example" onClickCapture={blockExampleClick} onKeyDownCapture={blockExampleKey} data-step={index ?? 'closed'} data-target={step.target}>
-      {(step.screen === 'picker' || step.screen === 'intro' || hasForm) && <section data-guide="matches" className="space-y-4">
+      {(step.screen === 'picker' || step.screen === 'intro' || hasForm) && <section className="space-y-4">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-lg font-semibold">{snapshot.tournament.name}</h2>
           <Button data-guide="access" variant="outline"><KeyRound />{messages.app.staffAccess}</Button>
         </div>
         {step.completed && <p data-guide="completed" className="text-sm font-semibold">{messages.guide.completed}</p>}
-        <div className="rounded-card border border-hairline bg-white p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="font-semibold">Đội Mây · Đội Nắng</h3>
-            <Button variant="outline"><Users />{messages.pairAssignment.open}</Button>
-          </div>
-          <ul className="mt-4 space-y-4">
-            {snapshot.matches.map((item) => <li key={item.id} className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-2 border-t border-hairline pt-3">
-              <p className="text-sm font-semibold">{messages.common.matchNumber(item.matchNumber)} · {courtLabel(snapshot, item.court ?? 1)}</p>
-              <p data-guide={item.matchNumber === 1 ? 'blocked' : undefined} className="text-right text-xs text-muted-ink">{item.state === 'completed' ? messages.guide.completed : startBlocker(snapshot, item) ? messages.scoring.startBlocked[startBlocker(snapshot, item) ?? 'pairs'] : null}</p>
-              <PairLines snapshot={snapshot} match={item} />
-              <Button disabled={startBlocker(snapshot, item) !== null || item.state === 'completed'}><Play />{messages.scoring.start}</Button>
-            </li>)}
-          </ul>
-        </div>
+        <MatchPickerView snapshot={snapshot} onSelect={noop} onExit={noop} onAssign={noop} onStart={noop} />
       </section>}
       {step.screen === 'score' && <ScoreTrackerView snapshot={snapshot} match={match} state={state}
         sidesSwapped={step.swapped} screenOrder={step.swapped ? ['b', 'a'] : ['a', 'b']} actionPending={false} actionFailure={null}
@@ -86,7 +72,7 @@ export function GuidePage() {
         {step.screen === 'access' ? <div data-guide="pin" className="space-y-4">
           <StaffAccessView pin="1234" onPinChange={noop} onSubmit={blockExampleClick} />
           <p className="text-sm text-muted-ink">{messages.guide.examplePin}</p>
-        </div> : <div data-guide={index === 6 ? 'pairs-saved' : 'pairs'} className="flex min-h-0 flex-1 flex-col">
+        </div> : <div data-guide="pairs" className="flex min-h-0 flex-1 flex-col">
           <PairAssignmentView key={index} snapshot={snapshot} fixtureId="guide-fixture" role="referee" onSave={noop} initialPicks={index === 6 ? guidePicks : {}} />
         </div>}
       </DialogContent>

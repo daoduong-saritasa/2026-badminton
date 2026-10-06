@@ -15,8 +15,10 @@ async function assertStep(page: Page, index: number) {
   await expect(page.locator('.driver-active-element')).toHaveAttribute('data-guide', (await page.locator('.guide-example').getAttribute('data-target'))!)
   const next = page.locator('.driver-popover-next-btn')
   await expect(next).toBeVisible()
-  const bounds = await next.boundingBox()
-  assert(bounds && bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= page.viewportSize()!.width && bounds.y + bounds.height <= page.viewportSize()!.height, `Navigation outside viewport at step ${index}`)
+  await expect.poll(async () => {
+    const bounds = await next.boundingBox()
+    return Boolean(bounds && bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= page.viewportSize()!.width && bounds.y + bounds.height <= page.viewportSize()!.height)
+  }, { message: `Navigation outside viewport at step ${index}` }).toBe(true)
   assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `Horizontal overflow at step ${index}`)
 }
 
@@ -38,7 +40,7 @@ try {
     const requests: string[] = []
     page.on('pageerror', (error) => errors.push(error.message))
     page.on('request', (request) => { if (backend.test(request.url())) requests.push(request.url()) })
-    page.on('websocket', (socket) => requests.push(socket.url()))
+    page.on('websocket', (socket) => { if (backend.test(socket.url())) requests.push(socket.url()) })
     for (const route of ['/guide', '/guide/']) {
       await page.goto(`${baseURL}${route}`)
       await expect(page.getByRole('heading', { name: 'Hướng dẫn trọng tài' })).toBeVisible()
