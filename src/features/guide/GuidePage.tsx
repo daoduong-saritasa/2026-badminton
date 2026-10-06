@@ -38,13 +38,13 @@ export function GuidePage() {
   }
   const hasForm = index !== null && (step.screen === 'access' || step.screen === 'pairs')
   return <div className="app-shell guide-shell" data-guide-total={guideSteps.length}>
-    <header className="mb-6 space-y-3">
+    <header className="guide-header">
       <a href="/" className="inline-flex items-center gap-2 text-sm text-navy"><ArrowLeft className="size-4" />{messages.guide.live}</a>
-      <h1 className="text-2xl font-bold">{messages.guide.heading}</h1>
+      <h1 className="text-[clamp(1.5rem,3vw,2rem)] font-bold tracking-tight">{messages.guide.heading}</h1>
       <p className="text-sm text-muted-ink">{messages.guide.notice}</p>
     </header>
-    <section data-guide="intro" className="mb-6 space-y-3 border-b border-hairline pb-6">
-      <p>{messages.guide.intro}</p>
+    <section data-guide="intro" className="guide-intro">
+      <p className="max-w-xl text-sm leading-relaxed text-muted-ink">{messages.guide.intro}</p>
       <Button ref={startButton} onClick={handleStart} disabled={index !== null}>{visited ? messages.guide.restart : messages.guide.start}</Button>
     </section>
     <div className="guide-example" onClickCapture={blockExampleClick} onKeyDownCapture={blockExampleKey} data-step={index ?? 'closed'} data-target={step.target}>
@@ -60,7 +60,7 @@ export function GuidePage() {
         sidesSwapped={step.swapped} screenOrder={step.swapped ? ['b', 'a'] : ['a', 'b']} actionPending={false} actionFailure={null}
         takeoverOpen={false} takeoverPending={false} dialogs={false} onExit={noop} toggleSides={noop} handlePoint={noop} handleRetry={noop}
         onUndo={noop} onConfirm={noop} onTakeover={noop} onReconcile={noop} onDismissReview={noop} setTakeoverOpen={noop} />}
-      {step.dialog && <section data-guide="confirmation" role="dialog" aria-modal="false" aria-label={step.title} className="guide-confirmation rounded-card border border-line bg-white p-5">
+      {step.dialog && <section data-guide="confirmation" role="dialog" aria-modal="false" aria-label={step.title} className="guide-confirmation rounded-card border border-line bg-white">
         <ScoreConfirmationView inline kind={step.dialog} gameNumber={step.gameNumber} score={[step.score.a, step.score.b]} onCancel={noop} onConfirm={noop} />
       </section>}
       {step.screen === 'finish' && <section data-guide="finish" className="space-y-3"><h2 className="text-lg font-semibold">{step.title}</h2><p>{messages.guide.finish}</p></section>}
@@ -68,7 +68,7 @@ export function GuidePage() {
     <Dialog open={hasForm} modal={false} onOpenChange={noop}>
       <DialogContent showCloseButton={false} onInteractOutside={(event) => event.preventDefault()} onEscapeKeyDown={(event) => event.preventDefault()}
         onClickCapture={blockExampleClick} onKeyDownCapture={blockExampleKey}
-        className={step.screen === 'pairs' ? 'guide-form flex max-h-[65dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl' : 'guide-form sm:max-w-sm'}>
+        className={step.screen === 'pairs' ? 'guide-form guide-pair-form flex max-h-[65dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl' : 'guide-form guide-access-form sm:max-w-sm'}>
         {step.screen === 'access' ? <div data-guide="pin" className="space-y-4">
           <StaffAccessView pin="1234" onPinChange={noop} onSubmit={blockExampleClick} />
           <p className="text-sm text-muted-ink">{messages.guide.examplePin}</p>

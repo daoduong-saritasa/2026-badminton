@@ -49,6 +49,8 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 
 - [x] (amended 2026-10-07) Give the text Close control the shared ink color in `guide.css` for readable contrast.
 
+- [x] (amended 2026-10-07) Refine guide page, popover, and mock-dialog spacing in `GuidePage.tsx` and `guide.css`; verify phone/desktop targets and keyboard navigation.
+
 **Phase gate (hard):**
 - [x] Run `npm run typecheck` project-wide.
 - [x] Run `npm run test:related -- <changed source files from the phase diff>`; record pass, failure, and skip counts (2026-10-07: 7 passed, 0 failed, 0 skipped). If integration setup lacks the prohibited Supabase socket, defer only that blocked verification with substitute evidence and STATUS debt.
@@ -76,3 +78,4 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 - Fresh review found missing shared route styles. The correction passed the single re-review through `1a44c94` with no actionable findings.
 - Cloudflare preview routing and live database mutations remain for user verification; no deployment was performed.
 - The final Close text color passed a browser contrast check; dialog Tab navigation, typecheck, related tests, and build passed afterward.
+- Guide spacing refinement passed the full 390px/1280px browser matrix, typecheck, build, and 7 related tests (0 failed, 0 skipped). Lint reported five existing Fast Refresh warnings.
