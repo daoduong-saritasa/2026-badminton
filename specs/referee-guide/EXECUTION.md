@@ -40,6 +40,13 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 - [x] (amended 2026-10-07) Target the actual save button in `PairAssignmentView.tsx`; preserve the optimistic score across retry in `guide-state.ts` and its test.
 - [x] (amended 2026-10-07) Distinguish Vite development sockets from Supabase sockets in `scripts/verify-referee-guide.ts`.
 
+- [x] (amended 2026-10-07) Load shared `App.css` in `src/main.tsx` so guide/rules retain layout without loading the live app.
+- [x] (amended 2026-10-07) Restore successful-save draft and confirmation cleanup through the `PairAssignmentView.tsx` / `PairAssignmentForm.tsx` completion callback.
+
+- [x] (amended 2026-10-07) Add a browser regression in `scripts/verify-referee-guide.ts` that saves through the shared pair view and verifies fresh saved pairs replace its drafts.
+
+- [x] (amended 2026-10-07) Focus Driver.js navigation after popover insertion in `guide-tour.ts`; assert Tab/Shift+Tab access at dialog steps in `scripts/verify-referee-guide.ts`.
+
 **Phase gate (hard):**
 - [x] Run `npm run typecheck` project-wide.
 - [x] Run `npm run test:related -- <changed source files from the phase diff>`; record pass, failure, and skip counts (2026-10-07: 7 passed, 0 failed, 0 skipped). If integration setup lacks the prohibited Supabase socket, defer only that blocked verification with substitute evidence and STATUS debt.

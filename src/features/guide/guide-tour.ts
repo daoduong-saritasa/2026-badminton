@@ -16,7 +16,10 @@ export function createGuideTour(render: (index: number | null) => void) {
     onPopoverRender: (popover) => {
       popover.closeButton.textContent = messages.guide.close
       popover.closeButton.setAttribute('aria-label', messages.guide.close)
-      popover.nextButton.focus()
+      const request = generation
+      requestAnimationFrame(() => {
+        if (active && request === generation && popover.nextButton.isConnected) popover.nextButton.focus()
+      })
     },
     onNextClick: () => { if (index === guideSteps.length - 1) tour.destroy(); else show(nextGuideIndex(index, 1)) },
     onPrevClick: () => show(nextGuideIndex(index, -1)),

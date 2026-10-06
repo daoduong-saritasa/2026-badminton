@@ -172,7 +172,7 @@ export function PairAssignmentView({
   snapshot: TournamentSnapshot
   fixtureId: UUID
   role: StaffRole
-  onSave: (input: { fixtureId: UUID; version: number; assignments: (PairDraft & { matchVersion: number })[]; ruleException: boolean }) => void
+  onSave: (input: { fixtureId: UUID; version: number; assignments: (PairDraft & { matchVersion: number })[]; ruleException: boolean }, onComplete: () => void) => void
   pending?: boolean
   error?: string | null
   initialPicks?: Record<string, UUID[]>
@@ -245,6 +245,9 @@ export function PairAssignmentView({
     if (!fixture) return
     onSave({ fixtureId: fixture.id, version: fixture.version, ruleException,
       assignments: changed.map((draft) => ({ ...draft, matchVersion: matches.find((match) => match.id === draft.matchId)?.version ?? 0 })),
+    }, () => {
+      setConfirmOpen(false)
+      setPicks({})
     })
   }
 

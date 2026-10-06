@@ -20,8 +20,6 @@ import { StandingsTable } from '@/features/tournament/StandingsTable'
 import { tournamentTitle } from '@/features/tournament/document-title'
 import { TournamentPage } from '@/features/tournament/TournamentPage'
 
-import './App.css'
-
 type PublicView = 'matches' | 'standings' | 'knockouts'
 type StaffView = 'scoring' | 'organizer'
 type AppView = PublicView | StaffView
