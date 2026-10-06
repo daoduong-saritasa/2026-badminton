@@ -7,5 +7,5 @@
 .referee-guide-popover .driver-popover-footer { gap: .75rem; flex-wrap: wrap; }
 .referee-guide-popover .driver-popover-navigation-btns { gap: .5rem; }
 .referee-guide-popover .driver-popover-next-btn, .referee-guide-popover .driver-popover-prev-btn { min-height: 44px; padding: 8px 12px; font-size: .875rem; }
-.referee-guide-popover .driver-popover-close-btn { position: static; width: auto; height: auto; min-height: 32px; margin-left: auto; font-size: .8125rem; }
+.referee-guide-popover .driver-popover-close-btn { color: var(--ink); position: static; width: auto; height: auto; min-height: 32px; margin-left: auto; font-size: .8125rem; }
 @media (prefers-reduced-motion: reduce) { .guide-shell *, .guide-form * { animation: none !important; transition: none !important; } }

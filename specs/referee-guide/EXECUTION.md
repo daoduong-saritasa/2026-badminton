@@ -5,9 +5,9 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — Isolated referee walkthrough: in-progress
-- Verification debt: none
+- Current phase: 1 — done-with-debt
+- Phase 1 — Isolated referee walkthrough: done-with-debt
+- Verification debt: Database integration setup failed in `auth`, `impacts`, `pair-assignment`, `reset`, `round-robin-phase1`, and `tournament`. Local Supabase remains prohibited. Substitute evidence: 168 non-database tests passed, 7 related tests passed, typecheck/build succeeded, and phone/desktop browser checks passed.
 
 ## Phase 1 — Isolated referee walkthrough
 
@@ -30,7 +30,7 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 - [x] Add `src/features/guide/guide-state.test.ts` for every forward/backward transition, Close/Restart, stage changes, failure/retry, and coherent pair/game examples.
 - [x] Add `scripts/verify-referee-guide.ts` using the installed Playwright library against `http://127.0.0.1:5181`; verify both routes, all targets, dialog transitions, keyboard navigation, and 390px/1280px layouts without the database-dependent E2E setup.
 - [x] In `scripts/verify-referee-guide.ts`, fail on Supabase HTTP/WebSocket activity, compare seeded staff-session and scoring-preference storage before/after, and verify reload resets progress; never navigate to the live tournament during isolation checks.
-- [ ] Run `npm run dev -- --host 127.0.0.1 --port 5181 --strictPort` if no preview exists, then `node --experimental-strip-types scripts/verify-referee-guide.ts`; resolve missing targets, stale overlays, unreachable controls, and horizontal overflow.
+- [x] Run `npm run dev -- --host 127.0.0.1 --port 5181 --strictPort` if no preview exists, then `node --experimental-strip-types scripts/verify-referee-guide.ts`; resolve missing targets, stale overlays, unreachable controls, and horizontal overflow.
 
 - [x] (amended 2026-10-07) Wait for stable popover geometry in `scripts/verify-referee-guide.ts` before viewport assertions.
 
@@ -46,6 +46,8 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 - [x] (amended 2026-10-07) Add a browser regression in `scripts/verify-referee-guide.ts` that saves through the shared pair view and verifies fresh saved pairs replace its drafts.
 
 - [x] (amended 2026-10-07) Focus Driver.js navigation after popover insertion in `guide-tour.ts`; assert Tab/Shift+Tab access at dialog steps in `scripts/verify-referee-guide.ts`.
+
+- [x] (amended 2026-10-07) Give the text Close control the shared ink color in `guide.css` for readable contrast.
 
 **Phase gate (hard):**
 - [x] Run `npm run typecheck` project-wide.
@@ -63,5 +65,14 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] Run `npm run test`; report failed integration suites plus pass and skip counts. The prohibited local Supabase socket blocks database verification; record it as `[~]` with successful non-database results and STATUS debt, without weakening tests.
-- [ ] Run `npm run build` to verify the new entry route, dependency, and guide bundle.
+- [~] Run `npm run test`; 168 tests passed and 42 skipped. Six integration suites failed setup because local Supabase is unavailable. The prohibited local Supabase socket blocks database verification; record it as `[~]` with successful non-database results and STATUS debt, without weakening tests.
+- [x] Run `npm run build` to verify the new entry route, dependency, and guide bundle.
+
+## Verification record
+
+- Browser verifier passed both guide routes at 390px and 1280px, including all 28 steps and every Close/Restart position.
+- Browser checks confirmed Back, arrows, Escape, Tab/Shift+Tab, reload reset, and successful pair-save draft cleanup.
+- No Supabase HTTP/WebSocket request or live-key storage access occurred; seeded staff and scoring preferences remained unchanged.
+- Fresh review found missing shared route styles. The correction passed the single re-review through `1a44c94` with no actionable findings.
+- Cloudflare preview routing and live database mutations remain for user verification; no deployment was performed.
+- The final Close text color passed a browser contrast check; dialog Tab navigation, typecheck, related tests, and build passed afterward.
