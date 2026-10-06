@@ -26,7 +26,7 @@
 
 .guide-intro > button { flex-shrink: 0; }
 .guide-example > section { gap: 1.25rem; }
-.guide-example .score-viewport { height: min(38rem, 75dvh); min-height: 24rem; }
+.guide-example .score-viewport { height: calc(100dvh - 2rem); min-height: 24rem; }
 
 .guide-confirmation {
   max-width: 32rem;

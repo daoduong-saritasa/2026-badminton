@@ -55,6 +55,10 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 
 - [x] (amended 2026-10-07) Remove the next-match preview from `MatchTicket.tsx` and its label computation in `TournamentPage.tsx`; retain current game tally.
 
+- [x] (amended 2026-10-07) Maximize score touch areas in `ScoreTrackerView.tsx`, `App.css`, and `guide.css`; remove idle feedback space, reduce surrounding gaps, and expand the guide scoring example. Verify phone/desktop scoring and feedback layouts.
+
+- [x] (amended 2026-10-07) Move save feedback to the center of the score header in `ScoreTrackerView.tsx` and `App.css`; keep idle/saving touch areas stable on phone and desktop.
+
 **Phase gate (hard):**
 - [x] Run `npm run typecheck` project-wide.
 - [x] Run `npm run test:related -- <changed source files from the phase diff>`; record pass, failure, and skip counts (2026-10-07: 7 passed, 0 failed, 0 skipped). If integration setup lacks the prohibited Supabase socket, defer only that blocked verification with substitute evidence and STATUS debt.
@@ -84,3 +88,4 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 - The final Close text color passed a browser contrast check; dialog Tab navigation, typecheck, related tests, and build passed afterward.
 - Guide spacing refinement passed the full 390px/1280px browser matrix, typecheck, build, and 7 related tests (0 failed, 0 skipped). Lint reported five existing Fast Refresh warnings.
 - Neutral card strips and schedule spacing passed the full guide browser matrix at 390px/1280px. A separate fictional-data organizer preview confirmed neutral ticket borders and no horizontal overflow at both widths.
+- Expanded score targets and top-bar save feedback passed the complete phone/desktop guide matrix, typecheck, build, and 7 related tests (0 failed, 0 skipped). Browser measurements confirmed identical idle/saving score-area bounds at 390×844, 1200×520, and 1280×900.

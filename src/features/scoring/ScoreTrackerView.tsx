@@ -24,13 +24,35 @@ export function ScoreTrackerView({ snapshot, match, state, sidesSwapped, screenO
   const tally = matchGameTally(match.games)
 
   return (
-    <main className="score-viewport scoring-surface grid gap-3 bg-background">
-      <div className="flex items-center justify-between gap-3">
+    <main className="score-viewport scoring-surface grid bg-background">
+      <div className="score-header grid items-center gap-2">
         <Button variant="outline" size="sm" onClick={onExit}>
           <ArrowLeft /> {messages.scoring.back}
         </Button>
-        <div className="flex items-center gap-3">
-          <span data-guide="game" className="min-w-0 text-right text-xs font-semibold [overflow-wrap:anywhere]">
+        <div className="score-feedback min-h-8 min-w-0 self-center text-center text-[0.8125rem] text-navy" data-guide="save" aria-live="polite">
+          {state.status === 'saving' ? messages.scoring.savingPoint : null}
+          {failed ? (
+            <div className="flex flex-wrap items-center justify-center gap-2">
+              <span className="text-destructive">{failed.message}</span>
+              {failed.reason === 'version-conflict' && failed.observed ? (
+                <Button size="sm" variant="outline" onClick={() => onReconcile()}>
+                  {messages.scoring.useLatestScore}
+                </Button>
+              ) : null}
+              {!needsTakeover ? (
+                <Button size="sm" variant="outline" data-guide="retry" onClick={handleRetry}><RefreshCw /> {messages.scoring.retry}</Button>
+              ) : null}
+            </div>
+          ) : null}
+          {needsTakeover ? (
+            <Button size="sm" variant="outline" className="rounded-full" disabled={actionPending} data-guide="takeover" onClick={() => setTakeoverOpen(true)}>
+              <ShieldAlert /> {messages.scoring.takeOverScoring}
+            </Button>
+          ) : null}
+          {actionFailure ? <p className="mt-1 text-destructive" role="alert">{actionFailure}</p> : null}
+        </div>
+        <div className="score-details flex items-center gap-3">
+          <span data-guide="game" className="score-court min-w-0 text-right text-xs font-semibold [overflow-wrap:anywhere]">
             {match.court ? courtLabel(snapshot, match.court) : '–'}
             <span className="block font-normal text-muted-ink">
               {gamesToWinMatch(state.stage) === 2 ? messages.scoring.gameStatus(state.gameNumber, scoreText(tally)) : stageRule(state.stage)}
@@ -50,14 +72,14 @@ export function ScoreTrackerView({ snapshot, match, state, sidesSwapped, screenO
         </div>
       </div>
 
-      <div className="score-panels grid min-h-0 gap-3">
+      <div className="score-panels grid min-h-0 gap-2">
         {screenOrder.map((side) => (
           <button
             type="button"
             key={side}
             data-guide={side === 'a' ? 'point' : undefined}
             className={cn(
-              'score-panel grid min-h-0 touch-manipulation select-none rounded-card border p-5 transition-colors disabled:cursor-default',
+              'score-panel grid min-h-0 touch-manipulation select-none rounded-card border p-4 transition-colors disabled:cursor-default',
               side === 'a' ? 'border-peach-line bg-peach text-ink' : 'border-line bg-ice text-ink',
             )}
             disabled={disabled}
@@ -76,7 +98,7 @@ export function ScoreTrackerView({ snapshot, match, state, sidesSwapped, screenO
         ))}
       </div>
 
-      <div className="score-actions grid grid-cols-2 gap-3">
+      <div className="score-actions grid grid-cols-2 gap-2">
         <Button
           variant="ghost"
           size="sm"
@@ -96,28 +118,7 @@ export function ScoreTrackerView({ snapshot, match, state, sidesSwapped, screenO
         </Button>
       </div>
 
-      <div className="min-h-8 self-center text-center text-[0.8125rem] text-navy" data-guide="save" aria-live="polite">
-        {state.status === 'saving' ? messages.scoring.savingPoint : null}
-        {failed ? (
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="text-destructive">{failed.message}</span>
-            {failed.reason === 'version-conflict' && failed.observed ? (
-              <Button size="sm" variant="outline" onClick={() => onReconcile()}>
-                {messages.scoring.useLatestScore}
-              </Button>
-            ) : null}
-            {!needsTakeover ? (
-              <Button size="sm" variant="outline" data-guide="retry" onClick={handleRetry}><RefreshCw /> {messages.scoring.retry}</Button>
-            ) : null}
-          </div>
-        ) : null}
-        {needsTakeover ? (
-          <Button size="sm" variant="outline" className="rounded-full" disabled={actionPending} data-guide="takeover" onClick={() => setTakeoverOpen(true)}>
-            <ShieldAlert /> {messages.scoring.takeOverScoring}
-          </Button>
-        ) : null}
-        {actionFailure ? <p className="mt-1 text-destructive" role="alert">{actionFailure}</p> : null}
-      </div>
+
 
       <AlertDialog open={dialogs && state.status === 'reviewing'} onOpenChange={(open) => {
         if (!open) onDismissReview()
