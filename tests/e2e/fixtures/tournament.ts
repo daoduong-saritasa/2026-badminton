@@ -151,6 +151,34 @@ export async function playMatch(
   for (const [a, b] of games) await scoreGame(scorer, matchId, a, b)
 }
 
+/**
+ * Prepares and plays a one-game match that `winnerId` wins `winning`–`losing`,
+ * whichever side that team is on.
+ */
+export async function playSingleGame(
+  organizer: LocalSession,
+  matchId: string,
+  winnerId: string,
+  winning: number,
+  losing: number,
+): Promise<void> {
+  await prepareMatch(organizer, matchId, 1)
+  const { snapshot } = await readState()
+  const winnerSide = sideTeam(snapshot, findMatch(snapshot, matchId), 'a') === winnerId ? 'a' : 'b'
+  await playMatch(organizer, matchId, [winnerSide === 'a' ? [winning, losing] : [losing, winning]])
+}
+
+/** The one match of the current playoff round's fixture between two teams. */
+export function playoffMatchBetween(snapshot: Snapshot, roundId: string, first: string, second: string): Match {
+  const fixture = snapshot.fixtures.find((candidate) =>
+    candidate.playoff_round_id === roundId
+    && [candidate.team_a_id, candidate.team_b_id].sort().join() === [first, second].sort().join())
+  if (!fixture) throw new Error('The playoff round has no fixture between those teams')
+  const [match] = fixtureMatches(snapshot, fixture.id)
+  if (!match) throw new Error('The playoff fixture has no match')
+  return match
+}
+
 export async function walkover(organizer: LocalSession, matchId: string, winnerSide: Side): Promise<void> {
   await matchCommand(organizer, 'mark_walkover', matchId, { winnerSide })
 }
