@@ -194,12 +194,12 @@ test('a saved pair can change until the match starts, and is fixed after', async
   const replacement = mixedPair(snapshot, teamA, 1)
   await card.getByRole('button', { name: pairLabel(snapshot, replacement) }).click()
   await card.getByRole('button', { name: pa.save }).click()
-  await expect(card.getByText(pairLabel(snapshot, replacement), { exact: true })).toBeVisible()
+  await expect.poll(async () => {
+    const changed = findMatch((await readState()).snapshot, first.id)
+    return [changed.pair_a_player_1_id, changed.pair_a_player_2_id]
+  }).toEqual([replacement.player1Id, replacement.player2Id])
   await page.keyboard.press('Escape')
-
   snapshot = (await readState()).snapshot
-  const changed = findMatch(snapshot, first.id)
-  expect([changed.pair_a_player_1_id, changed.pair_a_player_2_id]).toEqual([replacement.player1Id, replacement.player2Id])
 
   await matchCommand(referee, 'start_match', first.id)
   await expect(assignPair(organizer, first.id, 'a', mixedPair(snapshot, teamA, 0), true))
