@@ -29,6 +29,8 @@ export interface Tournament {
    * reviewed projection from one a scored point invalidated.
    */
   resultRevision: number
+  /** Display names of courts 1 and 2. */
+  courtNames: [string, string]
   /** Set when the organizer confirms the finalists; cleared when they change. */
   finalistsConfirmedAt: string | null
   /** The latest qualification playoff round, or null when none is needed. */

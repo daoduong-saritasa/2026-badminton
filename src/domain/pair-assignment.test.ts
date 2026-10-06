@@ -63,6 +63,7 @@ function snapshot(
       setupLockedAt: '2026-09-22T00:00:00Z',
       version: 1,
       resultRevision: 1,
+      courtNames: ['Sân 1', 'Sân 2'],
       finalistsConfirmedAt: null,
       currentPlayoffRoundId: null,
     },

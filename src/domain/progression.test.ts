@@ -33,6 +33,7 @@ const tournament: Tournament = {
   setupLockedAt: '2026-09-21T00:00:00Z',
   version: 1,
   resultRevision: 1,
+  courtNames: ['Sân 1', 'Sân 2'],
   finalistsConfirmedAt: null,
   currentPlayoffRoundId: null,
 }

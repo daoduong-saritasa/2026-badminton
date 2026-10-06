@@ -32,6 +32,7 @@ const tournamentDtoSchema = z.object({
   result_revision: z.int().nonnegative(),
   finalists_confirmed_at: z.string().nullable(),
   current_playoff_round_id: uuidSchema.nullable(),
+  court_names: z.tuple([z.string(), z.string()]),
 })
 
 const teamDtoSchema = z.object({
@@ -169,6 +170,7 @@ function mapTournament(dto: z.infer<typeof tournamentDtoSchema>): Tournament {
     resultRevision: dto.result_revision,
     finalistsConfirmedAt: dto.finalists_confirmed_at,
     currentPlayoffRoundId: dto.current_playoff_round_id,
+    courtNames: dto.court_names,
   }
 }
 

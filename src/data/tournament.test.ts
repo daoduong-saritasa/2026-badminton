@@ -53,6 +53,7 @@ function snapshot(version: number, overrides: Record<string, unknown> = {}) {
       result_revision: version,
       finalists_confirmed_at: null,
       current_playoff_round_id: null,
+      court_names: ['Sân 1', 'Sân 2'],
     },
     teams: [
       { id: teamId, name: 'Team A' },
@@ -137,6 +138,7 @@ describe('tournament data', () => {
             ...base.tournament,
             finalists_confirmed_at: '2026-09-21T02:00:00Z',
             current_playoff_round_id: roundId,
+            court_names: ['Sân 1', 'Sân 2'],
           },
           fixtures: [
             ...base.fixtures,

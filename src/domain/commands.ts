@@ -35,6 +35,8 @@ export interface CommandPayloads {
   /** Sets the two matchups of a four-team playoff round. */
   record_draw: { matchups: Array<{ fixtureId: UUID; teamAId: UUID; teamBId: UUID }> }
   confirm_finalists: Record<string, never>
+  /** Renames courts 1 and 2; expects the tournament version. */
+  rename_courts: { names: [string, string] }
   correct_result: {
     matchId: UUID
     winnerSide: Side

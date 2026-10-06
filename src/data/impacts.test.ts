@@ -63,6 +63,7 @@ function snapshot(version: number) {
       result_revision: version,
       finalists_confirmed_at: null,
       current_playoff_round_id: null,
+      court_names: ['Sân 1', 'Sân 2'],
     },
     teams: [{ id: teamId, name: 'Team' }],
     players: [],
