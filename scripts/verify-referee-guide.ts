@@ -1,0 +1,103 @@
+/// <reference lib="dom" />
+import assert from 'node:assert/strict'
+import { chromium, expect, type Page } from '@playwright/test'
+
+const baseURL = 'http://127.0.0.1:5181'
+const backend = /supabase|\/(auth|rest|realtime|functions)\/v1|:54321/
+const browser = await chromium.launch()
+const seed = { 'sb-guide-auth-token': 'existing-session-sentinel', 'badminton:sides-swapped:guide-match-1': '1', 'badminton:sides-swapped:live-match': '1' }
+
+async function assertStep(page: Page, index: number) {
+  await expect(page.locator('.guide-example')).toHaveAttribute('data-step', String(index))
+  await expect(page.locator('.driver-popover')).toBeVisible()
+  await expect(page.locator('.driver-active-element')).toBeVisible()
+  await expect(page.locator('.driver-active-element')).not.toHaveAttribute('id', 'driver-dummy-element')
+  await expect(page.locator('.driver-active-element')).toHaveAttribute('data-guide', (await page.locator('.guide-example').getAttribute('data-target'))!)
+  const next = page.locator('.driver-popover-next-btn')
+  await expect(next).toBeVisible()
+  const bounds = await next.boundingBox()
+  assert(bounds && bounds.x >= 0 && bounds.y >= 0 && bounds.x + bounds.width <= page.viewportSize()!.width && bounds.y + bounds.height <= page.viewportSize()!.height, `Navigation outside viewport at step ${index}`)
+  assert(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), `Horizontal overflow at step ${index}`)
+}
+
+try {
+  for (const width of [390, 1280]) {
+    const context = await browser.newContext({ viewport: { width, height: 844 }, reducedMotion: 'reduce', storageState: { cookies: [], origins: [{ origin: baseURL, localStorage: Object.entries(seed).map(([name, value]) => ({ name, value })) }] } })
+    await context.addInitScript(() => {
+      const originalGet = Storage.prototype.getItem
+      const originalSet = Storage.prototype.setItem
+      const originalRemove = Storage.prototype.removeItem
+      Storage.prototype.getItem = function (key) { if (/^sb-|^badminton:/.test(key)) console.debug('guide-storage:' + `get:${key}`); return originalGet.call(this, key) }
+      Storage.prototype.setItem = function (key, value) { if (/^sb-|^badminton:/.test(key)) console.debug('guide-storage:' + `set:${key}`); return originalSet.call(this, key, value) }
+      Storage.prototype.removeItem = function (key) { if (/^sb-|^badminton:/.test(key)) console.debug('guide-storage:' + `remove:${key}`); return originalRemove.call(this, key) }
+    })
+    const page = await context.newPage()
+    const accesses: string[] = []
+    page.on('console', (message) => { if (message.text().startsWith('guide-storage:')) accesses.push(message.text()) })
+    const errors: string[] = []
+    const requests: string[] = []
+    page.on('pageerror', (error) => errors.push(error.message))
+    page.on('request', (request) => { if (backend.test(request.url())) requests.push(request.url()) })
+    page.on('websocket', (socket) => requests.push(socket.url()))
+    for (const route of ['/guide', '/guide/']) {
+      await page.goto(`${baseURL}${route}`)
+      await expect(page.getByRole('heading', { name: 'Hướng dẫn trọng tài' })).toBeVisible()
+      await page.reload()
+      await expect(page.locator('.guide-example')).toHaveAttribute('data-step', 'closed')
+      await page.getByRole('button', { name: 'Bắt đầu hướng dẫn' }).click()
+      const count = Number(await page.locator('[data-guide-total]').getAttribute('data-guide-total'))
+      for (let index = 0; index < count; index++) {
+        await assertStep(page, index)
+        if (index > 0) {
+          const text = await page.locator('.guide-example').innerText()
+          await page.locator('.driver-popover-prev-btn').click()
+          await assertStep(page, index - 1)
+          await page.locator('.driver-popover-next-btn').click()
+          await assertStep(page, index)
+          assert.equal(await page.locator('.guide-example').innerText(), text, `Back did not restore step ${index}`)
+        }
+        await page.locator('.driver-popover-next-btn').click()
+      }
+      await expect(page.locator('.driver-popover')).toHaveCount(0)
+      await expect(page.getByRole('button', { name: 'Xem lại từ đầu' })).toBeFocused()
+      for (let index = 0; index < count; index++) {
+        await page.getByRole('button', { name: 'Xem lại từ đầu' }).click()
+        for (let current = 0; current < index; current++) {
+          await assertStep(page, current)
+          await page.locator('.driver-popover-next-btn').click()
+        }
+        await assertStep(page, index)
+        await page.locator('.driver-popover-close-btn').click()
+        await expect(page.locator('.driver-popover')).toHaveCount(0)
+        await expect(page.locator('[data-slot="dialog-content"]')).toHaveCount(0)
+      }
+      await page.getByRole('button', { name: 'Xem lại từ đầu' }).click()
+      await assertStep(page, 0)
+      await page.keyboard.press('ArrowRight')
+      await assertStep(page, 1)
+      await page.keyboard.press('ArrowLeft')
+      await assertStep(page, 0)
+      await page.keyboard.press('Escape')
+      await expect(page.locator('.driver-popover')).toHaveCount(0)
+      await page.getByRole('button', { name: 'Xem lại từ đầu' }).click()
+      for (let index = 0; index < 6; index++) {
+        await assertStep(page, index)
+        await page.locator('.driver-popover-next-btn').click()
+      }
+      await assertStep(page, 6)
+      await page.screenshot({ path: `/private/tmp/referee-guide-${width}.png`, fullPage: true })
+      await page.reload()
+      await expect(page.locator('.guide-example')).toHaveAttribute('data-step', 'closed')
+      await expect(page.locator('.driver-popover')).toHaveCount(0)
+      const storage = await page.evaluate(() => ({ ...localStorage }))
+      assert.deepEqual(storage, seed)
+      assert.deepEqual(accesses, [])
+    }
+    assert.deepEqual(errors, [])
+    assert.deepEqual(requests, [])
+    console.log(`Guide ${width}px: both routes, all steps, Back/Close/Restart, keyboard, isolation, and reload passed`)
+    await context.close()
+  }
+} finally {
+  await browser.close()
+}

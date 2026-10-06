@@ -1,0 +1,11 @@
+.guide-shell { max-width: 64rem; }
+.guide-example .score-viewport { height: min(38rem, 75dvh); min-height: 24rem; }
+.guide-confirmation { margin: 1rem auto; max-width: 30rem; }
+.referee-guide-popover { max-width: min(22rem, calc(100vw - 24px)); max-height: calc(100dvh - 24px); overflow-y: auto; font-family: inherit; border-radius: 12px; }
+.referee-guide-popover .driver-popover-title { font-size: 1rem; }
+.referee-guide-popover .driver-popover-description { font-size: .875rem; line-height: 1.6; }
+.referee-guide-popover .driver-popover-footer { gap: .75rem; flex-wrap: wrap; }
+.referee-guide-popover .driver-popover-navigation-btns { gap: .5rem; }
+.referee-guide-popover .driver-popover-next-btn, .referee-guide-popover .driver-popover-prev-btn { min-height: 44px; padding: 8px 12px; font-size: .875rem; }
+.referee-guide-popover .driver-popover-close-btn { position: static; width: auto; height: auto; min-height: 32px; margin-left: auto; font-size: .8125rem; }
+@media (prefers-reduced-motion: reduce) { .guide-shell *, .guide-form * { animation: none !important; transition: none !important; } }

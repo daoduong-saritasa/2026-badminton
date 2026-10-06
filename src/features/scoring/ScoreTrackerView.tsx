@@ -30,7 +30,7 @@ export function ScoreTrackerView({ snapshot, match, state, sidesSwapped, screenO
           <ArrowLeft /> {messages.scoring.back}
         </Button>
         <div className="flex items-center gap-3">
-          <span className="min-w-0 text-right text-xs font-semibold [overflow-wrap:anywhere]">
+          <span data-guide="game" className="min-w-0 text-right text-xs font-semibold [overflow-wrap:anywhere]">
             {match.court ? courtLabel(snapshot, match.court) : '–'}
             <span className="block font-normal text-muted-ink">
               {gamesToWinMatch(state.stage) === 2 ? messages.scoring.gameStatus(state.gameNumber, scoreText(tally)) : stageRule(state.stage)}
@@ -39,6 +39,7 @@ export function ScoreTrackerView({ snapshot, match, state, sidesSwapped, screenO
           <Button
             variant="outline"
             size="icon-sm"
+            data-guide="swap"
             aria-label={messages.scoring.swapSides}
             aria-pressed={sidesSwapped}
             title={messages.scoring.swapSides}
@@ -54,6 +55,7 @@ export function ScoreTrackerView({ snapshot, match, state, sidesSwapped, screenO
           <button
             type="button"
             key={side}
+            data-guide={side === 'a' ? 'point' : undefined}
             className={cn(
               'score-panel grid min-h-0 touch-manipulation select-none rounded-card border p-5 transition-colors disabled:cursor-default',
               side === 'a' ? 'border-peach-line border-t-4 border-t-orange bg-peach text-ink' : 'border-line border-t-4 border-t-cyan bg-ice text-ink',
@@ -80,7 +82,7 @@ export function ScoreTrackerView({ snapshot, match, state, sidesSwapped, screenO
           size="sm"
           className="min-w-22"
           disabled={actionPending || state.status === 'saving' || state.status === 'failed' || !state.hasOwnership}
-          onClick={() => onUndo()}
+          data-guide="undo" onClick={() => onUndo()}
         >
           <RotateCcw /> {messages.scoring.undo}
         </Button>
@@ -94,7 +96,7 @@ export function ScoreTrackerView({ snapshot, match, state, sidesSwapped, screenO
         </Button>
       </div>
 
-      <div className="min-h-8 self-center text-center text-[0.8125rem] text-navy" aria-live="polite">
+      <div className="min-h-8 self-center text-center text-[0.8125rem] text-navy" data-guide="save" aria-live="polite">
         {state.status === 'saving' ? messages.scoring.savingPoint : null}
         {failed ? (
           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -105,12 +107,12 @@ export function ScoreTrackerView({ snapshot, match, state, sidesSwapped, screenO
               </Button>
             ) : null}
             {!needsTakeover ? (
-              <Button size="sm" variant="outline" onClick={handleRetry}><RefreshCw /> {messages.scoring.retry}</Button>
+              <Button size="sm" variant="outline" data-guide="retry" onClick={handleRetry}><RefreshCw /> {messages.scoring.retry}</Button>
             ) : null}
           </div>
         ) : null}
         {needsTakeover ? (
-          <Button size="sm" variant="outline" className="rounded-full" disabled={actionPending} onClick={() => setTakeoverOpen(true)}>
+          <Button size="sm" variant="outline" className="rounded-full" disabled={actionPending} data-guide="takeover" onClick={() => setTakeoverOpen(true)}>
             <ShieldAlert /> {messages.scoring.takeOverScoring}
           </Button>
         ) : null}

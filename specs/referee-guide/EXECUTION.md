@@ -20,16 +20,16 @@ Fresh review: required — shared live scoring and recovery controls protect dur
 - [x] Add Driver.js to `package.json` and `package-lock.json`; verify the installed version's configuration and dynamic-target APIs against official documentation.
 - [x] Extract presentation into `src/features/staff/StaffAccessView.tsx`, `src/features/scoring/PairAssignmentView.tsx`, and `src/features/scoring/ScoreTrackerView.tsx`; keep authentication, mutations, queries, ownership checks, and side-order persistence in the existing live containers.
 - [x] Update `StaffAccessDialog.tsx`, `PairAssignmentForm.tsx`, and `ScoreTracker.tsx` to use those views; preserve live validation, save indicators, undo, confirmations, retry, and takeover behavior.
-- [ ] Create `src/features/guide/guide-data.ts` with fictional players, teams, fixtures, matches, and games; validate pair and score examples with `src/domain/pair-assignment.ts` and `src/domain/scoring.ts`.
-- [ ] Create `src/features/guide/guide-state.ts` with explicit immutable states and stable target IDs for every section in PLAN.md → "Walkthrough sequence"; restore the exact preceding state on Back.
-- [ ] Create `src/features/guide/GuidePage.tsx` and `guide-tour.ts`; apply each state before highlighting, render shared views, intercept example actions, and provide Vietnamese Start, Back, Next, Close, and Restart controls.
-- [ ] Implement dialog target readiness and focus coordination in `guide-tour.ts` and the shared views; retain live dialog focus traps, clean up Driver.js on close/unmount, and respect reduced motion.
-- [ ] Add fictional-data notices, the example PIN, explicit stage/failure transitions, and the final live-tournament link in `src/i18n/vi.ts`; follow `CONTEXT.md` terminology.
-- [ ] Update `src/main.tsx` to render `/guide` and `/guide/` without mounting `App`, its providers, or live containers; load guide code separately from the live scoring path.
-- [ ] Add the public **Hướng dẫn** link in `src/App.tsx`; confirm the SPA fallback described in `docs/deployment.md` supports direct guide links and reloads.
-- [ ] Add `src/features/guide/guide-state.test.ts` for every forward/backward transition, Close/Restart, stage changes, failure/retry, and coherent pair/game examples.
-- [ ] Add `scripts/verify-referee-guide.ts` using the installed Playwright library against `http://127.0.0.1:5181`; verify both routes, all targets, dialog transitions, keyboard navigation, and 390px/1280px layouts without the database-dependent E2E setup.
-- [ ] In `scripts/verify-referee-guide.ts`, fail on Supabase HTTP/WebSocket activity, compare seeded staff-session and scoring-preference storage before/after, and verify reload resets progress; never navigate to the live tournament during isolation checks.
+- [x] Create `src/features/guide/guide-data.ts` with fictional players, teams, fixtures, matches, and games; validate pair and score examples with `src/domain/pair-assignment.ts` and `src/domain/scoring.ts`.
+- [x] Create `src/features/guide/guide-state.ts` with explicit immutable states and stable target IDs for every section in PLAN.md → "Walkthrough sequence"; restore the exact preceding state on Back.
+- [x] Create `src/features/guide/GuidePage.tsx` and `guide-tour.ts`; apply each state before highlighting, render shared views, intercept example actions, and provide Vietnamese Start, Back, Next, Close, and Restart controls.
+- [x] Implement dialog target readiness and focus coordination in `guide-tour.ts` and the shared views; retain live dialog focus traps, clean up Driver.js on close/unmount, and respect reduced motion.
+- [x] Add fictional-data notices, the example PIN, explicit stage/failure transitions, and the final live-tournament link in `src/i18n/vi.ts`; follow `CONTEXT.md` terminology.
+- [x] Update `src/main.tsx` to render `/guide` and `/guide/` without mounting `App`, its providers, or live containers; load guide code separately from the live scoring path.
+- [x] Add the public **Hướng dẫn** link in `src/App.tsx`; confirm the SPA fallback described in `docs/deployment.md` supports direct guide links and reloads.
+- [x] Add `src/features/guide/guide-state.test.ts` for every forward/backward transition, Close/Restart, stage changes, failure/retry, and coherent pair/game examples.
+- [x] Add `scripts/verify-referee-guide.ts` using the installed Playwright library against `http://127.0.0.1:5181`; verify both routes, all targets, dialog transitions, keyboard navigation, and 390px/1280px layouts without the database-dependent E2E setup.
+- [x] In `scripts/verify-referee-guide.ts`, fail on Supabase HTTP/WebSocket activity, compare seeded staff-session and scoring-preference storage before/after, and verify reload resets progress; never navigate to the live tournament during isolation checks.
 - [ ] Run `npm run dev -- --host 127.0.0.1 --port 5181 --strictPort` if no preview exists, then `node --experimental-strip-types scripts/verify-referee-guide.ts`; resolve missing targets, stale overlays, unreachable controls, and horizontal overflow.
 
 **Phase gate (hard):**
