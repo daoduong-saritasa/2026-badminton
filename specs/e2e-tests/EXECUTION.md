@@ -13,8 +13,8 @@ never start the stack.
 
 ## STATUS
 
-- Current phase: 1 — pending
-- Phase 1 — End-to-end suite: pending
+- Current phase: 1 — in-progress
+- Phase 1 — End-to-end suite: in-progress
 - Verification debt: none
 
 ## Phase 1 — End-to-end suite
@@ -33,8 +33,8 @@ Produces: `npm run test:e2e`; `resetProgress(): Promise<void>`, `readRoster(): P
 Fresh review: required — test-gate infrastructure, and a harness that runs a destructive
 reset against a database
 
-- [ ] Commit `supabase/migrations/202609200001_round_robin.sql` (qualify `placement.stage`) and `supabase/migrations/202609250001_fix_save_roster_team_variable.sql` as two separate commits
-- [ ] Add `@playwright/test` to `devDependencies`; install Chromium with `npx playwright install chromium`
+- [x] Commit `supabase/migrations/202609200001_round_robin.sql` (qualify `placement.stage`) and `supabase/migrations/202609250001_fix_save_roster_team_variable.sql` as two separate commits
+- [x] Add `@playwright/test` to `devDependencies`; install Chromium with `npx playwright install chromium`
 - [ ] `playwright.config.ts`: `testDir: 'tests/e2e'`, `workers: 1`, `fullyParallel: false`, projects `desktop` (Desktop Chrome) and `phone` (Pixel 7); `webServer` runs `vite` with `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY` from `localStatus()` per PLAN.md → "Target safety"
 - [ ] `package.json`: add `"test:e2e": "playwright test"`; `vitest.config.ts`: exclude `tests/e2e/**`; `tsconfig.node.json`: include `playwright.config.ts` and `tests/e2e/**/*.ts`; `.gitignore`: add `test-results/` and `playwright-report/`
 - [ ] `tests/e2e/global-setup.ts`: refuse unless the API host is `127.0.0.1` or `localhost`; require `E2E_ORGANIZER_PIN` and `E2E_REFEREE_PIN`; check the roster shape (four teams, four players each, two per seed); write the roster snapshot to `test-results/roster.json`
