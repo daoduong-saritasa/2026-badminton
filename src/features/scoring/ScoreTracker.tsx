@@ -1,53 +1,22 @@
+import { ScoreTrackerView } from './ScoreTrackerView'
 import { useEffect, useReducer, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowLeft, ArrowLeftRight, Play, RefreshCw, RotateCcw, ShieldAlert, Users } from 'lucide-react'
+import { ArrowLeft, Play, Users } from 'lucide-react'
 
 import { canScore } from '@/data/staff'
 import { fetchTournament, mutateTournament } from '@/data/tournament'
 import { gamesToWinMatch, isGameWon, matchGameTally } from '@/domain/scoring'
 import type { FixtureMatch, Game, Side, StaffRole, TournamentSnapshot, UUID } from '@/domain/types'
-import {
-  reduceScoring,
-  type IdleScoringState,
-  type PendingPoint,
-  type SaveFailureReason,
-} from './scoring-state'
+import { reduceScoring, type IdleScoringState, type PendingPoint, type SaveFailureReason } from './scoring-state'
 import { PairAssignmentForm } from './PairAssignmentForm'
 import { PairLines } from '@/features/tournament/PairLines'
-import { PairDisplay, SeedLegend } from '@/features/tournament/Participants'
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog'
+import { SeedLegend } from '@/features/tournament/Participants'
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import {
-  courtLabel,
-  fixtureLabel,
-  fixtureOf,
-  groupByFixture,
-  isStartable,
-  startBlocker,
-  matchLabel,
-  matchPair,
-  openGame,
-  pairPlayers,
-  scoreText,
-  sideTeamId,
-  stageRule,
-  teamName,
-  upcomingMatches,
-} from '@/features/tournament/labels'
+import { courtLabel, fixtureLabel, fixtureOf, groupByFixture, isStartable, startBlocker, matchLabel, openGame, scoreText, sideTeamId, teamName, upcomingMatches } from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
-import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
-import { cn } from '@/lib/utils'
 
 function failureReason(error: unknown): SaveFailureReason {
   if (typeof error === 'object' && error !== null && 'code' in error) {
@@ -140,7 +109,6 @@ function ScoringSurface({
   const queryClient = useQueryClient()
   const [state, dispatch] = useReducer(reduceScoring, createInitialState(snapshot, match, resetGeneration, ownership))
   const game = liveGame(match)
-  const fixture = fixtureOf(snapshot, match)
   const [takeoverOpen, setTakeoverOpen] = useState(false)
   const [actionFailure, setActionFailure] = useState<string | null>(null)
   const [sidesSwapped, setSidesSwapped] = useState(() => readSidesSwapped(match.id))
@@ -296,139 +264,12 @@ function ScoringSurface({
     onError: (error) => handleActionFailure(messages.scoring.actions.confirm, error),
   })
 
-  const failed = state.status === 'failed' ? state : null
-  const needsTakeover = !state.hasOwnership || failed?.reason === 'ownership-conflict'
-  const actionPending = takeoverMutation.isPending || undoMutation.isPending || confirmMutation.isPending
-  const disabled = state.status !== 'idle' || !state.hasOwnership || isGameWon(state.score, state.stage) || actionPending
-  const tally = matchGameTally(match.games)
-
-  return (
-    <main className="score-viewport scoring-surface grid gap-3 bg-background">
-      <div className="flex items-center justify-between gap-3">
-        <Button variant="outline" size="sm" onClick={onExit}>
-          <ArrowLeft /> {messages.scoring.back}
-        </Button>
-        <div className="flex items-center gap-3">
-          <span className="min-w-0 text-right text-xs font-semibold [overflow-wrap:anywhere]">
-            {match.court ? courtLabel(snapshot, match.court) : '–'}
-            <span className="block font-normal text-muted-ink">
-              {gamesToWinMatch(state.stage) === 2 ? messages.scoring.gameStatus(state.gameNumber, scoreText(tally)) : stageRule(state.stage)}
-            </span>
-          </span>
-          <Button
-            variant="outline"
-            size="icon-sm"
-            aria-label={messages.scoring.swapSides}
-            aria-pressed={sidesSwapped}
-            title={messages.scoring.swapSides}
-            onClick={toggleSides}
-          >
-            <ArrowLeftRight />
-          </Button>
-        </div>
-      </div>
-
-      <div className="score-panels grid min-h-0 gap-3">
-        {screenOrder.map((side) => (
-          <button
-            type="button"
-            key={side}
-            className={cn(
-              'score-panel grid min-h-0 touch-manipulation select-none rounded-card border p-5 transition-colors disabled:cursor-default',
-              side === 'a' ? 'border-peach-line border-t-4 border-t-orange bg-peach text-ink' : 'border-line border-t-4 border-t-cyan bg-ice text-ink',
-            )}
-            disabled={disabled}
-            aria-label={messages.scoring.addPoint(pairPlayers(snapshot, matchPair(match, side)))}
-            onClick={() => handlePoint(side)}
-          >
-            <PairDisplay snapshot={snapshot} pair={matchPair(match, side)} className="max-w-full" />
-            <strong className="score-number numeric font-bold leading-none tracking-[-0.07em]">
-              {formatNumber(state.score[side])}
-            </strong>
-            <small className="score-team max-w-full text-sm opacity-80 [overflow-wrap:anywhere]">
-              {teamName(snapshot, sideTeamId(fixture, side))}
-              {gamesToWinMatch(state.stage) === 2 ? ` · ${formatNumber(tally[side])}` : ''}
-            </small>
-          </button>
-        ))}
-      </div>
-
-      <div className="score-actions grid grid-cols-2 gap-3">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="min-w-22"
-          disabled={actionPending || state.status === 'saving' || state.status === 'failed' || !state.hasOwnership}
-          onClick={() => undoMutation.mutate()}
-        >
-          <RotateCcw /> {messages.scoring.undo}
-        </Button>
-        <Button
-          size="sm"
-          className="min-w-22"
-          disabled={state.status !== 'reviewing' || actionPending}
-          onClick={() => confirmMutation.mutate()}
-        >
-          {messages.scoring.confirm}
-        </Button>
-      </div>
-
-      <div className="min-h-8 self-center text-center text-[0.8125rem] text-navy" aria-live="polite">
-        {state.status === 'saving' ? messages.scoring.savingPoint : null}
-        {failed ? (
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="text-destructive">{failed.message}</span>
-            {failed.reason === 'version-conflict' && failed.observed ? (
-              <Button size="sm" variant="outline" onClick={() => dispatch({ type: 'version-conflict-reconciled' })}>
-                {messages.scoring.useLatestScore}
-              </Button>
-            ) : null}
-            {!needsTakeover ? (
-              <Button size="sm" variant="outline" onClick={handleRetry}><RefreshCw /> {messages.scoring.retry}</Button>
-            ) : null}
-          </div>
-        ) : null}
-        {needsTakeover ? (
-          <Button size="sm" variant="outline" className="rounded-full" disabled={actionPending} onClick={() => setTakeoverOpen(true)}>
-            <ShieldAlert /> {messages.scoring.takeOverScoring}
-          </Button>
-        ) : null}
-        {actionFailure ? <p className="mt-1 text-destructive" role="alert">{actionFailure}</p> : null}
-      </div>
-
-      <AlertDialog open={state.status === 'reviewing'} onOpenChange={(open) => {
-        if (!open) dispatch({ type: 'review-dismissed' })
-      }}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{messages.scoring.confirmTitle(state.gameNumber)}</AlertDialogTitle>
-            <AlertDialogDescription>
-              {messages.scoring.confirmBody(state.score[screenOrder[0]], state.score[screenOrder[1]])}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{messages.scoring.reviewAndUndo}</AlertDialogCancel>
-            <AlertDialogAction disabled={actionPending} onClick={() => confirmMutation.mutate()}>{messages.scoring.confirmResult}</AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-
-      <AlertDialog open={takeoverOpen} onOpenChange={setTakeoverOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>{messages.scoring.takeoverTitle}</AlertDialogTitle>
-            <AlertDialogDescription>{messages.scoring.takeoverBody}</AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
-            <AlertDialogAction disabled={actionPending} onClick={() => takeoverMutation.mutate()}>
-              {takeoverMutation.isPending ? messages.scoring.takingOver : messages.scoring.takeOver}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </main>
-  )
+  return <ScoreTrackerView snapshot={snapshot} match={match} state={state} sidesSwapped={sidesSwapped} screenOrder={screenOrder}
+    actionPending={takeoverMutation.isPending || undoMutation.isPending || confirmMutation.isPending} actionFailure={actionFailure}
+    takeoverOpen={takeoverOpen} takeoverPending={takeoverMutation.isPending} setTakeoverOpen={setTakeoverOpen}
+    onExit={onExit} toggleSides={toggleSides} handlePoint={handlePoint} handleRetry={handleRetry}
+    onUndo={() => undoMutation.mutate()} onConfirm={() => confirmMutation.mutate()} onTakeover={() => takeoverMutation.mutate()}
+    onReconcile={() => dispatch({ type: 'version-conflict-reconciled' })} onDismissReview={() => dispatch({ type: 'review-dismissed' })} />
 }
 
 function MatchPicker({
