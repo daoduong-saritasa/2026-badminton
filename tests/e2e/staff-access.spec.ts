@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test'
 
 import { messages } from '../../src/i18n/vi.ts'
-import { unknownErrorMessage } from '../../src/i18n/errors.ts'
+import { errorMessage, unknownErrorMessage } from '../../src/i18n/errors.ts'
 import { edgeRequest, rpc, signInAnonymously } from '../integration/local-supabase.ts'
 import { signInStaff, type LocalSession } from './support/api.ts'
 import { openStaffMenuItem, signIn, signOut, staffMenuButton, submitPin, type StaffRole } from './support/staff.ts'
@@ -24,7 +24,7 @@ test('a wrong PIN is refused with a clear message, and repeated attempts lock th
   const wrong = wrongPin(pins)
 
   await submitPin(page, wrong)
-  await expect(pinAlert(page)).toBeVisible()
+  await expect(pinAlert(page)).toHaveText(errorMessage(new Error('The staff PIN is incorrect')))
   await expect(pinAlert(page)).not.toHaveText(unknownErrorMessage)
   await expect(staffMenuButton(page, 'organizer')).toBeHidden()
 
@@ -76,33 +76,45 @@ test('signing out removes staff access from the device', async ({ page, pins }) 
   await expect(staffMenuButton(page, 'organizer')).toBeHidden()
 })
 
+/**
+ * `rotating(role, rotated)` records a PIN the test is about to rotate to. Fixture
+ * teardown puts the original PIN back, which Playwright awaits even after a
+ * failure or timeout.
+ */
+const rotationTest = test.extend<{ rotating: (role: StaffRole, rotated: string) => void }>({
+  rotating: async ({ pins }, provide) => {
+    const rotations: Array<{ role: StaffRole; rotated: string }> = []
+    await provide((role, rotated) => {
+      rotations.push({ role, rotated })
+    })
+    for (const { role, rotated } of rotations) await restorePin(role, rotated, pins[role], pins.organizer)
+  },
+})
+
 for (const role of ['referee', 'organizer'] as const) {
-  test(`rotating the ${role} PIN retires the old PIN and signs out other ${role} devices`, async ({ page, pins }) => {
+  rotationTest(`rotating the ${role} PIN retires the old PIN and signs out other ${role} devices`, async ({ page, pins, rotating }) => {
     const original = pins[role]
     const rotated = ['97531', '86420', '75319'].find((pin) => pin !== pins.organizer && pin !== pins.referee) ?? '64208'
     const otherDevice = await signInStaff(original)
+    rotating(role, rotated)
 
-    try {
-      await page.goto('/')
-      await signIn(page, pins.organizer, 'organizer')
-      await openStaffMenuItem(page, 'organizer', role === 'organizer' ? messages.staff.rotateOrganizerPin : messages.staff.rotateRefereePin)
+    await page.goto('/')
+    await signIn(page, pins.organizer, 'organizer')
+    await openStaffMenuItem(page, 'organizer', role === 'organizer' ? messages.staff.rotateOrganizerPin : messages.staff.rotateRefereePin)
 
-      const rotation = page.getByRole('dialog', { name: messages.staff.rotateTitle[role] })
-      await rotation.getByLabel(messages.staff.newPinLabel).fill(rotated)
-      await rotation.getByRole('button', { name: messages.staff.reviewRotation }).click()
-      const confirmation = page.getByRole('alertdialog', { name: messages.staff.confirmRotateTitle[role] })
-      await confirmation.getByRole('button', { name: messages.staff.confirmRotate }).click()
-      await expect(confirmation).toBeHidden()
-      await expect(rotation).toBeHidden()
+    const rotation = page.getByRole('dialog', { name: messages.staff.rotateTitle[role] })
+    await rotation.getByLabel(messages.staff.newPinLabel).fill(rotated)
+    await rotation.getByRole('button', { name: messages.staff.reviewRotation }).click()
+    const confirmation = page.getByRole('alertdialog', { name: messages.staff.confirmRotateTitle[role] })
+    await confirmation.getByRole('button', { name: messages.staff.confirmRotate }).click()
+    await expect(confirmation).toBeHidden()
+    await expect(rotation).toBeHidden()
 
-      expect(await hasStaffAccess(otherDevice)).toBe(false)
-      await expect(signInStaff(original)).rejects.toThrow()
-      await signInStaff(rotated)
-      // The device that rotated keeps working.
-      await expect(staffMenuButton(page, 'organizer')).toBeVisible()
-    } finally {
-      await restorePin(role, rotated, original, pins.organizer)
-    }
+    expect(await hasStaffAccess(otherDevice)).toBe(false)
+    await expect(signInStaff(original)).rejects.toThrow()
+    await signInStaff(rotated)
+    // The device that rotated keeps working.
+    await expect(staffMenuButton(page, 'organizer')).toBeVisible()
   })
 }
 
