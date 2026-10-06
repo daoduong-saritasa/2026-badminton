@@ -4,7 +4,7 @@
 
 -- Validates one side's pair on a locked, unstarted match and saves it.
 -- Returns the match's new version.
-create function private.set_match_pair(
+create or replace function private.set_match_pair(
   p_match_id uuid,
   p_side text,
   p_player_1 uuid,
@@ -141,7 +141,7 @@ $$;
 -- version; each assignment carries its match's version. Sides being replaced
 -- are cleared before any pair is checked, so swapping arrangements never
 -- conflicts with the pairs it replaces.
-create function private.team_assign_fixture_pairs(
+create or replace function private.team_assign_fixture_pairs(
   p_request_id uuid,
   p_expected_version integer,
   p_payload jsonb
@@ -289,7 +289,7 @@ begin
 end;
 $$;
 
-create function public.assign_fixture_pairs(
+create or replace function public.assign_fixture_pairs(
   p_request_id uuid, p_reset_generation integer,
   p_expected_version integer, p_payload jsonb
 ) returns jsonb language sql security definer set search_path = '' as $$

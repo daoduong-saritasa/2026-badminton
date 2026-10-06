@@ -2,21 +2,32 @@
 -- the names only change what the app displays.
 
 alter table public.tournament
-  add column court_names text[] not null default array['Sân 1', 'Sân 2'];
-alter table public.tournament
-  add constraint tournament_court_names_check check (
-    cardinality(court_names) = 2
-    and court_names[1] is not null
-    and court_names[2] is not null
-    and length(btrim(court_names[1])) between 1 and 30
-    and length(btrim(court_names[2])) between 1 and 30
-    and lower(btrim(court_names[1])) <> lower(btrim(court_names[2]))
-  );
+  add column if not exists court_names text[] not null default array['Sân 1', 'Sân 2'];
+
+do $$
+begin
+  if not exists (
+    select 1 from pg_catalog.pg_constraint
+    where conrelid = 'public.tournament'::regclass
+      and conname = 'tournament_court_names_check'
+  ) then
+    alter table public.tournament
+      add constraint tournament_court_names_check check (
+        cardinality(court_names) = 2
+        and court_names[1] is not null
+        and court_names[2] is not null
+        and length(btrim(court_names[1])) between 1 and 30
+        and length(btrim(court_names[2])) between 1 and 30
+        and lower(btrim(court_names[1])) <> lower(btrim(court_names[2]))
+      );
+  end if;
+end;
+$$;
 
 -- Renames both courts; expects the tournament version. Names are trimmed and
 -- must differ ignoring case. Result revision is untouched, so open result
 -- previews stay valid.
-create function private.team_rename_courts(
+create or replace function private.team_rename_courts(
   p_request_id uuid,
   p_expected_version integer,
   p_payload jsonb
@@ -123,7 +134,7 @@ begin
 end;
 $$;
 
-create function public.rename_courts(
+create or replace function public.rename_courts(
   p_request_id uuid, p_reset_generation integer,
   p_expected_version integer, p_payload jsonb
 ) returns jsonb language sql security definer set search_path = '' as $$
