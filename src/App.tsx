@@ -259,7 +259,10 @@ export default function App() {
         </div>
       </header>
 
-      <a href="/guide" className="mb-4 inline-block text-sm font-medium text-navy underline underline-offset-4">{messages.guide.heading}</a>
+      <nav className="mb-4 flex flex-wrap gap-x-5 gap-y-2 text-sm font-medium">
+        <a href="/rules" className="text-navy underline underline-offset-4">{messages.publicView.rules.heading}</a>
+        <a href="/guide" className="text-navy underline underline-offset-4">{messages.guide.heading}</a>
+      </nav>
       <Tabs value={view} onValueChange={handleViewChange} className="gap-6">
         <TabsList variant="default" className="court-navigation w-full items-stretch gap-1 rounded-card p-1.5 group-data-horizontal/tabs:h-auto">
           {tabs.map((tab) => (
