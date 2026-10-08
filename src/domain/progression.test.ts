@@ -44,7 +44,7 @@ function fixture(
   teamBId: string | null,
   suffix = '',
 ): TeamFixture {
-  return { id: `${stage}-${teamAId}-${teamBId}${suffix}`, stage, teamAId, teamBId, version: 1 }
+  return { id: `${stage}-${teamAId}-${teamBId}${suffix}`, stage, teamAId, teamBId, version: 1, qualifyingOrder: null, qualifyingCourt: null }
 }
 
 function match(

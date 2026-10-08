@@ -66,7 +66,7 @@ function snapshot(version: number, overrides: Record<string, unknown> = {}) {
       { id: playerDId, team_id: otherTeamId, name: 'D', seed: 2 },
     ],
     fixtures: [
-      { id: fixtureId, stage: 'qualifying', team_a_id: teamId, team_b_id: otherTeamId, playoff_round_id: null, version: 2 },
+      { id: fixtureId, stage: 'qualifying', team_a_id: teamId, team_b_id: otherTeamId, playoff_round_id: null, qualifying_order: 1, qualifying_court: 1, version: 2 },
     ],
     matches: [match()],
     games: [
@@ -143,7 +143,7 @@ describe('tournament data', () => {
           fixtures: [
             ...base.fixtures,
             { id: playoffId, stage: 'qualification-playoff', team_a_id: teamId, team_b_id: otherTeamId, playoff_round_id: roundId, version: 1 },
-            { id: releasedId, stage: 'qualification-playoff', team_a_id: null, team_b_id: null, playoff_round_id: null, version: 3 },
+            { id: releasedId, stage: 'qualification-playoff', team_a_id: null, team_b_id: null, playoff_round_id: null, qualifying_order: 1, qualifying_court: 1, version: 3 },
           ],
           matches: [
             ...base.matches,

@@ -68,7 +68,7 @@ export function guideExample(index: number) {
   if (index === 3) {
     snapshot.teams.push({ id: 'guide-c', name: 'Đội Gió' }, { id: 'guide-d', name: 'Đội Sao' })
     snapshot.players.push(...snapshot.players.map((player) => ({ ...player, id: player.id.replace('guide-a', 'guide-c').replace('guide-b', 'guide-d'), teamId: player.teamId === 'guide-a' ? 'guide-c' : 'guide-d' })))
-    snapshot.fixtures.push({ id: 'guide-active-fixture', stage: 'qualifying', teamAId: 'guide-c', teamBId: 'guide-d', version: 1 })
+    snapshot.fixtures.push({ id: 'guide-active-fixture', stage: 'qualifying', teamAId: 'guide-c', teamBId: 'guide-d', version: 1, qualifyingOrder: 2, qualifyingCourt: 2 })
     snapshot.matches.push({ ...snapshot.matches[0], id: 'guide-active-match', fixtureId: 'guide-active-fixture', court: 2, state: 'playing',
       pairA: { player1Id: 'guide-c-0', player2Id: 'guide-c-2' }, pairB: { player1Id: 'guide-d-0', player2Id: 'guide-d-2' },
       games: [{ gameNumber: 1, score: { a: 8, b: 6 }, confirmedAt: null }],

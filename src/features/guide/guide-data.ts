@@ -10,11 +10,11 @@ export function guideSnapshot(stage: FixtureStage = 'qualifying', assigned = tru
     id: `guide-match-${matchNumber}`, fixtureId: 'guide-fixture', matchNumber,
     pairA: assigned ? { player1Id: `guide-a-${matchNumber - 1}`, player2Id: `guide-a-${matchNumber + 1}` } : null,
     pairB: assigned ? { player1Id: `guide-b-${matchNumber - 1}`, player2Id: `guide-b-${matchNumber + 1}` } : null,
-    court: matchNumber, state: 'unstarted', resultKind: null, winnerSide: null, games: [], version: 1,
+    court: stage === 'qualifying' ? 1 : matchNumber, state: 'unstarted', resultKind: null, winnerSide: null, games: [], version: 1,
   }))
   return { tournament: { id: 'guide', name: 'Giải minh họa', stage: 'groups', version: 1, resultRevision: 1,
     setupLockedAt: null, courtNames: ['Sân xanh', 'Sân cam'], finalistsConfirmedAt: '2026-10-07T00:00:00Z', currentPlayoffRoundId: null },
-    teams, players, fixtures: [{ id: 'guide-fixture', stage, teamAId: 'guide-a', teamBId: 'guide-b', version: 1 }], matches, playoffRounds: [],
+    teams, players, fixtures: [{ id: 'guide-fixture', stage, teamAId: 'guide-a', teamBId: 'guide-b', version: 1, qualifyingOrder: stage === 'qualifying' ? 1 : null, qualifyingCourt: stage === 'qualifying' ? 1 : null }], matches, playoffRounds: [],
   }
 }
 

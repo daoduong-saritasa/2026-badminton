@@ -128,7 +128,7 @@ export function qualifyingPairings(
   ]
 }
 
-/** Matches 1 and 2 of a fixture play at the same time, one per court. */
+/** The two openers use distinct players, including sequential qualifying matches. */
 function isConcurrent(matchNumber: 1 | 2 | 3): boolean {
   return matchNumber < 3
 }

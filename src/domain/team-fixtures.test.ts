@@ -14,6 +14,8 @@ function fixture(stage: FixtureStage): TeamFixture {
     teamAId: 'team-a',
     teamBId: 'team-b',
     version: 1,
+    qualifyingOrder: null,
+    qualifyingCourt: null,
   }
 }
 

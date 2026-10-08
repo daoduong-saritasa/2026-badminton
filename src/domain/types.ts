@@ -84,6 +84,8 @@ export type FixtureStage =
   | 'final'
 
 export interface TeamFixture {
+  qualifyingOrder: number | null
+  qualifyingCourt: Court | null
   id: UUID
   stage: FixtureStage
   teamAId: UUID | null

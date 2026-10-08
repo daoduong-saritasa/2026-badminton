@@ -10,6 +10,8 @@ function fixture(id: string, teamAId: string, teamBId: string): TeamFixture {
     teamAId,
     teamBId,
     version: 1,
+    qualifyingOrder: null,
+    qualifyingCourt: null,
   }
 }
 

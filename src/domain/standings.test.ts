@@ -21,7 +21,7 @@ const teams: Team[] = [
 ]
 
 function fixture(teamAId: string, teamBId: string, stage: FixtureStage = 'qualifying'): TeamFixture {
-  return { id: `${stage}-${teamAId}-${teamBId}`, stage, teamAId, teamBId, version: 1 }
+  return { id: `${stage}-${teamAId}-${teamBId}`, stage, teamAId, teamBId, version: 1, qualifyingOrder: null, qualifyingCourt: null }
 }
 
 function played(

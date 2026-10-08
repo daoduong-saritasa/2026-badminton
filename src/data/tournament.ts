@@ -53,6 +53,8 @@ const fixtureDtoSchema = z.object({
   team_a_id: uuidSchema.nullable(),
   team_b_id: uuidSchema.nullable(),
   playoff_round_id: uuidSchema.nullable(),
+  qualifying_order: z.int().min(1).max(6).nullable(),
+  qualifying_court: courtSchema.nullable(),
   version: z.int().nonnegative(),
 })
 
@@ -188,6 +190,8 @@ function mapFixture(dto: z.infer<typeof fixtureDtoSchema>): TeamFixture {
     stage: dto.stage,
     teamAId: dto.team_a_id,
     teamBId: dto.team_b_id,
+    qualifyingOrder: dto.qualifying_order,
+    qualifyingCourt: dto.qualifying_court,
     version: dto.version,
   }
 }

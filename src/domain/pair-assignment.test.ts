@@ -27,7 +27,7 @@ const players: TeamPlayer[] = [
 const pair = (player1Id: string, player2Id: string): Pair => ({ player1Id, player2Id })
 
 function fixture(stage: FixtureStage, id: string = stage): TeamFixture {
-  return { id, stage, teamAId: 'a', teamBId: 'b', version: 1 }
+  return { id, stage, teamAId: 'a', teamBId: 'b', version: 1, qualifyingOrder: null, qualifyingCourt: null }
 }
 
 function match(

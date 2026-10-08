@@ -34,7 +34,7 @@ function placementSnapshot(version: number, confirmedAt: string | null, pairedSi
   return {
     ...snapshot(version),
     tournament: { ...snapshot(version).tournament, finalists_confirmed_at: confirmedAt },
-    fixtures: [{ id: finalId, stage: 'final', team_a_id: teamId, team_b_id: otherTeamId, playoff_round_id: null, version: 1 }],
+    fixtures: [{ id: finalId, stage: 'final', team_a_id: teamId, team_b_id: otherTeamId, playoff_round_id: null, qualifying_order: null, qualifying_court: null, version: 1 }],
     matches: [{
       id: finalMatchId,
       fixture_id: finalId,
