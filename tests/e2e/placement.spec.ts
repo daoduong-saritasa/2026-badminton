@@ -93,11 +93,15 @@ test('third place finishes first, a 1–1 tie goes to a free-pairing decider, an
   const finalWinner = sideTeam(snapshot, finalOne, 'a')
 
   await page.getByRole('button', { name: messages.organizer.returnToTournament }).click()
-  await page.getByRole('tab', { name: messages.app.tabs.knockouts }).click()
+  const celebration = page.getByRole('dialog', { name: teamName(snapshot, finalWinner) })
+  await expect(celebration).toBeVisible()
+  await page.keyboard.press('Escape')
+  await expect(celebration).toBeHidden()
+
+  await page.getByRole('tab', { name: messages.app.tabs.final }).click()
   await expect(page.getByText(messages.fixtures.championLabel)).toBeVisible()
   await expect(page.getByRole('heading', { level: 2, name: teamName(snapshot, finalWinner) })).toBeVisible()
 
-  await page.getByRole('tab', { name: messages.app.tabs.standings }).click()
   const positions = page.getByRole('heading', { name: messages.fixtures.positionsHeading }).locator('..')
   const fourthPlace = [third, fourth].find((teamId) => teamId !== thirdPlaceWinner) ?? ''
   const expected = [finalWinner, [champion, runnerUp].find((teamId) => teamId !== finalWinner) ?? '', thirdPlaceWinner, fourthPlace]

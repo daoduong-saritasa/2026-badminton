@@ -329,7 +329,8 @@ export const messages = {
     tabs: {
       matches: 'Trận đấu',
       standings: 'Bảng xếp hạng',
-      knockouts: 'Tranh hạng',
+      'third-place': 'Tranh hạng ba',
+      final: 'Chung kết',
       scoring: 'Ghi điểm',
       organizer: 'Điều hành',
     },
@@ -506,7 +507,6 @@ export const messages = {
     playoffRound: (roundNumber: number) => `Vòng ${formatNumber(roundNumber)}`,
     playOn: (teams: string, places: number) =>
       `${teams} vẫn bằng nhau nên đánh tiếp để giành ${formatNumber(places)} suất.`,
-    placementHeading: 'Tranh hạng',
     placementDescription: 'Tranh hạng ba kết thúc trước khi chung kết bắt đầu.',
     awaitingFinalist: 'Đội vào chung kết',
     awaitingThirdPlace: 'Đội tranh hạng ba',

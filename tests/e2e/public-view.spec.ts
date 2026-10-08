@@ -11,7 +11,12 @@ test('a spectator sees the tournament in setup without staff controls', async ({
   await expect(page.getByText(messages.publicView.setupInProgress)).toBeVisible()
 
   const tabs = page.getByRole('tab')
-  await expect(tabs).toHaveText([messages.app.tabs.matches, messages.app.tabs.standings, messages.app.tabs.knockouts])
+  await expect(tabs).toHaveText([
+    messages.app.tabs.matches,
+    messages.app.tabs.standings,
+    messages.app.tabs['third-place'],
+    messages.app.tabs.final,
+  ])
   await expect(page.getByRole('button', { name: messages.app.staffAccess, exact: true })).toBeVisible()
   await expect(page.getByRole('heading', { name: messages.organizer.heading })).toHaveCount(0)
 

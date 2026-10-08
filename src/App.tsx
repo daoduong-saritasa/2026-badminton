@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, ArrowLeft, ClipboardPen, KeyRound, LayoutDashboard, RefreshCw, ListOrdered, Trophy, Volleyball } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ClipboardPen, KeyRound, LayoutDashboard, RefreshCw, ListOrdered, Medal, Trophy, Volleyball } from 'lucide-react'
 
 import { fetchTournament, subscribeTournament } from '@/data/tournament'
 import { getStaffAccess } from '@/data/staff'
@@ -16,12 +16,13 @@ import { StaffMenu } from '@/features/staff/StaffMenu'
 import { ScoreTracker } from '@/features/scoring/ScoreTracker'
 import { OrganizerPage, type OrganizerSection } from '@/features/organizer/OrganizerPage'
 import { SetupForm } from '@/features/organizer/SetupForm'
-import { KnockoutBracket } from '@/features/tournament/KnockoutBracket'
+import { FinalCelebration } from '@/features/tournament/FinalCelebration'
+import { FinalView, ThirdPlaceView } from '@/features/tournament/PlacementViews'
 import { StandingsTable } from '@/features/tournament/StandingsTable'
 import { tournamentTitle } from '@/features/tournament/document-title'
 import { TournamentPage } from '@/features/tournament/TournamentPage'
 
-type PublicView = 'matches' | 'standings' | 'knockouts'
+type PublicView = 'matches' | 'standings' | 'third-place' | 'final'
 type StaffView = 'scoring' | 'organizer'
 type AppView = PublicView | StaffView
 
@@ -31,8 +32,7 @@ const staffQueryKey = ['staff-access'] as const
 const tabTriggerClass = 'min-h-14 min-w-0 flex-1 flex-col gap-1 whitespace-normal rounded-field px-2 py-2 text-center text-xs font-medium text-muted-ink hover:bg-peach hover:text-navy data-active:bg-orange data-active:text-white data-active:hover:bg-orange data-active:hover:text-white after:hidden sm:flex-row sm:gap-2 sm:text-sm'
 
 function defaultView(stage: TournamentStage): PublicView {
-  if (stage === 'knockouts' || stage === 'completed') return 'knockouts'
-  return 'matches'
+  return stage === 'completed' ? 'final' : 'matches'
 }
 
 function ErrorScreen({ error, onRetry }: { error: Error; onRetry: () => void }) {
@@ -91,8 +91,10 @@ function renderView(snapshot: TournamentSnapshot, view: AppView) {
       return <TournamentPage snapshot={snapshot} />
     case 'standings':
       return <StandingsTable snapshot={snapshot} />
-    case 'knockouts':
-      return <KnockoutBracket snapshot={snapshot} />
+    case 'third-place':
+      return <ThirdPlaceView snapshot={snapshot} />
+    case 'final':
+      return <FinalView snapshot={snapshot} />
     case 'scoring':
     case 'organizer':
       // Staff views render outside the public tabs.
@@ -206,7 +208,8 @@ export default function App() {
   const tabs: { value: AppView; label: string }[] = [
     { value: 'matches', label: messages.app.tabs.matches },
     { value: 'standings', label: messages.app.tabs.standings },
-    { value: 'knockouts', label: messages.app.tabs.knockouts },
+    { value: 'third-place', label: messages.app.tabs['third-place'] },
+    { value: 'final', label: messages.app.tabs.final },
     ...(workspace ? [{ value: workspace, label: messages.app.tabs[workspace] }] : []),
   ]
 
@@ -245,7 +248,8 @@ export default function App() {
             <TabsTrigger className={tabTriggerClass} key={tab.value} value={tab.value}>
               {tab.value === 'matches' ? <Volleyball className="size-5" aria-hidden="true" /> : null}
               {tab.value === 'standings' ? <ListOrdered className="size-5" aria-hidden="true" /> : null}
-              {tab.value === 'knockouts' ? <Trophy className="size-5" aria-hidden="true" /> : null}
+              {tab.value === 'third-place' ? <Medal className="size-5" aria-hidden="true" /> : null}
+              {tab.value === 'final' ? <Trophy className="size-5" aria-hidden="true" /> : null}
               {tab.value === 'scoring' ? <ClipboardPen className="size-5" aria-hidden="true" /> : null}
               {tab.value === 'organizer' ? <LayoutDashboard className="size-5" aria-hidden="true" /> : null}
               {tab.label}
@@ -260,6 +264,7 @@ export default function App() {
         onOpenChange={setStaffDialogOpen}
         onGranted={handleStaffGranted}
       />
+      <FinalCelebration snapshot={snapshot} />
     </div>
   )
 }

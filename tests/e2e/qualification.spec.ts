@@ -66,7 +66,7 @@ test('clear standings send the top two to the final once the organizer confirms'
   expect([thirdPlace.team_a_id, thirdPlace.team_b_id].sort()).toEqual([third, fourth].sort())
 
   await page.getByRole('button', { name: messages.organizer.returnToTournament }).click()
-  await page.getByRole('tab', { name: messages.app.tabs.knockouts }).click()
+  await page.getByRole('tab', { name: messages.app.tabs['third-place'] }).click()
   await expect(page.getByText(teamName(snapshot, third)).first()).toBeVisible()
 })
 

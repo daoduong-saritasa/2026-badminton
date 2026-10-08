@@ -8,8 +8,27 @@ import { FixtureCard } from './FixtureCard'
 import { fixtureMatches, teamName } from './labels'
 import { FinalPositions } from './StandingsTable'
 
-export function KnockoutBracket({ snapshot }: { snapshot: TournamentSnapshot }) {
+/** The third-place fixture, which ends before the final begins. */
+export function ThirdPlaceView({ snapshot }: { snapshot: TournamentSnapshot }) {
   const thirdPlace = snapshot.fixtures.find((fixture) => fixture.stage === 'third-place')
+  return (
+    <section className="view-enter space-y-6">
+      <div>
+        <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.stages['third-place']}</h2>
+        <p className="mt-2 text-xs text-muted-ink">{messages.fixtures.placementDescription}</p>
+      </div>
+      <FixtureCard
+        snapshot={snapshot}
+        fixture={thirdPlace}
+        label={messages.stages['third-place']}
+        placeholders={{ a: messages.fixtures.awaitingThirdPlace, b: messages.fixtures.awaitingThirdPlace }}
+      />
+    </section>
+  )
+}
+
+/** The final, its champion once decided, and the final positions. */
+export function FinalView({ snapshot }: { snapshot: TournamentSnapshot }) {
   const final = snapshot.fixtures.find((fixture) => fixture.stage === 'final')
   const championId = final ? fixtureWinnerTeamId(final, fixtureMatches(snapshot, final.id)) : null
 
@@ -21,28 +40,16 @@ export function KnockoutBracket({ snapshot }: { snapshot: TournamentSnapshot }) 
           <p className="mt-5 text-xs font-semibold tracking-[0.12em] text-white">{messages.fixtures.championLabel}</p>
           <h2 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-5xl">{teamName(snapshot, championId)}</h2>
         </div>
-      ) : null}
-      {championId ? null : (
-        <div>
-          <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.fixtures.placementHeading}</h2>
-          <p className="mt-2 text-xs text-muted-ink">{messages.fixtures.placementDescription}</p>
-        </div>
+      ) : (
+        <h2 className="text-lg font-semibold tracking-[-0.033em]">{messages.stages.final}</h2>
       )}
-      <div className="grid gap-6 md:grid-cols-2">
-        <FixtureCard
-          snapshot={snapshot}
-          fixture={final}
-          label={messages.stages.final}
-          placeholders={{ a: messages.fixtures.awaitingFinalist, b: messages.fixtures.awaitingFinalist }}
-          final
-        />
-        <FixtureCard
-          snapshot={snapshot}
-          fixture={thirdPlace}
-          label={messages.stages['third-place']}
-          placeholders={{ a: messages.fixtures.awaitingThirdPlace, b: messages.fixtures.awaitingThirdPlace }}
-        />
-      </div>
+      <FixtureCard
+        snapshot={snapshot}
+        fixture={final}
+        label={messages.stages.final}
+        placeholders={{ a: messages.fixtures.awaitingFinalist, b: messages.fixtures.awaitingFinalist }}
+        final
+      />
       <FinalPositions snapshot={snapshot} />
     </section>
   )
