@@ -342,10 +342,6 @@ export const messages = {
       organizer: 'Điều hành',
       referee: 'Trọng tài',
     },
-    openWorkspace: {
-      organizer: 'Vào màn hình điều hành',
-      referee: 'Vào màn hình ghi điểm',
-    },
     rotateOrganizerPin: 'Đổi mã PIN điều hành',
     rotateRefereePin: 'Đổi mã PIN trọng tài',
     signOut: 'Đăng xuất',

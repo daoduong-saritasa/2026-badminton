@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { AlertCircle, ArrowLeft, KeyRound, RefreshCw, ListOrdered, Trophy, Volleyball } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ClipboardPen, KeyRound, LayoutDashboard, RefreshCw, ListOrdered, Trophy, Volleyball } from 'lucide-react'
 
 import { fetchTournament, subscribeTournament } from '@/data/tournament'
 import { getStaffAccess } from '@/data/staff'
@@ -166,10 +166,6 @@ export default function App() {
       : selectedView
   const view = accessibleSelection ?? defaultView(snapshot.tournament.stage)
   const handleViewChange = (nextView: string) => setSelectedView(nextView as AppView)
-  const handleStaffAction = () => {
-    if (isStaff) setSelectedView(isOrganizer ? 'organizer' : 'scoring')
-    else setStaffDialogOpen(true)
-  }
   const handleSignedOut = () => {
     queryClient.setQueryData(staffQueryKey, null)
     setSelectedView(null)
@@ -206,10 +202,12 @@ export default function App() {
     )
   }
   const viewContent = renderView(snapshot, view)
-  const tabs: { value: PublicView; label: string }[] = [
+  const workspace: StaffView | null = isStaff ? (isOrganizer ? 'organizer' : 'scoring') : null
+  const tabs: { value: AppView; label: string }[] = [
     { value: 'matches', label: messages.app.tabs.matches },
     { value: 'standings', label: messages.app.tabs.standings },
     { value: 'knockouts', label: messages.app.tabs.knockouts },
+    ...(workspace ? [{ value: workspace, label: messages.app.tabs[workspace] }] : []),
   ]
 
   return (
@@ -227,13 +225,13 @@ export default function App() {
           </p>
         </div>
         {isStaff ? (
-          <StaffMenu role={staffAccess.role} onOpenWorkspace={handleStaffAction} onSignedOut={handleSignedOut} />
+          <StaffMenu role={staffAccess.role} onSignedOut={handleSignedOut} />
         ) : (
           <Button
             variant="outline"
             className="shrink-0 border-rule bg-transparent px-3 text-muted-ink hover:bg-white sm:px-4"
             aria-label={messages.app.staffAccess}
-            onClick={handleStaffAction}
+            onClick={() => setStaffDialogOpen(true)}
           >
             <KeyRound /> <span className="hidden sm:inline">{messages.app.staffAccess}</span>
           </Button>
@@ -248,6 +246,8 @@ export default function App() {
               {tab.value === 'matches' ? <Volleyball className="size-5" aria-hidden="true" /> : null}
               {tab.value === 'standings' ? <ListOrdered className="size-5" aria-hidden="true" /> : null}
               {tab.value === 'knockouts' ? <Trophy className="size-5" aria-hidden="true" /> : null}
+              {tab.value === 'scoring' ? <ClipboardPen className="size-5" aria-hidden="true" /> : null}
+              {tab.value === 'organizer' ? <LayoutDashboard className="size-5" aria-hidden="true" /> : null}
               {tab.label}
             </TabsTrigger>
           ))}
