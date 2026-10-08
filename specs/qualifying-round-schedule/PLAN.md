@@ -84,8 +84,8 @@ Starting a match checks court occupancy and player overlap, but does not enforce
 
 - Group qualifying fixtures by round and court.
 - Show the current match and next match for each court.
-- Preserve global fixture numbering when users filter by team.
-- Use compact labels such as **Lượt 2 · Cặp đấu 3/6**, with match numbers underneath.
+- Preserve round and court labels when users filter by team; omit global fixture numbers.
+- Use compact labels such as **Lượt 2 · Sân 1**, with **Trận 1** and **Trận 2** underneath.
 - Show a short start blocker only where staff need it, such as **Chờ lượt 1 kết thúc**.
 - Keep score controls accessible on phones and preserve long-name wrapping.
 - Update Vietnamese and English copy using the canonical terms in `CONTEXT.md`.
@@ -146,7 +146,7 @@ Create `EXECUTION.md` through the spec-plan workflow before phased implementatio
 - Concurrent start requests cannot bypass match sequence or round boundaries.
 - Conversion preserves match identity and pairing data, and rejects started tournaments.
 - **Reset progress** preserves fixture order and courts.
-- Public and staff views show the same current round, fixture order, and court queues on phones.
+- Public and staff views show the same current round, round labels, and court queues on phones.
 
 ## Verification constraints
 

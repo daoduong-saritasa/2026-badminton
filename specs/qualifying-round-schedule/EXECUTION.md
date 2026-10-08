@@ -44,6 +44,8 @@ Migration is not applied. The local database contains one qualifying match marke
 
 - [x] (amended 2026-10-08) Adapt scheduling assertions and SQL fixture metadata in `tests/integration/tournament.test.ts`, `tests/integration/pair-assignment.test.ts`, `tests/integration/impacts.test.ts`, and `tests/integration/round-robin-phase1.test.ts`; preserve occupied-court coverage outside round scheduling.
 
+- [x] (amended 2026-10-08) Remove global fixture numbers from `src/features/tournament/labels.ts` and `src/features/tournament/TournamentPage.tsx`; retain rounds, courts, teams, and the two match numbers.
+
 ## Spec gate (hard — once, before the final phase's PR)
 
 - [~] `npm run test` (database fixtures clear tournament data; do not elevate or run against a populated stack without authorization; record environment debt).

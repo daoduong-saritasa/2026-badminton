@@ -43,14 +43,9 @@ export function fixtureLabel(fixture: TeamFixture | undefined): string {
   return messages.stages[fixture.stage]
 }
 
-export function fixtureScheduleLabel(snapshot: TournamentSnapshot, fixture: TeamFixture | undefined): string {
-  const stage = fixtureLabel(fixture)
-  if (fixture?.stage !== 'qualifying') return stage
-  const qualifying = snapshot.fixtures.filter((candidate) => candidate.stage === 'qualifying')
-  const index = qualifying.findIndex((candidate) => candidate.id === fixture.id)
-  const round = qualifyingRound(fixture)
-  const position = fixture.qualifyingOrder ?? index + 1
-  return index < 0 ? stage : `${round === null ? stage : messages.qualifying.round(round)} · ${messages.common.fixtureOrder(position, qualifying.length)}`
+export function fixtureScheduleLabel(_snapshot: TournamentSnapshot, fixture: TeamFixture | undefined): string {
+  const round = fixture ? qualifyingRound(fixture) : null
+  return round === null ? fixtureLabel(fixture) : messages.qualifying.round(round)
 }
 
 /** "Chạm 21, cách 2 điểm, tối đa 30 · Thắng 2 ván": the game rules a stage plays under. */

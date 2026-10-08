@@ -34,7 +34,7 @@ function FixtureList({ snapshot, teamId }: { snapshot: TournamentSnapshot; teamI
                   <h3 className="text-sm font-semibold text-muted-ink">{messages.qualifying.round(round)}</h3>
                   <div className="grid gap-4 md:grid-cols-2">
                     {fixtures.map((fixture) => <FixtureCard key={fixture.id} snapshot={snapshot} fixture={fixture}
-                      label={`${fixture.qualifyingCourt ? courtLabel(snapshot, fixture.qualifyingCourt) : messages.publicView.courtPending} · ${messages.common.fixtureOrder(fixture.qualifyingOrder ?? 0, 6)}`} />)}
+                      label={fixture.qualifyingCourt ? courtLabel(snapshot, fixture.qualifyingCourt) : messages.publicView.courtPending} />)}
                   </div>
                 </section>
               )
