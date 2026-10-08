@@ -180,7 +180,12 @@ export default function App() {
     setOrganizerSection('overview')
   }
   if (view === 'scoring' && staffAccess) {
-    return <ScoreTracker snapshot={snapshot} resetGeneration={tournamentState.resetGeneration} role={staffAccess.role} onExit={() => setSelectedView(isOrganizer ? 'organizer' : 'matches')} />
+    return (
+      <>
+        <ScoreTracker snapshot={snapshot} resetGeneration={tournamentState.resetGeneration} role={staffAccess.role} onExit={() => setSelectedView(isOrganizer ? 'organizer' : 'matches')} />
+        <FinalCelebration snapshot={snapshot} />
+      </>
+    )
   }
   if (view === 'organizer' && staffAccess) {
     return (
@@ -209,6 +214,7 @@ export default function App() {
           onSectionChange={setOrganizerSection}
           onOpenScoring={() => setSelectedView('scoring')}
         />
+        <FinalCelebration snapshot={snapshot} />
       </div>
     )
   }
@@ -276,7 +282,7 @@ export default function App() {
         onOpenChange={setStaffDialogOpen}
         onGranted={handleStaffGranted}
       />
-      <FinalCelebration snapshot={snapshot} />
+      <FinalCelebration snapshot={snapshot} onClose={() => setSelectedView('final')} />
     </div>
   )
 }

@@ -515,6 +515,7 @@ export const en = {
     positionsHeading: 'Final positions',
     position: (position: number) => `${ordinal(position)} place`,
     championLabel: 'Champion',
+    viewResults: 'See the results',
   },
 
   results: {

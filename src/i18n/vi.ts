@@ -518,6 +518,7 @@ export const vi = {
     positionsHeading: 'Thứ hạng chung cuộc',
     position: (position: number) => `Hạng ${formatNumber(position)}`,
     championLabel: 'Vô địch',
+    viewResults: 'Xem kết quả',
   },
 
   results: {
