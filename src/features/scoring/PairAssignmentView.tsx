@@ -89,18 +89,21 @@ function PlayerChoice({ player, selected, played, overLimit, playing, onClick }:
     <button
       type="button"
       aria-pressed={selected}
+      title={player.name}
       className={cn(
-        'flex min-h-11 min-w-0 items-center gap-2 rounded-field border px-3 py-2 text-left text-sm transition-colors',
+        'flex min-h-11 min-w-0 flex-col items-start justify-center gap-1 rounded-field border px-2.5 py-2 text-left text-sm transition-colors',
         selected ? 'border-navy bg-mist font-semibold text-navy ring-1 ring-navy' : 'border-line bg-white text-ink hover:bg-well',
       )}
       onClick={onClick}
     >
-      {playing ? <span className="size-2 shrink-0 rounded-full bg-destructive" aria-hidden="true" /> : null}
-      <span className="seed-name min-w-0 flex-1 [overflow-wrap:anywhere]" data-seed={player.seed}>{player.name}</span>
+      <span className="flex w-full min-w-0 items-center gap-1.5">
+        {playing ? <span className="size-2 shrink-0 rounded-full bg-destructive" aria-hidden="true" /> : null}
+        <span className="seed-name min-w-0 truncate" data-seed={player.seed}>{player.name}</span>
+      </span>
       <span
         aria-hidden="true"
         className={cn(
-          'numeric shrink-0 rounded-pill px-1.5 py-0.5 text-xs font-medium',
+          'numeric rounded-pill px-1.5 py-0.5 text-xs font-medium',
           overLimit ? 'bg-[#fdeceb] text-destructive' : selected ? 'bg-navy text-white' : 'bg-well text-muted-ink',
         )}
       >
@@ -141,8 +144,8 @@ function TeamPicker({ teamLabel, players, picked, mixed, playing, played, overLi
       <p className="truncate text-xs font-semibold tracking-[0.02em] text-muted-ink">{teamLabel}</p>
       {mixed ? (
         ([1, 2] as const).map((seed) => (
-          <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2" key={seed}>
-            <span className="text-xs font-semibold text-muted-ink">{messages.pairAssignment.seedShort(seed)}</span>
+          <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)] items-stretch gap-2" key={seed}>
+            <span className="self-center text-xs font-semibold text-muted-ink">{messages.pairAssignment.seedShort(seed)}</span>
             {players.filter((player) => player.seed === seed).map((player) => (
               <PlayerChoice key={player.id} player={player} selected={picked.includes(player.id)} played={played(player.id)} overLimit={overLimit(player.id)} playing={playing.has(player.id)} onClick={() => choose(player)} />
             ))}
