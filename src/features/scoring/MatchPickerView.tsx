@@ -8,9 +8,11 @@ import { SeedLegend } from '@/features/tournament/Participants'
 import { courtLabel, fixtureLabel, fixtureOf, groupByFixture, matchLabel, openGame, scoreText, sideTeamId, startBlocker, teamName, upcomingMatches } from '@/features/tournament/labels'
 import { messages } from '@/i18n/vi'
 
-export function MatchPickerView({ snapshot, onSelect, onExit, onAssign, onStart, startPending = false }: {
+export function MatchPickerView({ snapshot, onSelect, onExit, onAssign, onStart, startPending = false, courtControl }: {
   snapshot: TournamentSnapshot; onSelect: (matchId: UUID) => void; onExit: () => void;
   onAssign: (fixtureId: UUID) => void; onStart: (matchId: UUID) => void; startPending?: boolean;
+  /** Control that changes an upcoming match's court; without it the court is shown as text. */
+  courtControl?: (match: FixtureMatch) => ReactNode;
 }) {
   const playing = snapshot.matches.filter((match) => match.state === 'playing')
   const upcoming = upcomingMatches(snapshot)
@@ -78,13 +80,14 @@ export function MatchPickerView({ snapshot, onSelect, onExit, onAssign, onStart,
                       <li className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-x-4 gap-y-4 py-5 first:pt-0 last:pb-0" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
                         <p className="w-fit rounded-field bg-well px-2.5 py-1 text-sm font-semibold">
                           {messages.common.matchNumber(match.matchNumber)}
-                          <span className="font-normal text-muted-ink"> · {match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending}</span>
+                          {courtControl ? null : <span className="font-normal text-muted-ink"> · {match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending}</span>}
                         </p>
                         <p data-guide={match.matchNumber === 1 ? 'blocked' : undefined} className="text-right text-xs text-muted-ink">
                           {startBlocker(snapshot, match) ? messages.scoring.startBlocked[startBlocker(snapshot, match) ?? 'pairs'] : null}
                         </p>
                         <PairLines snapshot={snapshot} match={match} className="col-span-2 sm:col-span-1" />
-                        <Button className="col-start-2 w-full" disabled={startBlocker(snapshot, match) !== null || startPending} onClick={() => onStart(match.id)}>
+                        {courtControl ? <div className="col-start-1">{courtControl(match)}</div> : null}
+                        <Button className="col-start-2 w-full self-start" disabled={startBlocker(snapshot, match) !== null || startPending} onClick={() => onStart(match.id)}>
                           <Play /> {messages.scoring.start}
                         </Button>
                       </li>

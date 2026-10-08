@@ -231,6 +231,12 @@ describe('pair assignment', () => {
     }
   })
 
+  it('lets a referee move an unstarted match to another court', async () => {
+    const ready = await startQualifying(organizer)
+    const [first] = fixtureMatches(ready, ready.fixtures[0].id)
+    expect((await assignCourt(referee, first.id, 2)).court).toBe(2)
+  })
+
   it('blocks a player already on court for everyone, at assignment and at start', async () => {
     const ready = await startQualifying(organizer)
     const [first, second] = fixtureMatches(ready, ready.fixtures[0].id)

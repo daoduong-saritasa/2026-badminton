@@ -20,7 +20,7 @@ import type { CommandPayloads } from '@/domain/commands'
 import type { PlayoffRound } from '@/domain/playoff-rounds'
 import { resolvedFinalists, type FinalistBasis } from '@/domain/progression'
 import { qualifyingStandings } from '@/domain/standings'
-import type { Court, FixtureMatch, TournamentSnapshot, UUID } from '@/domain/types'
+import type { FixtureMatch, TournamentSnapshot, UUID } from '@/domain/types'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -34,9 +34,9 @@ import {
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CourtSelect } from '@/features/scoring/CourtSelect'
 import { PairAssignmentForm } from '@/features/scoring/PairAssignmentForm'
 import {
-  courtLabel,
   fixtureLabel,
   fixtureMatches,
   fixtureOf,
@@ -57,8 +57,6 @@ import { CourtNamesDialog } from './CourtNamesDialog'
 import { ResultEditor } from './ResultEditor'
 import { ResultSchedule } from './ResultSchedule'
 import { SetupForm } from './SetupForm'
-
-const courts: readonly Court[] = [1, 2]
 
 /**
  * Result entry is driven from the schedule: pick a match, then edit that one
@@ -143,14 +141,6 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
   const [assignOpen, setAssignOpen] = useState(false)
   const [startMatchId, setStartMatchId] = useState<UUID | null>(null)
 
-  const courtMutation = useMutation({
-    mutationFn: ({ matchId, court }: { matchId: UUID; court: Court }) => mutateTournament('assign_courts', {
-      requestId: crypto.randomUUID(),
-      resetGeneration,
-      expectedVersion: snapshot.tournament.version,
-      payload: { assignments: [{ matchId, court }] },
-    }),
-  })
   const startMutation = useMutation({
     mutationFn: (matchId: UUID) => {
       const match = snapshot.matches.find((candidate) => candidate.id === matchId)
@@ -196,18 +186,12 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
                     </p>
                     <PairLines snapshot={snapshot} match={match} className="col-span-2 row-start-2 md:col-span-1 md:col-start-1" />
                     <div className="col-start-1 row-start-3 md:col-start-2 md:row-start-2">
-                    <Select
-                      value={match.court === null ? '' : String(match.court)}
-                      disabled={courtMutation.isPending}
-                      onValueChange={(value) => courtMutation.mutate({ matchId: match.id, court: Number(value) as Court })}
-                    >
-                      <SelectTrigger className="w-full" aria-label={messages.organizer.schedule.courtFor(`${matchLabel(snapshot, match)} · ${fixtureTeams}`)}>
-                        <SelectValue placeholder={messages.organizer.schedule.noCourt} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {courts.map((option) => <SelectItem value={String(option)} key={option}>{courtLabel(snapshot, option)}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
+                    <CourtSelect
+                      snapshot={snapshot}
+                      match={match}
+                      resetGeneration={resetGeneration}
+                      label={messages.organizer.schedule.courtFor(`${matchLabel(snapshot, match)} · ${fixtureTeams}`)}
+                    />
                     </div>
                     <Button
                       className="col-start-2 row-start-3 w-full md:col-start-3 md:row-start-2"
@@ -224,7 +208,6 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
         })}
       </ul>
       {waiting.length === 0 ? <p className="text-[0.8125rem] text-muted-ink">{messages.organizer.schedule.empty}</p> : null}
-      {courtMutation.isError ? <p className="mt-3 text-[0.8125rem] text-destructive" role="alert">{errorMessage(courtMutation.error)}</p> : null}
       {startMutation.isError ? <p className="mt-3 text-[0.8125rem] text-destructive" role="alert">{errorMessage(startMutation.error)}</p> : null}
 
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>

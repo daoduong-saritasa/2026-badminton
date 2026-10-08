@@ -8,10 +8,11 @@ import { fetchTournament, mutateTournament } from '@/data/tournament'
 import { isGameWon } from '@/domain/scoring'
 import type { FixtureMatch, Game, Side, StaffRole, TournamentSnapshot, UUID } from '@/domain/types'
 import { reduceScoring, type IdleScoringState, type PendingPoint, type SaveFailureReason } from './scoring-state'
+import { CourtSelect } from './CourtSelect'
 import { PairAssignmentForm } from './PairAssignmentForm'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { courtLabel, fixtureOf, isStartable, openGame, upcomingMatches } from '@/features/tournament/labels'
+import { courtLabel, fixtureOf, isStartable, matchLabel, openGame, upcomingMatches } from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
 import { messages } from '@/i18n/vi'
 
@@ -305,7 +306,11 @@ function MatchPicker({
   return (
     <main className="app-shell space-y-6">
       <MatchPickerView snapshot={snapshot} onSelect={onSelect} onExit={onExit} startPending={startMutation.isPending}
-        onStart={setStartMatchId} onAssign={(fixtureId) => { setAssignFixtureId(fixtureId); setAssignOpen(true) }} />
+        onStart={setStartMatchId} onAssign={(fixtureId) => { setAssignFixtureId(fixtureId); setAssignOpen(true) }}
+        courtControl={(match) => (
+          <CourtSelect snapshot={snapshot} match={match} resetGeneration={resetGeneration}
+            label={messages.organizer.schedule.courtFor(matchLabel(snapshot, match))} />
+        )} />
       <Dialog open={assignOpen} onOpenChange={setAssignOpen}>
         <DialogContent className="flex max-h-[calc(100dvh-1.5rem)] flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
           {assignFixtureId ? (
