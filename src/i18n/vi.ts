@@ -328,7 +328,7 @@ export const messages = {
     },
     tabs: {
       matches: 'Trận đấu',
-      standings: 'Vòng loại',
+      standings: 'Bảng xếp hạng',
       knockouts: 'Tranh hạng',
       scoring: 'Ghi điểm',
       organizer: 'Điều hành',
@@ -376,14 +376,11 @@ export const messages = {
 
   publicView: {
     playingNow: 'Trên sân',
-    upcoming: 'Sắp tới',
-    recentResults: 'Kết quả gần đây',
     courtPending: 'Chưa xếp sân',
     noCourtMatches: 'Chưa có trận nào được xếp sân.',
     setupInProgress: 'Đang chuẩn bị giải',
     teamFilter: 'Lọc theo đội',
     allTeams: 'Tất cả đội',
-    teamSchedule: (team: string) => `Lịch thi đấu của ${team}`,
     opponent: (team: string) => `Gặp ${team}`,
     noFixtures: 'Đội này chưa có cặp đấu nào.',
     rules: {
@@ -521,7 +518,6 @@ export const messages = {
   },
 
   results: {
-    gameScores: 'Điểm từng ván',
     completed: 'Kết quả đã ghi',
     showWalkovers: (count: number) => `Xử thắng một trận chưa có kết quả (${formatNumber(count)})`,
     hideWalkovers: 'Ẩn các trận chưa có kết quả',

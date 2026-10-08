@@ -6,7 +6,6 @@ import { formatNumber } from '@/i18n/format'
 import { messages } from '@/i18n/vi'
 import { cn } from '@/lib/utils'
 
-import { FixtureCard } from './FixtureCard'
 import { PlayerIdentity, SeedLegend, TeamIdentity } from './Participants'
 import { fixtureMatches, teamName } from './labels'
 
@@ -203,16 +202,10 @@ function TeamRoster({ snapshot }: { snapshot: TournamentSnapshot }) {
 export function StandingsTable({ snapshot }: { snapshot: TournamentSnapshot }) {
   return (
     <section className="view-enter space-y-6">
-      <h2 className="sr-only">{messages.fixtures.qualifyingHeading}</h2>
+      <h2 className="sr-only">{messages.fixtures.standingsHeading}</h2>
       <SeedLegend />
       <QualifyingStandings snapshot={snapshot} />
-      <div className="grid gap-6 md:grid-cols-2">
-        {snapshot.fixtures
-          .filter((fixture) => fixture.stage === 'qualifying')
-          .map((fixture) => <FixtureCard key={fixture.id} snapshot={snapshot} fixture={fixture} />)}
-      </div>
       <TeamRoster snapshot={snapshot} />
-      <FinalPositions snapshot={snapshot} />
     </section>
   )
 }

@@ -4,36 +4,13 @@ import type { Court, FixtureMatch, TournamentSnapshot, UUID } from '@/domain/typ
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { messages } from '@/i18n/vi'
 
-import {
-  fixtureScheduleLabel,
-  isDeciderEligible,
-  teamName,
-} from './labels'
+import { isDeciderEligible } from './labels'
 import { MatchTicket } from './MatchTicket'
 import { FixtureCard } from './FixtureCard'
-import { MatchSummary } from './MatchSummary'
 import { SeedLegend } from './Participants'
+import { QualificationPlayoffs } from './QualificationPlayoffs'
 
 const courts: readonly Court[] = [1, 2]
-
-function PlayingFixtures({ snapshot }: { snapshot: TournamentSnapshot }) {
-  const playingIds = new Set(snapshot.matches.filter((match) => match.state === 'playing').map((match) => match.fixtureId))
-  const fixtures = snapshot.fixtures.filter((fixture) => playingIds.has(fixture.id))
-  if (fixtures.length === 0) return null
-  return (
-    <div className="border-l-4 border-orange bg-white px-4 py-3">
-      <p className="text-sm font-semibold text-navy">{messages.matchState.playing}</p>
-      <ul className="mt-2 space-y-2">
-        {fixtures.map((fixture) => (
-          <li className="text-sm [overflow-wrap:anywhere]" key={fixture.id}>
-            <span className="font-semibold">{fixtureScheduleLabel(snapshot, fixture)}</span>
-            <span className="mt-0.5 block text-muted-ink">{messages.common.versus(teamName(snapshot, fixture.teamAId), teamName(snapshot, fixture.teamBId))}</span>
-          </li>
-        ))}
-      </ul>
-    </div>
-  )
-}
 
 /** Snapshot order is fixture order then match number, which is the playing order. */
 function waiting(snapshot: TournamentSnapshot): FixtureMatch[] {
@@ -45,19 +22,24 @@ function currentMatch(snapshot: TournamentSnapshot, court: Court): FixtureMatch 
     ?? waiting(snapshot).find((match) => match.court === court)
 }
 
-function TeamSchedule({ snapshot, teamId }: { snapshot: TournamentSnapshot; teamId: UUID }) {
-  const fixtures = snapshot.fixtures.filter((fixture) => fixture.teamAId === teamId || fixture.teamBId === teamId)
+/** Qualifying fixtures, then the qualification playoff rounds, for one team or all. */
+function FixtureList({ snapshot, teamId }: { snapshot: TournamentSnapshot; teamId: UUID | null }) {
+  const qualifying = snapshot.fixtures.filter((fixture) =>
+    fixture.stage === 'qualifying' && (teamId === null || fixture.teamAId === teamId || fixture.teamBId === teamId))
   return (
-    <div>
-      <h2 className="sr-only">{messages.publicView.teamSchedule(teamName(snapshot, teamId))}</h2>
-      {fixtures.length === 0 ? (
-        <p className="rounded-card border border-dashed border-rule bg-white/60 p-8 text-center text-sm text-muted-ink">{messages.publicView.noFixtures}</p>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2">
-          {fixtures.map((fixture) => <FixtureCard key={fixture.id} snapshot={snapshot} fixture={fixture} />)}
-        </div>
-      )}
-    </div>
+    <>
+      <section className="space-y-4">
+        <h2 className="text-lg font-semibold tracking-tight">{messages.fixtures.qualifyingHeading}</h2>
+        {qualifying.length === 0 ? (
+          <p className="rounded-card border border-dashed border-rule bg-white/60 p-8 text-center text-sm text-muted-ink">{messages.publicView.noFixtures}</p>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {qualifying.map((fixture) => <FixtureCard key={fixture.id} snapshot={snapshot} fixture={fixture} />)}
+          </div>
+        )}
+      </section>
+      <QualificationPlayoffs snapshot={snapshot} teamId={teamId} />
+    </>
   )
 }
 
@@ -69,44 +51,21 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
   const current = isSetup ? [] : courts
     .map((court) => currentMatch(snapshot, court))
     .filter((match): match is FixtureMatch => match !== undefined)
-  const visibleIds = new Set(current.map((match) => match.id))
-  const upcoming = isSetup ? [] : waiting(snapshot).filter((match) => !visibleIds.has(match.id))
-  const completed = snapshot.matches
-    .filter((match) => match.state === 'completed')
-    .toReversed()
-    .slice(0, 6)
-
-  const filter = (
-    <Select value={selectedTeamId ?? 'all'} onValueChange={(value) => setTeamFilter(value)}>
-      <SelectTrigger className="w-full sm:w-64" aria-label={messages.publicView.teamFilter}>
-        <SelectValue />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value="all">{messages.publicView.allTeams}</SelectItem>
-        {snapshot.teams.map((team) => <SelectItem value={team.id} key={team.id}>{team.name}</SelectItem>)}
-      </SelectContent>
-    </Select>
-  )
-
-  if (selectedTeamId !== null) {
-    return (
-      <section className="view-enter space-y-6">
-        {filter}
-        <SeedLegend />
-        {!isSetup ? <PlayingFixtures snapshot={snapshot} /> : null}
-        <TeamSchedule snapshot={snapshot} teamId={selectedTeamId} />
-      </section>
-    )
-  }
 
   return (
     <section className="view-enter space-y-6">
-      {filter}
+      <Select value={selectedTeamId ?? 'all'} onValueChange={(value) => setTeamFilter(value)}>
+        <SelectTrigger className="w-full sm:w-64" aria-label={messages.publicView.teamFilter}>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectItem value="all">{messages.publicView.allTeams}</SelectItem>
+          {snapshot.teams.map((team) => <SelectItem value={team.id} key={team.id}>{team.name}</SelectItem>)}
+        </SelectContent>
+      </Select>
       <SeedLegend />
-      <div>
-        <div className="mb-4">
-          <h2 className="text-lg font-semibold tracking-tight">{messages.publicView.playingNow}</h2>
-        </div>
+      <section>
+        <h2 className="mb-4 text-lg font-semibold tracking-tight">{messages.publicView.playingNow}</h2>
         <div className="grid gap-4 md:grid-cols-2">
           {current.map((match) => <MatchTicket match={match} snapshot={snapshot} key={match.id} />)}
         </div>
@@ -117,27 +76,8 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
             </p>
           </div>
         ) : null}
-      </div>
-      {upcoming.length > 0 ? (
-        <div>
-          <h2 className="mb-3 text-lg font-semibold tracking-tight">{messages.publicView.upcoming}</h2>
-          <ol className="grid gap-x-8 md:grid-cols-2">
-            {upcoming.slice(0, 6).map((match) => (
-              <li className="min-w-0" key={match.id}><MatchSummary snapshot={snapshot} match={match} compact /></li>
-            ))}
-          </ol>
-        </div>
-      ) : null}
-      {completed.length > 0 ? (
-        <div>
-          <h2 className="mb-3 text-lg font-semibold tracking-tight">{messages.publicView.recentResults}</h2>
-          <ol className="grid gap-x-8 md:grid-cols-2">
-            {completed.map((match) => (
-              <li className="min-w-0" key={match.id}><MatchSummary snapshot={snapshot} match={match} /></li>
-            ))}
-          </ol>
-        </div>
-      ) : null}
+      </section>
+      <FixtureList snapshot={snapshot} teamId={selectedTeamId} />
     </section>
   )
 }

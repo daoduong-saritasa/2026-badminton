@@ -154,7 +154,7 @@ test('four tied teams need a recorded matchup draw before the playoff', async ({
   expect(finalistIds(snapshot)).toEqual([opponent, rest[0]].sort())
 
   await page.getByRole('button', { name: messages.organizer.returnToTournament }).click()
-  await page.getByRole('tab', { name: messages.app.tabs.knockouts }).click()
+  await page.getByRole('tab', { name: messages.app.tabs.matches }).click()
   await expect(page.getByText(messages.fixtures.matchupDrawn(messages.common.versus(teamName(snapshot, anchor), teamName(snapshot, opponent))))).toBeVisible()
   expect(fixturesIn(snapshot, 'qualification-playoff').flatMap((fixture) => fixtureMatches(snapshot, fixture.id))
     .filter((match) => match.state === 'completed')).toHaveLength(2)
