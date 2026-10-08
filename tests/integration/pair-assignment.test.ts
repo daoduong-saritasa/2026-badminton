@@ -224,6 +224,13 @@ describe('pair assignment', () => {
     await ok(await assign(organizer, second, 'a', { player1Id: seed1[0], player2Id: seed2[1] }, true))
   })
 
+  it('creates matches 1 and 2 on courts 1 and 2', async () => {
+    const ready = await startQualifying(organizer)
+    for (const fixture of ready.fixtures.filter((candidate) => candidate.stage === 'qualifying')) {
+      expect(fixtureMatches(ready, fixture.id).map(({ court }) => court)).toEqual([1, 2])
+    }
+  })
+
   it('blocks a player already on court for everyone, at assignment and at start', async () => {
     const ready = await startQualifying(organizer)
     const [first, second] = fixtureMatches(ready, ready.fixtures[0].id)
