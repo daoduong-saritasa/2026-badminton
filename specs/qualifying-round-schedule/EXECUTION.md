@@ -5,9 +5,9 @@ Integration branch: `main`. Branch model: stacked via `gh stack` (default).
 
 ## STATUS
 
-- Current phase: 1 — in-progress
-- Phase 1 — Round schedule: in-progress
-- Verification debt: none
+- Current phase: 1 — done-with-debt
+- Phase 1 — Round schedule: done-with-debt
+- Verification debt: dependency-aware tests: 120 passed, 28 skipped, four integration suites failed during local Supabase setup. Full suite: 185 passed, 44 skipped, six integration suites failed during setup. The local stack is accessible only through elevated tools; its destructive fixtures lack authorization. SQL regression file and concurrent database execution remain unrun. The rollback migration attempt rejected one existing playing qualifying match with a score record; no changes persisted. Substitute evidence: typecheck, non-database tests, and build pass.
 
 ## Phase 1 — Round schedule
 
@@ -27,8 +27,14 @@ Fresh review: required — persistent-data migration and durable mutation rules.
 - [x] Add transactional SQL regression scenarios in `tests/sql/qualifying-round-schedule.sql` for generation, conversion, progression, walkovers, swaps, reset, and stale versions; document concurrency review evidence: the router, start command, and court assignment acquire the same transaction-scoped mutation lock before eligibility checks; concurrent database execution remains unverified.
 
 **Phase gate (hard):**
-- [ ] `npm run typecheck`.
-- [ ] `git diff --name-only --diff-filter=ACMR main...HEAD -z | xargs -0 npm run test:related --` (database suites may be environment-blocked; record pass/skip counts and substitute non-database evidence).
+- [x] `npm run typecheck` — exit 0.
+- [~] `git diff --name-only --diff-filter=ACMR main...HEAD -z | xargs -0 npm run test:related --` (database suites may be environment-blocked; record pass/skip counts and substitute non-database evidence).
+
+Fresh review result: no P0–P2 findings. Successful migration conversion, SQL regression execution, and concurrent database requests remain unverified.
+
+Browser verification: isolated mock backend; public rounds and court queues pass at 320, 390, 768, and 1440 pixels without horizontal overflow. Team filtering preserves global fixture numbers. Staff sequence and round blockers pass; no browser errors.
+
+Migration is not applied. The local database contains one qualifying match marked `playing` with a score record.
 
 **On completion:** run the phase gate; run `fresh-review`; update STATUS + checkboxes; stop and ask before push/PR.
 
@@ -40,5 +46,5 @@ Fresh review: required — persistent-data migration and durable mutation rules.
 
 ## Spec gate (hard — once, before the final phase's PR)
 
-- [ ] `npm run test` (database fixtures clear tournament data; do not elevate or run against a populated stack without authorization; record environment debt).
-- [ ] `npm run build`.
+- [~] `npm run test` (database fixtures clear tournament data; do not elevate or run against a populated stack without authorization; record environment debt).
+- [x] `npm run build` — exit 0.

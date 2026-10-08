@@ -1,6 +1,6 @@
 # Qualifying schedule across two courts
 
-Status: schedule agreed; implementation not started.
+Status: implemented in one phase with database verification debt; see [Execution plan](EXECUTION.md).
 
 ## Goal
 
