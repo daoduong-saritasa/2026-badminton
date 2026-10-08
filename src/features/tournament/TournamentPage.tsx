@@ -64,19 +64,21 @@ export function TournamentPage({ snapshot }: { snapshot: TournamentSnapshot }) {
         </SelectContent>
       </Select>
       <SeedLegend />
-      <section>
-        <h2 className="mb-4 text-lg font-semibold tracking-tight">{messages.publicView.playingNow}</h2>
-        <div className="grid gap-4 md:grid-cols-2">
-          {current.map((match) => <MatchTicket match={match} snapshot={snapshot} key={match.id} />)}
-        </div>
-        {current.length === 0 ? (
-          <div className="rounded-card border border-dashed border-rule bg-white/60 px-6 py-10 text-center">
-            <p className="text-sm font-semibold text-ink">
-              {isSetup ? messages.publicView.setupInProgress : messages.publicView.noCourtMatches}
-            </p>
+      {selectedTeamId === null ? (
+        <section>
+          <h2 className="mb-4 text-lg font-semibold tracking-tight">{messages.publicView.playingNow}</h2>
+          <div className="grid gap-4 md:grid-cols-2">
+            {current.map((match) => <MatchTicket match={match} snapshot={snapshot} key={match.id} />)}
           </div>
-        ) : null}
-      </section>
+          {current.length === 0 ? (
+            <div className="rounded-card border border-dashed border-rule bg-white/60 px-6 py-10 text-center">
+              <p className="text-sm font-semibold text-ink">
+                {isSetup ? messages.publicView.setupInProgress : messages.publicView.noCourtMatches}
+              </p>
+            </div>
+          ) : null}
+        </section>
+      ) : null}
       <FixtureList snapshot={snapshot} teamId={selectedTeamId} />
     </section>
   )
