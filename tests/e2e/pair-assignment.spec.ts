@@ -168,7 +168,7 @@ test('the organizer saves a doubled-up player as a confirmed exception', async (
   // seed1[0] plays both matches, as when a teammate is absent.
   await pick(teamPicker(dialog, 1, team), snapshot, { player1Id: seed1[0], player2Id: seed2[0] })
   await pick(teamPicker(dialog, 2, team), snapshot, { player1Id: seed1[0], player2Id: seed2[1] })
-  await expect(dialog).toContainText(pa.issues['qualifying-player-reused'])
+  await expect(dialog).toContainText(pa.issues['concurrent-player-reused'])
 
   await dialog.getByRole('button', { name: pa.saveException }).click()
   const confirm = page.getByRole('alertdialog', { name: pa.exceptionTitle })

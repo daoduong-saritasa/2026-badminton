@@ -66,7 +66,7 @@ export interface PairAssignmentIssue {
     | 'duplicate-player'
     | 'player-playing'
     | 'same-seed'
-    | 'qualifying-player-reused'
+    | 'concurrent-player-reused'
   overridable: boolean
 }
 

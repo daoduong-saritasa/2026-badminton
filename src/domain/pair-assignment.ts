@@ -64,12 +64,15 @@ export function validatePairAssignment(
     issues.push({ code: 'same-seed', overridable: true })
   }
 
-  if (fixture.stage === 'qualifying') {
+  if (isConcurrent(match.matchNumber)) {
     const siblingPlayerIds = snapshot.matches
-      .filter((candidate) => candidate.fixtureId === fixture.id && candidate.id !== match.id)
+      .filter((candidate) =>
+        candidate.fixtureId === fixture.id
+        && candidate.id !== match.id
+        && isConcurrent(candidate.matchNumber))
       .flatMap((candidate) => pairIds(side === 'a' ? candidate.pairA : candidate.pairB))
     if (siblingPlayerIds.some((playerId) => selectedIds.has(playerId))) {
-      issues.push({ code: 'qualifying-player-reused', overridable: true })
+      issues.push({ code: 'concurrent-player-reused', overridable: true })
     }
   }
 
@@ -123,6 +126,11 @@ export function qualifyingPairings(
     [pair(seed1[0], seed2[0]), pair(seed1[1], seed2[1])],
     [pair(seed1[0], seed2[1]), pair(seed1[1], seed2[0])],
   ]
+}
+
+/** Matches 1 and 2 of a fixture play at the same time, one per court. */
+function isConcurrent(matchNumber: 1 | 2 | 3): boolean {
+  return matchNumber < 3
 }
 
 function pair(player1: TeamPlayer, player2: TeamPlayer): Pair {

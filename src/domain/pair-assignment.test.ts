@@ -129,7 +129,28 @@ describe('validatePairAssignment', () => {
     )
 
     expect(validatePairAssignment(state, 'qualifying-2', 'a', pair('a1', 'a4')))
-      .toContainEqual({ code: 'qualifying-player-reused', overridable: true })
+      .toContainEqual({ code: 'concurrent-player-reused', overridable: true })
+  })
+
+  it('marks reuse across the concurrent placement matches but not the decider', () => {
+    const final = fixture('final')
+    const thirdPlace = fixture('third-place')
+    const state = snapshot(
+      [final, thirdPlace],
+      [
+        match(final, 1, { pairA: pair('a1', 'a2') }),
+        match(final, 2),
+        match(final, 3),
+        match(thirdPlace, 1, { pairA: pair('a1', 'a3') }),
+        match(thirdPlace, 2),
+      ],
+    )
+
+    expect(validatePairAssignment(state, 'final-2', 'a', pair('a1', 'a2')))
+      .toContainEqual({ code: 'concurrent-player-reused', overridable: true })
+    expect(validatePairAssignment(state, 'third-place-2', 'a', pair('a3', 'a2')))
+      .toContainEqual({ code: 'concurrent-player-reused', overridable: true })
+    expect(validatePairAssignment(state, 'final-3', 'a', pair('a1', 'a2'))).toEqual([])
   })
 
   it('marks same-seed pairs as overridable only where mixed seeds are required', () => {
@@ -214,7 +235,7 @@ describe('validatePairDrafts', () => {
       { matchId: 'qualifying-1', side: 'a', pair: pair('a1', 'a3') },
       { matchId: 'qualifying-2', side: 'a', pair: pair('a1', 'a4') },
     ])
-    expect(first.issues).toContainEqual({ code: 'qualifying-player-reused', overridable: true })
-    expect(second.issues).toContainEqual({ code: 'qualifying-player-reused', overridable: true })
+    expect(first.issues).toContainEqual({ code: 'concurrent-player-reused', overridable: true })
+    expect(second.issues).toContainEqual({ code: 'concurrent-player-reused', overridable: true })
   })
 })

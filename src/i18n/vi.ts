@@ -257,7 +257,7 @@ export const messages = {
       'duplicate-player': 'Một cặp phải gồm hai người khác nhau.',
       'player-playing': 'Có người đang thi đấu ở trận khác.',
       'same-seed': 'Trận này cần một hạt giống 1 và một hạt giống 2.',
-      'qualifying-player-reused': 'Một người được xếp ở cả hai trận của cặp đấu.',
+      'concurrent-player-reused': 'Một người được xếp ở cả trận 1 và trận 2, hai trận đánh cùng lúc.',
     },
   },
 
