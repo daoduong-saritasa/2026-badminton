@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ChevronDown } from 'lucide-react'
+import { ArrowLeft, ChevronDown } from 'lucide-react'
 
 import { messages } from '@/i18n/messages'
 
@@ -26,12 +26,13 @@ function RuleDetails({ heading, children }: { heading: string; children: ReactNo
 /**
  * The published rules as a standalone page, laid out stage by stage so players
  * can scan them from a shared link. It loads no tournament data and links
- * nowhere else.
+ * only back to the tournament.
  */
 export function RulesPage() {
   return (
     <main className="app-shell view-enter space-y-[2.125rem]">
       <header>
+        <a href="/" className="mb-5 inline-flex items-center gap-2 text-sm text-navy"><ArrowLeft className="size-4" aria-hidden="true" />{messages.publicView.rules.back}</a>
         <h1 className="text-[clamp(1.4375rem,4vw,1.875rem)] font-extrabold tracking-[-0.0433em]">
           <span className="brand-mark" aria-hidden="true" />
           {messages.publicView.rules.heading}

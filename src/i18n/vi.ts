@@ -389,6 +389,7 @@ export const vi = {
     noFixtures: 'Đội này chưa có cặp đấu nào.',
     rules: {
       heading: 'Luật thi đấu',
+      back: 'Về giải đấu',
       summary: '4 đội · 2 sân · Vòng loại vòng tròn → Tranh hạng ba → Chung kết',
       teamRule: 'Mỗi đội có 4 người: 2 hạt giống 1 và 2 hạt giống 2.',
       formatNote: 'Cặp đấu là giữa hai đội. Mỗi trận là giữa hai cặp. Ván là đơn vị ghi điểm trong một trận.',

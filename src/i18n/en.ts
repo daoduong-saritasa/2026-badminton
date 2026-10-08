@@ -386,6 +386,7 @@ export const en = {
     noFixtures: 'This team has no fixtures yet.',
     rules: {
       heading: 'Tournament rules',
+      back: 'Go to the tournament',
       summary: '4 teams · 2 courts · Round-robin qualifying → Third place → Final',
       teamRule: 'Each team has 4 players: 2 seed 1 and 2 seed 2.',
       formatNote: 'A fixture is between two teams. A match is between two pairs. A game is the scoring unit within a match.',
