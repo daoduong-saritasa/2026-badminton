@@ -1,4 +1,4 @@
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
 export function LoadingScreen({ label = messages.app.loading }: { label?: string }) {
   return (
