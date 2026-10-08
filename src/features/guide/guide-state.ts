@@ -29,6 +29,7 @@ const examples: Partial<GuideStep>[] = [
   { screen: 'pairs', target: 'pairs', assigned: false },
   { screen: 'pairs', target: 'pairs-saved', assigned: false },
   { screen: 'picker', target: 'matches' },
+  { screen: 'picker', target: 'court' },
   { screen: 'picker', target: 'confirmation', dialog: 'start' },
   { screen: 'score', target: 'point' },
   { screen: 'score', target: 'save', score: { a: 1, b: 0 }, status: 'saving' },
@@ -51,10 +52,13 @@ const examples: Partial<GuideStep>[] = [
   { screen: 'finish', target: 'finish' },
 ]
 
+/** Every step; titles and descriptions read the current locale's copy. */
 export const guideSteps: readonly GuideStep[] = examples.map((example, index) => ({
   screen: 'intro', target: 'intro', stage: 'qualifying', assigned: true, score: { a: 0, b: 0 },
   status: 'idle', swapped: false, gameNumber: 1, ownership: true, dialog: null, completed: false,
-  ...example, title: messages.guide.steps[index][0], description: messages.guide.steps[index][1],
+  ...example,
+  get title() { return messages.guide.steps[index][0] },
+  get description() { return messages.guide.steps[index][1] },
 }))
 
 export function guideExample(index: number) {
@@ -69,7 +73,6 @@ export function guideExample(index: number) {
       pairA: { player1Id: 'guide-c-0', player2Id: 'guide-c-2' }, pairB: { player1Id: 'guide-d-0', player2Id: 'guide-d-2' },
       games: [{ gameNumber: 1, score: { a: 8, b: 6 }, confirmedAt: null }],
     })
-    snapshot.matches[1].court = null
   }
   const match = snapshot.matches[0]
   match.state = step.completed ? 'completed' : step.screen === 'score' ? 'playing' : 'unstarted'

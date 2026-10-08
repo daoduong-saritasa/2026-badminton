@@ -40,12 +40,12 @@ import { guideExample, guideSteps, nextGuideIndex } from './guide-state'
     }
   })
   it('keeps failure recovery and takeover separate from result confirmation', () => {
-    expect(guideExample(21).state.status).toBe('failed')
     expect(guideExample(22).state.status).toBe('failed')
-    expect(guideExample(22).state.score).toEqual(guideExample(23).state.score)
-    expect(guideExample(23).state).toMatchObject({ status: 'idle', score: { a: 6, b: 3 } })
-    expect(guideExample(24).state.hasOwnership).toBe(false)
-    expect(guideExample(25).step.dialog).toBe('takeover')
-    expect(guideExample(26).state).toMatchObject({ hasOwnership: true, score: { a: 8, b: 6 } })
+    expect(guideExample(23).state.status).toBe('failed')
+    expect(guideExample(23).state.score).toEqual(guideExample(24).state.score)
+    expect(guideExample(24).state).toMatchObject({ status: 'idle', score: { a: 6, b: 3 } })
+    expect(guideExample(25).state.hasOwnership).toBe(false)
+    expect(guideExample(26).step.dialog).toBe('takeover')
+    expect(guideExample(27).state).toMatchObject({ hasOwnership: true, score: { a: 8, b: 6 } })
   })
 })

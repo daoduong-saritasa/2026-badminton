@@ -9,6 +9,36 @@ import { messages } from '@/i18n/messages'
 
 const courts: readonly Court[] = [1, 2]
 
+/** A match's court as a select; reports the chosen court without saving it. */
+export function CourtSelectView({ snapshot, match, label, disabled = false, error = null, onChange }: {
+  snapshot: TournamentSnapshot
+  match: FixtureMatch
+  /** Accessible name of the select. */
+  label: string
+  disabled?: boolean
+  /** Message shown under the select. */
+  error?: string | null
+  onChange: (court: Court) => void
+}) {
+  return (
+    <div>
+      <Select
+        value={match.court === null ? '' : String(match.court)}
+        disabled={disabled}
+        onValueChange={(value) => onChange(Number(value) as Court)}
+      >
+        <SelectTrigger className="w-full" aria-label={label}>
+          <SelectValue placeholder={messages.organizer.schedule.noCourt} />
+        </SelectTrigger>
+        <SelectContent>
+          {courts.map((court) => <SelectItem value={String(court)} key={court}>{courtLabel(snapshot, court)}</SelectItem>)}
+        </SelectContent>
+      </Select>
+      {error ? <p className="mt-2 text-xs text-destructive" role="alert">{error}</p> : null}
+    </div>
+  )
+}
+
 /** Moves an unstarted match to another court; a choice saves at once. */
 export function CourtSelect({ snapshot, match, resetGeneration, label }: {
   snapshot: TournamentSnapshot
@@ -27,20 +57,13 @@ export function CourtSelect({ snapshot, match, resetGeneration, label }: {
   })
 
   return (
-    <div>
-      <Select
-        value={match.court === null ? '' : String(match.court)}
-        disabled={mutation.isPending}
-        onValueChange={(value) => mutation.mutate(Number(value) as Court)}
-      >
-        <SelectTrigger className="w-full" aria-label={label}>
-          <SelectValue placeholder={messages.organizer.schedule.noCourt} />
-        </SelectTrigger>
-        <SelectContent>
-          {courts.map((court) => <SelectItem value={String(court)} key={court}>{courtLabel(snapshot, court)}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      {mutation.isError ? <p className="mt-2 text-xs text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
-    </div>
+    <CourtSelectView
+      snapshot={snapshot}
+      match={match}
+      label={label}
+      disabled={mutation.isPending}
+      error={mutation.isError ? errorMessage(mutation.error) : null}
+      onChange={(court) => mutation.mutate(court)}
+    />
   )
 }

@@ -6,6 +6,9 @@ import { PairAssignmentView } from '@/features/scoring/PairAssignmentView'
 import { ScoreTrackerView, ScoreConfirmationView } from '@/features/scoring/ScoreTrackerView'
 import { StaffAccessView } from '@/features/staff/StaffAccessView'
 import { MatchPickerView } from '@/features/scoring/MatchPickerView'
+import { CourtSelectView } from '@/features/scoring/CourtSelect'
+import { matchLabel } from '@/features/tournament/labels'
+import { LanguageToggle } from '@/components/LanguageToggle'
 import { messages } from '@/i18n/messages'
 import { guidePicks } from './guide-data'
 import { guideExample, guideSteps } from './guide-state'
@@ -39,7 +42,10 @@ export function GuidePage() {
   const hasForm = index !== null && (step.screen === 'access' || step.screen === 'pairs')
   return <div className="app-shell guide-shell" data-guide-total={guideSteps.length}>
     <header className="guide-header">
-      <a href="/" className="inline-flex items-center gap-2 text-sm text-navy"><ArrowLeft className="size-4" />{messages.guide.live}</a>
+      <div className="flex items-center justify-between gap-3">
+        <a href="/" className="inline-flex items-center gap-2 text-sm text-navy"><ArrowLeft className="size-4" />{messages.guide.live}</a>
+        {index === null ? <LanguageToggle /> : null}
+      </div>
       <h1 className="text-[clamp(1.5rem,3vw,2rem)] font-bold tracking-tight">{messages.guide.heading}</h1>
       <p className="text-sm text-muted-ink">{messages.guide.notice}</p>
     </header>
@@ -54,7 +60,8 @@ export function GuidePage() {
           <Button data-guide="access" variant="outline"><KeyRound />{messages.app.staffAccess}</Button>
         </div>
         {step.completed && <p data-guide="completed" className="text-sm font-semibold">{messages.guide.completed}</p>}
-        <MatchPickerView snapshot={snapshot} onSelect={noop} onExit={noop} onAssign={noop} onStart={noop} />
+        <MatchPickerView snapshot={snapshot} onSelect={noop} onExit={noop} onAssign={noop} onStart={noop}
+          courtControl={(upcoming) => <CourtSelectView snapshot={snapshot} match={upcoming} label={messages.organizer.schedule.courtFor(matchLabel(snapshot, upcoming))} onChange={noop} />} />
       </section>}
       {step.screen === 'score' && <ScoreTrackerView snapshot={snapshot} match={match} state={state}
         sidesSwapped={step.swapped} screenOrder={step.swapped ? ['b', 'a'] : ['a', 'b']} actionPending={false} actionFailure={null}

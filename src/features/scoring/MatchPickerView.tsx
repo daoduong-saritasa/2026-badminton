@@ -86,7 +86,7 @@ export function MatchPickerView({ snapshot, onSelect, onExit, onAssign, onStart,
                           {startBlocker(snapshot, match) ? messages.scoring.startBlocked[startBlocker(snapshot, match) ?? 'pairs'] : null}
                         </p>
                         <PairLines snapshot={snapshot} match={match} className="col-span-2 sm:col-span-1" />
-                        {courtControl ? <div className="col-start-1">{courtControl(match)}</div> : null}
+                        {courtControl ? <div className="col-start-1" data-guide={match.matchNumber === 1 ? 'court' : undefined}>{courtControl(match)}</div> : null}
                         <Button className="col-start-2 w-full self-start" disabled={startBlocker(snapshot, match) !== null || startPending} onClick={() => onStart(match.id)}>
                           <Play /> {messages.scoring.start}
                         </Button>
