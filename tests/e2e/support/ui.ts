@@ -1,6 +1,6 @@
 import type { Locator, Page } from '@playwright/test'
 
-import { messages } from '../../../src/i18n/vi.ts'
+import { vi as messages } from '../../../src/i18n/vi.ts'
 import { fixtureOf, sideTeam, teamName } from '../fixtures/tournament.ts'
 import type { Match, Snapshot } from './api.ts'
 

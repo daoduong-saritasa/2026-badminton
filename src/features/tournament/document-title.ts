@@ -1,4 +1,4 @@
-import { messages } from '../../i18n/vi'
+import { messages } from '../../i18n/messages'
 
 /** The browser title: the tournament's own name, or the generic identity before setup. */
 export function tournamentTitle(name: string | null): string {

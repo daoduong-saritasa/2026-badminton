@@ -6,7 +6,7 @@ import { signInStaff, StaffAccessError } from '@/data/staff'
 import type { StaffAccess } from '@/domain/types'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { errorMessage } from '@/i18n/errors'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
 function accessErrorMessage(error: Error): string {
   if (error instanceof StaffAccessError && error.code === 'rate_limited' && error.retryAfterSeconds) {

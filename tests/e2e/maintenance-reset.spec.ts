@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
 
-import { messages } from '../../src/i18n/vi.ts'
+import { vi as messages } from '../../src/i18n/vi.ts'
 import {
   assignCourt,
   clearStandings,

@@ -1,7 +1,7 @@
 import { driver } from 'driver.js'
 import { flushSync } from 'react-dom'
 import { guideSteps, nextGuideIndex } from './guide-state'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
 export function createGuideTour(render: (index: number | null) => void) {
   let index = 0

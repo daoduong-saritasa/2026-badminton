@@ -12,7 +12,7 @@ import {
   sideTeamId,
   teamName,
 } from '@/features/tournament/labels'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
 function matchById(snapshot: TournamentSnapshot, id: UUID): FixtureMatch | undefined {
   return snapshot.matches.find((match) => match.id === id)

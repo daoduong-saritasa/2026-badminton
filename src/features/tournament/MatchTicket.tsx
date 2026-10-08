@@ -2,7 +2,7 @@ import type { FixtureMatch, Side, TournamentSnapshot } from '@/domain/types'
 import { gamesToWinMatch, matchGameTally } from '@/domain/scoring'
 import { Badge } from '@/components/ui/badge'
 import { formatNumber } from '@/i18n/format'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 import { cn } from '@/lib/utils'
 import { PairDisplay, TeamIdentity } from './Participants'
 

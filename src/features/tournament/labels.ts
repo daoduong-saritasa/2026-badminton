@@ -11,7 +11,7 @@ import type {
   UUID,
 } from '@/domain/types'
 import { formatNumber } from '@/i18n/format'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
 export function teamName(snapshot: TournamentSnapshot, teamId: UUID | null): string {
   if (teamId === null) return messages.common.toBeDecided

@@ -32,7 +32,7 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { errorMessage } from '@/i18n/errors'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 import type { StaffRole } from '@/domain/types'
 
 export function StaffMenu({

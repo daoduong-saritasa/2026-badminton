@@ -54,7 +54,7 @@ describe('errorMessage', () => {
     const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
     const raw = 'relation "public.tournament_42" does not exist'
 
-    expect(errorMessage(new Error(raw))).toBe(unknownErrorMessage)
+    expect(errorMessage(new Error(raw))).toBe(unknownErrorMessage())
     expect(errorMessage(new Error(raw))).not.toContain('tournament_42')
     expect(logged).toHaveBeenCalled()
 
@@ -64,9 +64,9 @@ describe('errorMessage', () => {
   it('falls back when there is no message at all', () => {
     const logged = vi.spyOn(console, 'error').mockImplementation(() => {})
 
-    expect(errorMessage(null)).toBe(unknownErrorMessage)
-    expect(errorMessage(undefined)).toBe(unknownErrorMessage)
-    expect(errorMessage({ code: 42 })).toBe(unknownErrorMessage)
+    expect(errorMessage(null)).toBe(unknownErrorMessage())
+    expect(errorMessage(undefined)).toBe(unknownErrorMessage())
+    expect(errorMessage({ code: 42 })).toBe(unknownErrorMessage())
 
     logged.mockRestore()
   })
@@ -90,7 +90,7 @@ describe('errorMessage', () => {
       'Qualifying requires four complete teams',
     ]) {
       const translated = errorMessage(new Error(message))
-      expect(translated).not.toBe(unknownErrorMessage)
+      expect(translated).not.toBe(unknownErrorMessage())
       expect(asciiOnly.test(translated)).toBe(false)
     }
 

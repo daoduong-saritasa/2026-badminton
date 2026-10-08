@@ -4,8 +4,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import './index.css'
 import './App.css'
 import { RulesPage } from './features/tournament/RulesPage.tsx'
-import { messages } from './i18n/vi.ts'
+import { messages } from './i18n/messages.ts'
 import { LoadingScreen } from './components/LoadingScreen.tsx'
+import { useLocale } from './i18n/locale.ts'
 
 const App = lazy(() => import('./App.tsx'))
 const GuidePage = lazy(() => import('./features/guide/GuidePage.tsx').then((module) => ({ default: module.GuidePage })))
@@ -24,16 +25,22 @@ const isRulesPath = /^\/rules\/?$/.test(window.location.pathname)
 if (isGuidePath) document.title = messages.guide.heading
 if (isRulesPath) document.title = messages.publicView.rules.heading
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <Suspense fallback={<LoadingScreen label={isGuidePath ? messages.guide.loading : messages.app.loading} />}>
-    {isGuidePath ? <GuidePage /> : isRulesPath ? (
-      <RulesPage />
-    ) : (
-      <QueryClientProvider client={queryClient}>
-        <App />
-      </QueryClientProvider>
-    )}
-    </Suspense>
-  </StrictMode>,
-)
+/** Re-renders the whole tree when the interface language changes. */
+function Root() {
+  useLocale()
+  return (
+    <StrictMode>
+      <Suspense fallback={<LoadingScreen label={isGuidePath ? messages.guide.loading : messages.app.loading} />}>
+      {isGuidePath ? <GuidePage /> : isRulesPath ? (
+        <RulesPage />
+      ) : (
+        <QueryClientProvider client={queryClient}>
+          <App />
+        </QueryClientProvider>
+      )}
+      </Suspense>
+    </StrictMode>
+  )
+}
+
+createRoot(document.getElementById('root')!).render(<Root />)

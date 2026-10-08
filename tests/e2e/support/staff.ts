@@ -1,6 +1,6 @@
 import { expect, type Page } from '@playwright/test'
 
-import { messages } from '../../../src/i18n/vi.ts'
+import { vi as messages } from '../../../src/i18n/vi.ts'
 
 export type StaffRole = 'organizer' | 'referee'
 

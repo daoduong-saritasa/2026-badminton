@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test'
 
-import { messages } from '../../src/i18n/vi.ts'
+import { vi as messages } from '../../src/i18n/vi.ts'
 import { errorMessage, unknownErrorMessage } from '../../src/i18n/errors.ts'
 import { edgeRequest, rpc, signInAnonymously } from '../integration/local-supabase.ts'
 import { signInStaff, type LocalSession } from './support/api.ts'
@@ -25,7 +25,7 @@ test('a wrong PIN is refused with a clear message, and repeated attempts lock th
 
   await submitPin(page, wrong)
   await expect(pinAlert(page)).toHaveText(errorMessage(new Error('The staff PIN is incorrect')))
-  await expect(pinAlert(page)).not.toHaveText(unknownErrorMessage)
+  await expect(pinAlert(page)).not.toHaveText(unknownErrorMessage())
   await expect(staffMenuButton(page, 'organizer')).toBeHidden()
 
   for (let attempt = 2; attempt <= 5; attempt += 1) await submitPin(page, wrong)

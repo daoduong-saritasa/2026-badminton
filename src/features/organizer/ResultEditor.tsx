@@ -31,7 +31,7 @@ import {
   teamName,
 } from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 import { ImpactPreview } from './ImpactPreview'
 
 export interface ResultEditorProps {

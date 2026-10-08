@@ -7,11 +7,13 @@ import { getStaffAccess } from '@/data/staff'
 import type { StaffAccess, TournamentSnapshot, TournamentStage } from '@/domain/types'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
+import { LanguageToggle } from '@/components/LanguageToggle'
 import { LoadingScreen } from '@/components/LoadingScreen'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { StaffAccessDialog } from '@/features/staff/StaffAccessDialog'
 import { errorMessage } from '@/i18n/errors'
-import { messages } from '@/i18n/vi'
+import { useLocale } from '@/i18n/locale'
+import { messages } from '@/i18n/messages'
 import { StaffMenu } from '@/features/staff/StaffMenu'
 import { ScoreTracker } from '@/features/scoring/ScoreTracker'
 import { OrganizerPage, type OrganizerSection } from '@/features/organizer/OrganizerPage'
@@ -68,7 +70,10 @@ function SetupRequiredScreen({
   return (
     <main className="app-shell">
       <header className="mb-8">
-        <h1 className="text-2xl font-extrabold tracking-tight"><span className="brand-mark" aria-hidden="true" />{messages.app.setupHeading}</h1>
+        <div className="flex items-start justify-between gap-3">
+          <h1 className="text-2xl font-extrabold tracking-tight"><span className="brand-mark" aria-hidden="true" />{messages.app.setupHeading}</h1>
+          <LanguageToggle />
+        </div>
         <p className="ml-[2.5625rem] mt-2 text-xs text-muted-ink">{messages.app.setupNote}</p>
       </header>
       {isOrganizer ? (
@@ -131,9 +136,10 @@ export default function App() {
   }), [queryClient])
 
   const tournamentName = tournamentQuery.data?.snapshot?.tournament.name ?? null
+  const locale = useLocale()
   useEffect(() => {
     document.title = tournamentTitle(tournamentName)
-  }, [tournamentName])
+  }, [tournamentName, locale])
 
   useEffect(() => {
     if (staffAccess === null) return
@@ -184,7 +190,10 @@ export default function App() {
             <Button variant="ghost" className="-ml-3 text-muted-ink" onClick={() => setSelectedView('matches')}>
               <ArrowLeft /> {messages.organizer.returnToTournament}
             </Button>
-            <StaffMenu role={staffAccess.role} onSignedOut={handleSignedOut} />
+            <div className="flex items-center gap-2">
+              <LanguageToggle />
+              <StaffMenu role={staffAccess.role} onSignedOut={handleSignedOut} />
+            </div>
           </div>
           <div className="mt-6">
             <h1 className="text-[clamp(1.5rem,5vw,2rem)] font-extrabold tracking-[-0.0433em] [overflow-wrap:anywhere]">
@@ -227,6 +236,8 @@ export default function App() {
             {messages.app.stage[snapshot.tournament.stage]}
           </p>
         </div>
+        <div className="flex items-center gap-2">
+        <LanguageToggle />
         {isStaff ? (
           <StaffMenu role={staffAccess.role} onSignedOut={handleSignedOut} />
         ) : (
@@ -239,6 +250,7 @@ export default function App() {
             <KeyRound /> <span className="hidden sm:inline">{messages.app.staffAccess}</span>
           </Button>
         )}
+        </div>
       </header>
 
       <a href="/guide" className="mb-4 inline-block text-sm font-medium text-navy underline underline-offset-4">{messages.guide.heading}</a>

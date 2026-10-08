@@ -7,7 +7,7 @@
  */
 import { formatNumber } from './format'
 
-export const messages = {
+export const vi = {
   guide: {
     loading: 'Đang tải hướng dẫn…',
     heading: 'Hướng dẫn trọng tài',
@@ -326,6 +326,8 @@ export const messages = {
       knockouts: 'Tranh hạng',
       completed: 'Đã kết thúc',
     },
+    switchLanguage: 'Switch to English',
+    switchLanguageShort: 'EN',
     tabs: {
       matches: 'Trận đấu',
       standings: 'Bảng xếp hạng',

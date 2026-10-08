@@ -1,6 +1,6 @@
 import type { Locator } from '@playwright/test'
 
-import { messages } from '../../src/i18n/vi.ts'
+import { vi as messages } from '../../src/i18n/vi.ts'
 import {
   assignCourt,
   assignFixturePairs,

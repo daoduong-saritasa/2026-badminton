@@ -5,7 +5,7 @@ import type { Court, FixtureMatch, TournamentSnapshot } from '@/domain/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { courtLabel } from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
 const courts: readonly Court[] = [1, 2]
 

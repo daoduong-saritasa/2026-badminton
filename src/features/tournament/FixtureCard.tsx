@@ -1,7 +1,7 @@
 import { fixtureWinnerTeamId } from '@/domain/team-fixtures'
 import type { Side, TeamFixture, TournamentSnapshot } from '@/domain/types'
 import { formatNumber } from '@/i18n/format'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 import { cn } from '@/lib/utils'
 import { PairLines } from './PairLines'
 import { TeamIdentity } from './Participants'

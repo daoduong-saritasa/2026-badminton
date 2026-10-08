@@ -1,5 +1,5 @@
 import type { Pair, TournamentSnapshot, UUID } from '@/domain/types'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 import { cn } from '@/lib/utils'
 
 import { playerName, teamName } from './labels'

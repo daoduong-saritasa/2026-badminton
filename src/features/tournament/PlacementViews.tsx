@@ -2,7 +2,7 @@ import { Trophy } from 'lucide-react'
 
 import { fixtureWinnerTeamId } from '@/domain/team-fixtures'
 import type { TournamentSnapshot } from '@/domain/types'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
 import { FixtureCard } from './FixtureCard'
 import { fixtureMatches, teamName } from './labels'

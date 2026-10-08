@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 import type { Court, FixtureMatch, TournamentSnapshot, UUID } from '@/domain/types'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
 import { isDeciderEligible } from './labels'
 import { MatchTicket } from './MatchTicket'

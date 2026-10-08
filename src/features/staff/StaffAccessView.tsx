@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
 export function StaffAccessView({ pin, onPinChange, onSubmit, pending = false, error = null }: {
   pin: string; onPinChange: (pin: string) => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void; pending?: boolean; error?: string | null

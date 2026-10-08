@@ -1,5 +1,5 @@
 import type { FixtureMatch, TournamentSnapshot } from '@/domain/types'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 import { cn } from '@/lib/utils'
 
 import { fixtureOf, matchPair, sideTeamId } from './labels'

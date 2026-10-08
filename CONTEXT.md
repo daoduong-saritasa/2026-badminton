@@ -2,9 +2,10 @@
 
 ## Language
 
-The interface is written in Vietnamese, so each term carries the Vietnamese word
-the interface uses. Never translate a player, pair, or tournament name that
-someone entered.
+The interface is written in Vietnamese, with an English version that uses the
+English term for each entry. Each term carries the Vietnamese word the
+interface uses. Never translate a player, pair, team, court, or tournament name
+that someone entered.
 
 **Team** (_Đội_):
 A four-player roster that competes together in the tournament, containing two

@@ -1,7 +1,7 @@
 import type { FixtureStage, Score } from '@/domain/types'
 import type { ScoringState } from '@/features/scoring/scoring-state'
 import { guideSnapshot } from './guide-data'
-import { messages } from '../../i18n/vi'
+import { messages } from '../../i18n/messages'
 
 export type GuideScreen = 'intro' | 'access' | 'picker' | 'pairs' | 'score' | 'finish'
 export interface GuideStep {

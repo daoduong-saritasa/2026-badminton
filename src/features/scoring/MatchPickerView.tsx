@@ -6,7 +6,7 @@ import type { FixtureMatch, TournamentSnapshot, UUID } from '@/domain/types'
 import { PairLines } from '@/features/tournament/PairLines'
 import { SeedLegend } from '@/features/tournament/Participants'
 import { courtLabel, fixtureLabel, fixtureOf, groupByFixture, matchLabel, openGame, scoreText, sideTeamId, startBlocker, teamName, upcomingMatches } from '@/features/tournament/labels'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
 export function MatchPickerView({ snapshot, onSelect, onExit, onAssign, onStart, startPending = false, courtControl }: {
   snapshot: TournamentSnapshot; onSelect: (matchId: UUID) => void; onExit: () => void;

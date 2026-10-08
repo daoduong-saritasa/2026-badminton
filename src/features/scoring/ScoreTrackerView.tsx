@@ -8,7 +8,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Button } from '@/components/ui/button'
 import { courtLabel, fixtureOf, matchPair, pairPlayers, scoreText, sideTeamId, stageRule, teamName } from '@/features/tournament/labels'
 import { formatNumber } from '@/i18n/format'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 import { cn } from '@/lib/utils'
 
 export function ScoreTrackerView({ snapshot, match, state, sidesSwapped, screenOrder, actionPending, actionFailure, takeoverOpen, takeoverPending, onExit, toggleSides, handlePoint, handleRetry, onUndo, onConfirm, onTakeover, onReconcile, onDismissReview, setTakeoverOpen, dialogs = true }: {

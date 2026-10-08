@@ -1,5 +1,8 @@
+import { currentLocale, type Locale } from './locale'
+
 /**
- * Known server failures, keyed by the exact message PostgreSQL raises.
+ * Known server failures in Vietnamese, keyed by the exact message PostgreSQL
+ * raises; the English table below has the same keys.
  *
  * Anything absent from this table is treated as unknown: the raw text is a
  * developer-facing English string that may also carry identifiers, so it is
@@ -7,7 +10,7 @@
  * something to do, because most of these are reachable by two organizers
  * working at once rather than by a mistake.
  */
-const serverMessages: Record<string, string> = {
+const viServerMessages = {
   // Concurrency and staleness
   'Tournament version conflict': 'Giải đấu vừa thay đổi. Hãy tải lại và thử lại.',
   'Fixture version conflict': 'Cặp đấu vừa thay đổi. Hãy tải lại và thử lại.',
@@ -95,18 +98,116 @@ const serverMessages: Record<string, string> = {
   'The staff PIN could not be rotated': 'Chưa đổi được mã PIN. Hãy thử lại.',
   'Staff access is unavailable': 'Chưa đăng nhập được. Hãy thử lại sau.',
   'Unknown tournament mutation': 'Thao tác không được hỗ trợ.',
+} satisfies Record<string, string>
+
+type ServerFailure = keyof typeof viServerMessages
+
+const enServerMessages: Record<ServerFailure, string> = {
+  'Tournament version conflict': 'The tournament just changed. Reload and try again.',
+  'Fixture version conflict': 'The fixture just changed. Reload and try again.',
+  'Match version conflict': 'The match just changed. Reload and try again.',
+  'Tournament reset generation conflict': 'The tournament was reset. Reload the page.',
+  'Reviewed result impact is stale': 'Results changed after your review. Review again, then confirm.',
+  'Request ID was already used with different input': 'This request was already sent with different content. Reload and try again.',
+
+  'Tournament is not configured': 'No tournament has been set up yet.',
+  'Invalid roster payload': 'The team list is not valid.',
+  'Roster requires four teams and sixteen players': 'Four teams with sixteen players in all are required.',
+  'Each team requires two seed 1 and two seed 2 players': 'Each team needs two seed 1 and two seed 2 players.',
+  'Invalid player': 'A player is not valid.',
+  'Roster is locked after qualifying starts': 'The team list cannot change after qualifying starts.',
+
+  'Invalid pair assignment': 'The pair assignment is not valid.',
+  'Pairs are fixed after the match starts': 'The match has started, so the pairs cannot change.',
+  'Pair assignment is not open for this match':
+    'Pairs cannot be assigned for this match yet. Placement fixtures open only after the finalists are confirmed.',
+  'A pair requires two distinct players': 'A pair needs two different players.',
+  'Pair players must belong to the team': 'Players must belong to this team.',
+  'Pair must mix seeds': 'This match needs one seed 1 and one seed 2 player.',
+  'Player already plays in this fixture': 'A player is already in the other match of this fixture, which plays at the same time.',
+  'Fixture participants are not assigned': 'Both teams of this fixture are not decided yet.',
+  'Qualifying requires four complete teams': 'Four teams of four players are required before qualifying starts.',
+
+  'Finalists are not resolved': 'The finalists are not decided yet.',
+  'Finalists must be confirmed before placement play': 'Confirm the finalists before placement fixtures are played.',
+  'Third place must finish before the final starts': 'The third-place fixture must end before the final starts.',
+  'A four-team draw requires two complete matchups': 'A four-team draw needs two complete fixtures.',
+  'Qualification-playoff matchups do not match the unresolved tie':
+    'The fixtures do not match the teams that are still level.',
+  'Draws are locked after placement play starts': 'The draw cannot change after placement fixtures start.',
+
+  'Invalid court assignments': 'The court assignment is not valid.',
+  'Court must be 1 or 2': 'Only court 1 and court 2 exist.',
+  'Only unstarted matches can be assigned': 'Only a match that has not started can change court.',
+  'Match is not ready to start': 'The match is not ready: it needs a court and both pairs.',
+  'Court is occupied': 'Another match is in play on this court.',
+  'Court names must be two distinct names of 1 to 30 characters': 'The two courts need different names of 1–30 characters.',
+  'A player is already playing': 'A player is in play in another match.',
+  'Decider is not eligible': 'Match 3 is played only when the first two matches end 1–1.',
+
+  'Only a playing match can be taken over': 'You can take over scoring only for a match in play.',
+  'Session already owns this match': 'This device already scores this match.',
+  'This session does not own the match': 'Another device is scoring this match.',
+  'Point cannot be added': 'No more points can be added to this match.',
+  'Point cannot be undone': 'Points in this match cannot be undone.',
+  'Game is already won': 'The game already has a winning score. End the game or undo.',
+  'No point is available to undo': 'This game has no point left to undo.',
+  'Point history does not match the open game': 'The point history does not match the current game. Reload the page.',
+  'Game cannot be confirmed': 'The game in this match cannot be ended.',
+  'Game does not have a valid winning score': 'The score is not enough to end the game.',
+
+  'Walkover requires an unscored match and one winner': 'A walkover is possible only for a match with no points.',
+  'Corrected result has the wrong number of games':
+    'Wrong number of games: third-place and final matches need two or three games, other matches one.',
+  'Corrected games contain an invalid score or an extra game': 'A game is not valid, or a game follows a decided match.',
+  'Corrected winner does not match the games': 'The winning pair does not match the game scores.',
+  'playoff-started': 'A qualification playoff has started, so a correction that changes the playoff is not allowed.',
+  'placement-started': 'A placement fixture has started, so a correction that changes who advances is not allowed.',
+  'tournament-completed': 'The tournament has finished, so results cannot be corrected.',
+  'invalid-match-state': 'Only a finished match can be corrected.',
+
+  'Authenticated session required': 'Your session has expired. Reload the page.',
+  'Verified session identity required': 'Your session has expired. Reload the page.',
+  'Staff authentication required': 'Organizer or referee access is required.',
+  'Organizer access required': 'Organizer access is required.',
+  'Scoring access required': 'Referee or organizer access is required.',
+  'Staff access expired or revoked': 'Your access has expired. Enter the PIN again.',
+  'PIN must contain 4 to 12 digits': 'The PIN must have 4 to 12 digits.',
+  'Staff role PINs must differ': 'The organizer and referee PINs must be different.',
+  'Unknown staff role': 'The role is not valid.',
+  'Invalid rate-limit bucket': 'The request is not valid.',
+  'Service role required': 'This action runs only from the admin tools.',
+  'The staff PIN is incorrect': 'The PIN is incorrect.',
+  'Enter a PIN containing 4 to 12 digits': 'The PIN must have 4 to 12 digits.',
+  'The staff PIN could not be rotated': 'The PIN was not changed. Try again.',
+  'Staff access is unavailable': 'Sign-in is unavailable. Try again later.',
+  'Unknown tournament mutation': 'This action is not supported.',
+}
+
+const serverMessages: Record<Locale, Record<string, string>> = {
+  vi: viServerMessages,
+  en: enServerMessages,
 }
 
 /**
  * Client-side failures, keyed by `Error.name`. Their messages interpolate
  * versions and issue lists, so they cannot be matched by text.
  */
-const clientMessages: Record<string, string> = {
-  InvalidTournamentDataError: 'Dữ liệu nhận được không hợp lệ. Hãy tải lại trang.',
-  StaleTournamentSnapshotError: 'Dữ liệu đang cũ hơn thay đổi vừa lưu. Hãy tải lại trang.',
+const clientMessages: Record<Locale, Record<string, string>> = {
+  vi: {
+    InvalidTournamentDataError: 'Dữ liệu nhận được không hợp lệ. Hãy tải lại trang.',
+    StaleTournamentSnapshotError: 'Dữ liệu đang cũ hơn thay đổi vừa lưu. Hãy tải lại trang.',
+  },
+  en: {
+    InvalidTournamentDataError: 'The received data is not valid. Reload the page.',
+    StaleTournamentSnapshotError: 'The data is older than the change just saved. Reload the page.',
+  },
 }
 
-const fallback = 'Đã xảy ra lỗi. Hãy thử lại, hoặc tải lại trang nếu vẫn lỗi.'
+const fallbacks: Record<Locale, string> = {
+  vi: 'Đã xảy ra lỗi. Hãy thử lại, hoặc tải lại trang nếu vẫn lỗi.',
+  en: 'Something went wrong. Try again, or reload the page if it persists.',
+}
 
 function rawMessage(error: unknown): string | null {
   if (typeof error === 'string') return error
@@ -125,21 +226,24 @@ function rawMessage(error: unknown): string | null {
  */
 export function errorMessage(error: unknown): string {
   if (error instanceof Error) {
-    const byName = clientMessages[error.name]
+    const byName = clientMessages[currentLocale()][error.name]
     if (byName !== undefined) return byName
   }
 
   const raw = rawMessage(error)
   if (raw === null) {
     console.error('Unknown failure with no message', { error })
-    return fallback
+    return unknownErrorMessage()
   }
 
-  const known = serverMessages[raw.trim()]
+  const known = serverMessages[currentLocale()][raw.trim()]
   if (known !== undefined) return known
 
   console.error('Untranslated failure', { message: raw })
-  return fallback
+  return unknownErrorMessage()
 }
 
-export const unknownErrorMessage = fallback
+/** The message shown for any failure without a translation. */
+export function unknownErrorMessage(): string {
+  return fallbacks[currentLocale()]
+}

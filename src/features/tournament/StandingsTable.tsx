@@ -3,7 +3,7 @@ import { qualifyingStandings, requiredPlayoff } from '@/domain/standings'
 import type { PlayoffFormat, Seed, TeamStanding, TournamentSnapshot } from '@/domain/types'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { formatNumber } from '@/i18n/format'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 import { cn } from '@/lib/utils'
 
 import { PlayerIdentity, SeedLegend, TeamIdentity } from './Participants'

@@ -1,4 +1,4 @@
-import { messages } from '../../src/i18n/vi.ts'
+import { vi as messages } from '../../src/i18n/vi.ts'
 import { readRoster } from './support/roster.ts'
 import { expect, test } from './support/test.ts'
 

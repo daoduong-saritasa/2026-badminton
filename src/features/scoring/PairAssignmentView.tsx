@@ -36,10 +36,9 @@ import {
   teamName,
 } from '@/features/tournament/labels'
 import { formatNumber } from '@/i18n/format'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 import { cn } from '@/lib/utils'
 
-const pa = messages.pairAssignment
 const sides = ['a', 'b'] as const
 
 function samePair(left: Pair | null, right: Pair | null): boolean {
@@ -107,7 +106,7 @@ function PlayerChoice({ player, selected, played, overLimit, playing, onClick }:
       >
         {played.short}
       </span>
-      <span className="sr-only">{played.full}{playing ? `, ${pa.playing}` : ''}</span>
+      <span className="sr-only">{played.full}{playing ? `, ${messages.pairAssignment.playing}` : ''}</span>
     </button>
   )
 }
@@ -143,7 +142,7 @@ function TeamPicker({ teamLabel, players, picked, mixed, playing, played, overLi
       {mixed ? (
         ([1, 2] as const).map((seed) => (
           <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_minmax(0,1fr)] items-center gap-2" key={seed}>
-            <span className="text-xs font-semibold text-muted-ink">{pa.seedShort(seed)}</span>
+            <span className="text-xs font-semibold text-muted-ink">{messages.pairAssignment.seedShort(seed)}</span>
             {players.filter((player) => player.seed === seed).map((player) => (
               <PlayerChoice key={player.id} player={player} selected={picked.includes(player.id)} played={played(player.id)} overLimit={overLimit(player.id)} playing={playing.has(player.id)} onClick={() => choose(player)} />
             ))}
@@ -231,7 +230,7 @@ export function PairAssignmentView({
     const qualifying = fixture?.stage === 'qualifying'
     return {
       short: qualifying ? `${formatNumber(count)}/3` : formatNumber(count),
-      full: qualifying ? pa.played.qualifying(count) : pa.played.other(count),
+      full: qualifying ? messages.pairAssignment.played.qualifying(count) : messages.pairAssignment.played.other(count),
     }
   }
   // Each player plays one match per qualifying fixture, so three in all; only an exception goes past it.
@@ -239,7 +238,7 @@ export function PairAssignmentView({
   const blocking = issues.filter((issue) => !issue.overridable)
   const overridable = issues.filter((issue) => issue.overridable)
   const needsException = blocking.length === 0 && overridable.length > 0
-  const issueTexts = [...new Set(issues.map((issue) => pa.issues[issue.code]))]
+  const issueTexts = [...new Set(issues.map((issue) => messages.pairAssignment.issues[issue.code]))]
 
   const save = (ruleException: boolean) => {
     if (!fixture) return
@@ -255,11 +254,11 @@ export function PairAssignmentView({
   const ruleText = !fixture || openMatches.length === 0
     ? null
     : fixture.stage === 'qualifying'
-      ? pa.rule.qualifying
-      : openMatches.some(isMixed) ? pa.rule['mixed-seed'] : pa.rule.free
+      ? messages.pairAssignment.rule.qualifying
+      : openMatches.some(isMixed) ? messages.pairAssignment.rule['mixed-seed'] : messages.pairAssignment.rule.free
   const header = (
     <DialogHeader className="shrink-0 border-b border-hairline px-5 pt-5 pb-4 pr-12 sm:px-6">
-      <DialogTitle className="text-base/snug [overflow-wrap:anywhere]">{fixture ? teams : pa.open}</DialogTitle>
+      <DialogTitle className="text-base/snug [overflow-wrap:anywhere]">{fixture ? teams : messages.pairAssignment.open}</DialogTitle>
       <DialogDescription className="text-[0.8125rem]">
         {fixture ? fixtureLabel(fixture) : null}
         {ruleText ? ` · ${ruleText}` : null}
@@ -268,10 +267,10 @@ export function PairAssignmentView({
   )
 
   const unavailable = !fixture || sides.some((side) => sideTeamId(fixture, side) === null)
-    ? pa.awaitingTeams
+    ? messages.pairAssignment.awaitingTeams
     : (fixture.stage === 'third-place' || fixture.stage === 'final') && snapshot.tournament.finalistsConfirmedAt === null
-      ? pa.awaitingFinalists
-      : openMatches.length === 0 ? pa.locked : null
+      ? messages.pairAssignment.awaitingFinalists
+      : openMatches.length === 0 ? messages.pairAssignment.locked : null
   if (unavailable) {
     return <>{header}<p className="px-5 py-5 text-[0.8125rem] text-muted-ink sm:px-6">{unavailable}</p></>
   }
@@ -302,18 +301,18 @@ export function PairAssignmentView({
                 className="mt-3"
                 onClick={() => setExpandedDeciders((current) => new Set([...current, match.id]))}
               >
-                {pa.prepareDecider}
+                {messages.pairAssignment.prepareDecider}
               </Button>
             ) : sides.some((side) => sourceOf(match, side)) ? (
               <div className="mt-2">
-                <p className="text-xs text-muted-ink">{pa.remainingOf(sourceOf(match, 'a')?.matchNumber ?? sourceOf(match, 'b')?.matchNumber ?? 1)}</p>
+                <p className="text-xs text-muted-ink">{messages.pairAssignment.remainingOf(sourceOf(match, 'a')?.matchNumber ?? sourceOf(match, 'b')?.matchNumber ?? 1)}</p>
                 <dl className="mt-2 space-y-1.5 text-[0.8125rem]">
                   {sides.map((side) => {
                     const pair = toPair(picked(match, side))
                     return (
                       <div className="flex flex-wrap gap-x-2" key={side}>
                         <dt className="text-muted-ink">{teamName(snapshot, sideTeamId(fixture, side))}:</dt>
-                        <dd className="font-medium">{pair ? pairPlayers(snapshot, pair) : pa.notAssigned}</dd>
+                        <dd className="font-medium">{pair ? pairPlayers(snapshot, pair) : messages.pairAssignment.notAssigned}</dd>
                       </div>
                     )
                   })}
@@ -344,23 +343,23 @@ export function PairAssignmentView({
         {issueTexts.length > 0 ? (
           <ul className="space-y-0.5 text-[0.8125rem] text-destructive" role="status">
             {issueTexts.map((text) => <li key={text}>{text}</li>)}
-            {needsException && role !== 'organizer' ? <li>{pa.organizerOnly}</li> : null}
+            {needsException && role !== 'organizer' ? <li>{messages.pairAssignment.organizerOnly}</li> : null}
           </ul>
         ) : null}
         {error !== null ? <p className="text-[0.8125rem] text-destructive" role="alert">{error}</p> : null}
         <div className="flex items-center justify-between gap-3">
           {role === 'organizer' && openMatches.some(isMixed) ? (
             <Button type="button" variant="link" className="h-auto min-w-0 px-0 whitespace-normal text-left" onClick={() => { setExceptionMode((value) => !value); setPicks({}) }}>
-              {exceptionMode ? pa.hideException : pa.showException}
+              {exceptionMode ? messages.pairAssignment.hideException : messages.pairAssignment.showException}
             </Button>
           ) : <span />}
           {needsException && role === 'organizer' ? (
             <Button variant="outline" className="shrink-0" disabled={pending} onClick={() => setConfirmOpen(true)}>
-              {pa.saveException}
+              {messages.pairAssignment.saveException}
             </Button>
           ) : (
             <Button data-guide="pairs-saved" className="shrink-0 px-6" disabled={changed.length === 0 || issues.length > 0 || pending} onClick={() => save(false)}>
-              {pending ? messages.common.saving : pa.save}
+              {pending ? messages.common.saving : messages.pairAssignment.save}
             </Button>
           )}
         </div>
@@ -369,15 +368,15 @@ export function PairAssignmentView({
       <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>{pa.exceptionTitle}</AlertDialogTitle>
+            <AlertDialogTitle>{messages.pairAssignment.exceptionTitle}</AlertDialogTitle>
             <AlertDialogDescription>
-              {pa.exceptionBody([...new Set(overridable.map((issue) => pa.issues[issue.code]))].join(' '))}
+              {messages.pairAssignment.exceptionBody([...new Set(overridable.map((issue) => messages.pairAssignment.issues[issue.code]))].join(' '))}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>{messages.common.cancel}</AlertDialogCancel>
             <AlertDialogAction disabled={pending} onClick={() => save(true)}>
-              {pending ? messages.common.saving : pa.confirmException}
+              {pending ? messages.common.saving : messages.pairAssignment.confirmException}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

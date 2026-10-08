@@ -51,7 +51,7 @@ import {
 } from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
 import { formatNumber } from '@/i18n/format'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 import { PairLines } from '@/features/tournament/PairLines'
 import { CourtNamesDialog } from './CourtNamesDialog'
 import { ResultEditor } from './ResultEditor'

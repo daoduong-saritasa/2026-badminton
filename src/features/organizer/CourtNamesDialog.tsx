@@ -17,9 +17,8 @@ import {
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { errorMessage } from '@/i18n/errors'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
-const copy = messages.organizer.courts
 
 function CourtNamesForm({ snapshot, resetGeneration, onSaved }: {
   snapshot: TournamentSnapshot
@@ -48,13 +47,13 @@ function CourtNamesForm({ snapshot, resetGeneration, onSaved }: {
       }}
     >
       <DialogHeader>
-        <DialogTitle>{copy.title}</DialogTitle>
-        <DialogDescription>{copy.description}</DialogDescription>
+        <DialogTitle>{messages.organizer.courts.title}</DialogTitle>
+        <DialogDescription>{messages.organizer.courts.description}</DialogDescription>
       </DialogHeader>
       <div className="grid gap-4 sm:grid-cols-2">
         {([0, 1] as const).map((index) => (
           <div className="space-y-2" key={index}>
-            <Label htmlFor={`court-name-${index + 1}`}>{copy.label(index + 1)}</Label>
+            <Label htmlFor={`court-name-${index + 1}`}>{messages.organizer.courts.label(index + 1)}</Label>
             <Input
               id={`court-name-${index + 1}`}
               value={names[index]}
@@ -69,13 +68,13 @@ function CourtNamesForm({ snapshot, resetGeneration, onSaved }: {
       </div>
       {issues.length > 0 ? (
         <ul className="space-y-0.5 text-[0.8125rem] text-destructive" role="status">
-          {issues.map((issue) => <li key={issue}>{copy.issues[issue]}</li>)}
+          {issues.map((issue) => <li key={issue}>{messages.organizer.courts.issues[issue]}</li>)}
         </ul>
       ) : null}
       {mutation.isError ? <p className="text-[0.8125rem] text-destructive" role="alert">{errorMessage(mutation.error)}</p> : null}
       <DialogFooter>
         <Button type="submit" disabled={issues.length > 0 || unchanged || mutation.isPending}>
-          {mutation.isPending ? messages.common.saving : copy.save}
+          {mutation.isPending ? messages.common.saving : messages.organizer.courts.save}
         </Button>
       </DialogFooter>
     </form>
@@ -91,7 +90,7 @@ export function CourtNamesDialog({ snapshot, resetGeneration }: {
   return (
     <>
       <Button variant="ghost" size="sm" onClick={() => setOpen(true)}>
-        <Pencil /> {copy.rename}
+        <Pencil /> {messages.organizer.courts.rename}
       </Button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-lg">

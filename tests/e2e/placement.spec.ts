@@ -1,4 +1,4 @@
-import { messages } from '../../src/i18n/vi.ts'
+import { vi as messages } from '../../src/i18n/vi.ts'
 import { errorMessage } from '../../src/i18n/errors.ts'
 import {
   assignCourt,

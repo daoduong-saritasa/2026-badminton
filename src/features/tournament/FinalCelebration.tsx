@@ -5,7 +5,7 @@ import { Trophy } from 'lucide-react'
 import { finalPositions } from '@/domain/progression'
 import type { TournamentSnapshot, UUID } from '@/domain/types'
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
 import { teamName } from './labels'
 

@@ -11,7 +11,7 @@ import {
   sideTeamId,
   teamName,
 } from '@/features/tournament/labels'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 import { PairLines } from '@/features/tournament/PairLines'
 
 export interface ResultScheduleProps {

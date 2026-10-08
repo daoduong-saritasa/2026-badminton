@@ -14,7 +14,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Dialog, DialogContent } from '@/components/ui/dialog'
 import { courtLabel, fixtureOf, isStartable, matchLabel, openGame, upcomingMatches } from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
-import { messages } from '@/i18n/vi'
+import { messages } from '@/i18n/messages'
 
 function failureReason(error: unknown): SaveFailureReason {
   if (typeof error === 'object' && error !== null && 'code' in error) {
