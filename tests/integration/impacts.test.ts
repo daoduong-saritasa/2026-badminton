@@ -38,8 +38,8 @@ function seedFixture(secondWinner: Side = 'b'): SeededFixture {
     insert into public.teams (id, tournament_id, name) values
       ('${teamA}', '${tournamentId}', 'Team A'),
       ('${teamB}', '${tournamentId}', 'Team B');
-    insert into public.team_fixtures (id, tournament_id, stage, team_a_id, team_b_id)
-    values ('${fixtureId}', '${tournamentId}', 'qualifying', '${teamA}', '${teamB}');
+    insert into public.team_fixtures (id, tournament_id, stage, team_a_id, team_b_id, qualifying_order, qualifying_court)
+    values ('${fixtureId}', '${tournamentId}', 'qualifying', '${teamA}', '${teamB}', 1, 1);
     insert into public.matches (id, fixture_id, match_number, state, result_kind, winner_side) values
       ('${matchOneId}', '${fixtureId}', 1, 'completed', 'walkover', 'a'),
       ('${matchTwoId}', '${fixtureId}', 2, 'completed', 'walkover', '${secondWinner}');
@@ -72,7 +72,7 @@ function seedRoundRobin(
     matchIds[key] = ids
     const [teamA, teamB] = [teams[key[0] as keyof typeof teams], teams[key[1] as keyof typeof teams]]
     return {
-      fixture: `('${fixtureId}', '${tournamentId}', 'qualifying', '${teamA}', '${teamB}')`,
+      fixture: `('${fixtureId}', '${tournamentId}', 'qualifying', '${teamA}', '${teamB}', ${['ab', 'cd', 'ac', 'bd', 'ad', 'bc'].indexOf(key) + 1}, ${['ab', 'cd', 'ac', 'bd', 'ad', 'bc'].indexOf(key) % 2 + 1})`,
       matches: [
         `('${ids[0]}', '${fixtureId}', 1, 'completed', 'walkover', '${first}')`,
         `('${ids[1]}', '${fixtureId}', 2, 'completed', 'walkover', '${second}')`,
@@ -87,10 +87,10 @@ function seedRoundRobin(
       ('${teams.b}', '${tournamentId}', 'B'),
       ('${teams.c}', '${tournamentId}', 'C'),
       ('${teams.d}', '${tournamentId}', 'D');
-    insert into public.team_fixtures (id, tournament_id, stage, team_a_id, team_b_id) values
+    insert into public.team_fixtures (id, tournament_id, stage, team_a_id, team_b_id, qualifying_order, qualifying_court) values
       ${rows.map((row) => row.fixture).join(',\n      ')},
-      ('${crypto.randomUUID()}', '${tournamentId}', 'third-place', null, null),
-      ('${finalFixtureId}', '${tournamentId}', 'final', null, null);
+      ('${crypto.randomUUID()}', '${tournamentId}', 'third-place', null, null, null, null),
+      ('${finalFixtureId}', '${tournamentId}', 'final', null, null, null, null);
     insert into public.matches (id, fixture_id, match_number, state, result_kind, winner_side) values
       ${rows.flatMap((row) => row.matches).join(',\n      ')};
     select private.populate_placement_fixtures();

@@ -1,3 +1,4 @@
+import { qualifyingRound } from '@/domain/qualifying-schedule'
 import type { ReactNode } from 'react'
 import { ArrowLeft, Play, Users } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -5,7 +6,8 @@ import { gamesToWinMatch, matchGameTally } from '@/domain/scoring'
 import type { FixtureMatch, TournamentSnapshot, UUID } from '@/domain/types'
 import { PairLines } from '@/features/tournament/PairLines'
 import { SeedLegend } from '@/features/tournament/Participants'
-import { courtLabel, fixtureLabel, fixtureOf, groupByFixture, matchLabel, openGame, scoreText, sideTeamId, startBlocker, teamName, upcomingMatches } from '@/features/tournament/labels'
+import { courtLabel, fixtureScheduleLabel, fixtureOf, groupByFixture, matchLabel, openGame, scoreText, sideTeamId, startBlocker,
+  startBlockerText, teamName, upcomingMatches } from '@/features/tournament/labels'
 import { messages } from '@/i18n/messages'
 
 export function MatchPickerView({ snapshot, onSelect, onExit, onAssign, onStart, startPending = false, courtControl }: {
@@ -60,16 +62,20 @@ export function MatchPickerView({ snapshot, onSelect, onExit, onAssign, onStart,
           <p className="py-4 text-sm text-muted-ink">{messages.scoring.noMatch}</p>
         ) : (
           <ul className="divide-y divide-line">
-            {groupByFixture(upcoming).map(({ fixtureId, matches }) => {
+            {groupByFixture(upcoming, snapshot).map(({ fixtureId, matches }, index, groups) => {
               const fixture = snapshot.fixtures.find((candidate) => candidate.id === fixtureId)
+              const round = fixture ? qualifyingRound(fixture) : null
+              const previous = snapshot.fixtures.find((candidate) => candidate.id === groups[index - 1]?.fixtureId)
+              const firstInRound = round !== null && (!previous || qualifyingRound(previous) !== round)
               const fixtureTeams = messages.common.versus(teamName(snapshot, sideTeamId(fixture, 'a')), teamName(snapshot, sideTeamId(fixture, 'b')))
               const paired = matches.every((match) => match.pairA !== null && match.pairB !== null)
               return (
-                <li className="py-6" aria-label={`${fixtureLabel(fixture)} · ${fixtureTeams}`} key={fixtureId}>
+                <li className="py-6" aria-label={`${fixtureScheduleLabel(snapshot, fixture)} · ${fixtureTeams}`} key={fixtureId}>
+              {firstInRound ? <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-ink">{messages.qualifying.round(round)}</h4> : null}
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div className="min-w-0">
                       <p className="text-[0.9375rem] font-semibold [overflow-wrap:anywhere]">{fixtureTeams}</p>
-                      <p className="mt-0.5 text-[0.8125rem] text-muted-ink">{fixtureLabel(fixture)}</p>
+                      <p className="mt-0.5 text-[0.8125rem] text-muted-ink">{fixtureScheduleLabel(snapshot, fixture)}{fixture?.qualifyingCourt ? ` · ${courtLabel(snapshot, fixture.qualifyingCourt)}` : ''}</p>
                     </div>
                     <Button className={paired ? 'w-[7.5rem] border-navy text-navy hover:bg-navy-soft' : 'w-[7.5rem] bg-navy text-white hover:bg-ink'} variant={paired ? 'outline' : 'secondary'} onClick={() => { onAssign(fixtureId) }}>
                       <Users /> {messages.pairAssignment.open}
@@ -83,7 +89,7 @@ export function MatchPickerView({ snapshot, onSelect, onExit, onAssign, onStart,
                           {courtControl ? null : <span className="font-normal text-muted-ink"> · {match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending}</span>}
                         </p>
                         <p data-guide={match.matchNumber === 1 ? 'blocked' : undefined} className="text-right text-xs text-muted-ink">
-                          {startBlocker(snapshot, match) ? messages.scoring.startBlocked[startBlocker(snapshot, match) ?? 'pairs'] : null}
+                          {startBlockerText(snapshot, match)}
                         </p>
                         <PairLines snapshot={snapshot} match={match} className="col-span-2 sm:col-span-1" />
                         {courtControl ? <div className="col-start-1" data-guide={match.matchNumber === 1 ? 'court' : undefined}>{courtControl(match)}</div> : null}

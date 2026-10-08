@@ -255,8 +255,16 @@ export const en = {
       'duplicate-player': 'A pair needs two different players.',
       'player-playing': 'A player is in play in another match.',
       'same-seed': 'This match needs one seed 1 and one seed 2 player.',
-      'concurrent-player-reused': 'A player is in both match 1 and match 2, which play at the same time.',
+      'concurrent-player-reused': 'A player is in both match 1 and match 2 of this fixture.',
     },
+  },
+
+  qualifying: {
+    round: (round: number) => `Round ${formatNumber(round)}`,
+    waitForRound: (round: number) => `Wait for round ${formatNumber(round)} to finish`,
+    swapCourts: 'Swap courts for this round',
+    next: 'Next',
+    waiting: 'Waiting for the previous round',
   },
 
   scoring: {
@@ -269,6 +277,8 @@ export const en = {
     resume: 'Score',
     start: 'Start',
     startBlocked: {
+      sequence: 'Wait for match 1 to finish',
+      round: 'Wait for earlier rounds to finish',
       decider: 'Played only at 1–1',
       court: 'Needs a court',
       pairs: 'Needs pairs',
@@ -412,9 +422,9 @@ export const en = {
       stages: [
         {
           name: 'Qualifying',
-          overview: 'Each team plays the other 3 teams. Two matches at once; a 1–1 draw is possible.',
+          overview: 'Three rounds, with all four teams in each round. Each fixture plays two matches sequentially on one court.',
           who: 'Each team plays the other 3 teams. 6 fixtures, 12 matches in all. Ranking uses match wins, not fixture wins.',
-          fixture: '2 matches at the same time on 2 courts. A fixture ends 2–0, 1–1, or 0–2. Qualifying has no match 3.',
+          fixture: 'Each court hosts one fixture: match 1, then match 2. Both courts must finish before the next round. A 1–1 draw is possible; there is no match 3.',
           match: '1 game, to 21, cap 30.',
           pairs: 'Each pair is 1 seed 1 and 1 seed 2 player. Each player plays exactly 1 match per fixture, 3 in all. A pair can stay the same across all three fixtures.',
         },

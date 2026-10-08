@@ -1,3 +1,4 @@
+import { qualifyingRound } from '@/domain/qualifying-schedule'
 import { useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import {
@@ -37,12 +38,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CourtSelect } from '@/features/scoring/CourtSelect'
 import { PairAssignmentForm } from '@/features/scoring/PairAssignmentForm'
 import {
-  fixtureLabel,
+  courtLabel,
+  fixtureScheduleLabel,
   fixtureMatches,
   fixtureOf,
   groupByFixture,
   isDeciderEligible,
   startBlocker,
+  startBlockerText,
   matchLabel,
   sideTeamId,
   teamName,
@@ -162,16 +165,20 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
         <CourtNamesDialog snapshot={snapshot} resetGeneration={resetGeneration} />
       </div>
       <ul className="mt-6 divide-y divide-line">
-        {groupByFixture(waiting).map(({ fixtureId, matches }) => {
+        {groupByFixture(waiting, snapshot).map(({ fixtureId, matches }, index, groups) => {
           const fixture = snapshot.fixtures.find((candidate) => candidate.id === fixtureId)
+          const round = fixture ? qualifyingRound(fixture) : null
+          const previous = snapshot.fixtures.find((candidate) => candidate.id === groups[index - 1]?.fixtureId)
+          const firstInRound = round !== null && (!previous || qualifyingRound(previous) !== round)
           const fixtureTeams = teams(snapshot, matches[0])
           const paired = matches.every((match) => match.pairA !== null && match.pairB !== null)
           return (
-            <li className="py-6 first:pt-0 last:pb-0" aria-label={`${fixtureLabel(fixture)} · ${fixtureTeams}`} key={fixtureId}>
+            <li className="py-6 first:pt-0 last:pb-0" aria-label={`${fixtureScheduleLabel(snapshot, fixture)} · ${fixtureTeams}`} key={fixtureId}>
+              {firstInRound ? <h4 className="mb-4 text-xs font-semibold uppercase tracking-wide text-muted-ink">{messages.qualifying.round(round)}</h4> : null}
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="min-w-0">
                   <p className="text-base font-semibold [overflow-wrap:anywhere]">{fixtureTeams}</p>
-                  <p className="mt-0.5 text-[0.8125rem] text-muted-ink">{fixtureLabel(fixture)}</p>
+                  <p className="mt-0.5 text-[0.8125rem] text-muted-ink">{fixtureScheduleLabel(snapshot, fixture)}{fixture?.qualifyingCourt ? ` · ${courtLabel(snapshot, fixture.qualifyingCourt)}` : ''}</p>
                 </div>
                 <Button className={paired ? 'w-[7.5rem] border-navy text-navy hover:bg-navy-soft' : 'w-[7.5rem] bg-navy text-white hover:bg-ink'} variant={paired ? 'outline' : 'secondary'} onClick={() => { setAssignFixtureId(fixtureId); setAssignOpen(true) }}>
                   <Users /> {messages.pairAssignment.open}
@@ -182,7 +189,7 @@ function CourtSchedule({ snapshot, resetGeneration, onStartScoring }: { snapshot
                   <li className="grid grid-cols-[minmax(0,1fr)_7.5rem] items-center gap-x-4 gap-y-4 py-5 first:pt-0 last:pb-0 md:grid-cols-[minmax(0,1fr)_14rem_7.5rem]" aria-label={messages.common.matchNumber(match.matchNumber)} key={match.id}>
                     <p className="col-start-1 row-start-1 w-fit rounded-field bg-well px-2.5 py-1 text-sm font-semibold">{messages.common.matchNumber(match.matchNumber)}</p>
                     <p className="col-start-2 row-start-1 text-right text-xs text-muted-ink md:col-start-3">
-                      {startBlocker(snapshot, match) ? messages.scoring.startBlocked[startBlocker(snapshot, match) ?? 'pairs'] : null}
+                      {startBlockerText(snapshot, match)}
                     </p>
                     <PairLines snapshot={snapshot} match={match} className="col-span-2 row-start-2 md:col-span-1 md:col-start-1" />
                     <div className="col-start-1 row-start-3 md:col-start-2 md:row-start-2">

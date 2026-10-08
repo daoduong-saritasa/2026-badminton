@@ -1,3 +1,4 @@
+import { qualifyingCourtAssignments, qualifyingCourtLocked } from '@/domain/qualifying-schedule'
 import { useMutation } from '@tanstack/react-query'
 
 import { mutateTournament } from '@/data/tournament'
@@ -39,7 +40,7 @@ export function CourtSelectView({ snapshot, match, label, disabled = false, erro
   )
 }
 
-/** Moves an unstarted match to another court; a choice saves at once. */
+/** Saves a court choice; qualifying swaps both fixtures of the round. */
 export function CourtSelect({ snapshot, match, resetGeneration, label }: {
   snapshot: TournamentSnapshot
   match: FixtureMatch
@@ -47,23 +48,33 @@ export function CourtSelect({ snapshot, match, resetGeneration, label }: {
   /** Accessible name of the select. */
   label: string
 }) {
+  const fixture = snapshot.fixtures.find((candidate) => candidate.id === match.fixtureId)
+  const qualifying = fixture?.stage === 'qualifying'
+  const locked = qualifying && qualifyingCourtLocked(snapshot, fixture)
   const mutation = useMutation({
     mutationFn: (court: Court) => mutateTournament('assign_courts', {
       requestId: crypto.randomUUID(),
       resetGeneration,
       expectedVersion: snapshot.tournament.version,
-      payload: { assignments: [{ matchId: match.id, court }] },
+      payload: { assignments: qualifyingCourtAssignments(snapshot, match, court) },
     }),
   })
 
+  if (qualifying && (locked || match.matchNumber === 2)) {
+    return <span className="text-xs text-muted-ink">{match.court ? courtLabel(snapshot, match.court) : messages.publicView.courtPending}</span>
+  }
+
   return (
-    <CourtSelectView
-      snapshot={snapshot}
-      match={match}
-      label={label}
-      disabled={mutation.isPending}
-      error={mutation.isError ? errorMessage(mutation.error) : null}
-      onChange={(court) => mutation.mutate(court)}
-    />
+    <div>
+      {qualifying ? <p className="mb-1 text-xs text-muted-ink">{messages.qualifying.swapCourts}</p> : null}
+      <CourtSelectView
+        snapshot={snapshot}
+        match={match}
+        label={label}
+        disabled={mutation.isPending || locked}
+        error={mutation.isError ? errorMessage(mutation.error) : null}
+        onChange={(court) => mutation.mutate(court)}
+      />
+    </div>
   )
 }

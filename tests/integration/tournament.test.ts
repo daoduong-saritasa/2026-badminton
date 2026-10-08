@@ -31,6 +31,7 @@ interface Player {
 
 interface Fixture {
   id: string
+  qualifying_court: 1 | 2 | null
   qualifying_order: number | null
   stage: 'qualifying' | 'qualification-playoff' | 'third-place' | 'final'
   team_a_id: string | null
@@ -253,21 +254,18 @@ describe('team tournament commands', () => {
       teamNames.get(fixture.team_b_id ?? ''),
     ])).toEqual([
       ['Zulu', 'Alpha'],
+      ['Mike', 'Bravo'],
       ['Zulu', 'Mike'],
       ['Alpha', 'Bravo'],
       ['Zulu', 'Bravo'],
       ['Alpha', 'Mike'],
-      ['Mike', 'Bravo'],
     ])
     expect(ready.matches.map((match) => [match.fixture_id, match.match_number]))
       .toEqual(qualifying.flatMap((fixture) => [[fixture.id, 1], [fixture.id, 2]]))
-    for (const team of ready.teams) {
-      const appearances = qualifying.map((fixture) =>
-        fixture.team_a_id === team.id || fixture.team_b_id === team.id,
-      )
-      for (let index = 0; index < appearances.length - 2; index += 1) {
-        expect(appearances.slice(index, index + 3).every(Boolean)).toBe(false)
-      }
+    expect(qualifying.map((fixture) => fixture.qualifying_court)).toEqual([1, 2, 1, 2, 1, 2])
+    for (let round = 0; round < 3; round += 1) {
+      expect(new Set(qualifying.slice(round * 2, round * 2 + 2)
+        .flatMap((fixture) => [fixture.team_a_id, fixture.team_b_id])).size).toBe(4)
     }
     await assignCourt(organizer, ready.matches[2].id, 2)
     expect((await snapshot(organizer)).matches.map((match) => match.id))
@@ -381,13 +379,19 @@ describe('team tournament commands', () => {
     const first = await assignPairs(organizer, qualifying.matches[0].id)
     await callMutation('start_match', organizer, first.version, { matchId: first.id })
 
-    // A fixture sharing no team, so only the occupied court can block the start.
     const firstFixture = qualifying.fixtures.find((fixture) => fixture.id === first.fixture_id)
     const busyTeams = [firstFixture?.team_a_id, firstFixture?.team_b_id]
     const freeFixture = stageFixtures(qualifying, 'qualifying').find((fixture) =>
       !busyTeams.includes(fixture.team_a_id) && !busyTeams.includes(fixture.team_b_id))
-    const other = freeFixture ? fixtureMatches(qualifying, freeFixture.id)[0] : undefined
-    if (!other) throw new Error('Second match is missing')
+    if (!freeFixture) throw new Error('Independent fixture is missing')
+    const extraFixtureId = crypto.randomUUID()
+    runSql(`
+      insert into public.team_fixtures (id, tournament_id, stage, team_a_id, team_b_id)
+      values ('${extraFixtureId}', '${qualifying.tournament.id}', 'qualification-playoff',
+        '${freeFixture.team_a_id}', '${freeFixture.team_b_id}');
+      select private.sync_fixture_matches('${extraFixtureId}');
+    `)
+    const other = fixtureMatches(await snapshot(organizer), extraFixtureId)[0]
     await assignCourt(organizer, other.id, 1)
     const assignedOther = await assignPairs(organizer, other.id)
     expect((await rpc('start_match', mutation(assignedOther.version, { matchId: assignedOther.id }), referee)).ok).toBe(false)

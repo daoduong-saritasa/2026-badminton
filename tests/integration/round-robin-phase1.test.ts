@@ -49,19 +49,19 @@ function seedThreeTeamRound(): SeededRoundRobin {
     update public.tournament set current_playoff_round_id = '${firstRoundId}'
     where id = '${tournamentId}';
     insert into public.team_fixtures (
-      id, tournament_id, stage, team_a_id, team_b_id, playoff_round_id
+      id, tournament_id, stage, team_a_id, team_b_id, playoff_round_id, qualifying_order, qualifying_court
     ) values
-      ('${ab}', '${tournamentId}', 'qualifying', '${teamA}', '${teamB}', null),
-      ('${ac}', '${tournamentId}', 'qualifying', '${teamA}', '${teamC}', null),
-      ('${ad}', '${tournamentId}', 'qualifying', '${teamA}', '${teamD}', null),
-      ('${bc}', '${tournamentId}', 'qualifying', '${teamB}', '${teamC}', null),
-      ('${bd}', '${tournamentId}', 'qualifying', '${teamB}', '${teamD}', null),
-      ('${cd}', '${tournamentId}', 'qualifying', '${teamC}', '${teamD}', null),
-      ('${playoffAB}', '${tournamentId}', 'qualification-playoff', '${teamA}', '${teamB}', '${firstRoundId}'),
-      ('${playoffBC}', '${tournamentId}', 'qualification-playoff', '${teamB}', '${teamC}', '${firstRoundId}'),
-      ('${playoffCA}', '${tournamentId}', 'qualification-playoff', '${teamC}', '${teamA}', '${firstRoundId}'),
-      ('${thirdPlaceFixtureId}', '${tournamentId}', 'third-place', null, null, null),
-      ('${finalFixtureId}', '${tournamentId}', 'final', null, null, null);
+      ('${ab}', '${tournamentId}', 'qualifying', '${teamA}', '${teamB}', null, 1, 1),
+      ('${ac}', '${tournamentId}', 'qualifying', '${teamA}', '${teamC}', null, 3, 1),
+      ('${ad}', '${tournamentId}', 'qualifying', '${teamA}', '${teamD}', null, 5, 1),
+      ('${bc}', '${tournamentId}', 'qualifying', '${teamB}', '${teamC}', null, 6, 2),
+      ('${bd}', '${tournamentId}', 'qualifying', '${teamB}', '${teamD}', null, 4, 2),
+      ('${cd}', '${tournamentId}', 'qualifying', '${teamC}', '${teamD}', null, 2, 2),
+      ('${playoffAB}', '${tournamentId}', 'qualification-playoff', '${teamA}', '${teamB}', '${firstRoundId}', null, null),
+      ('${playoffBC}', '${tournamentId}', 'qualification-playoff', '${teamB}', '${teamC}', '${firstRoundId}', null, null),
+      ('${playoffCA}', '${tournamentId}', 'qualification-playoff', '${teamC}', '${teamA}', '${firstRoundId}', null, null),
+      ('${thirdPlaceFixtureId}', '${tournamentId}', 'third-place', null, null, null, null, null),
+      ('${finalFixtureId}', '${tournamentId}', 'final', null, null, null, null, null);
     insert into public.matches (
       fixture_id, match_number, state, result_kind, winner_side
     ) values
@@ -274,10 +274,10 @@ describe('round-robin phase 1 SQL boundaries', () => {
         ('${playerA}', '${teamA}', 'A1', 1),
         ('${playerB}', '${teamA}', 'A2', 2);
       insert into public.team_fixtures (
-        id, tournament_id, stage, team_a_id, team_b_id
+        id, tournament_id, stage, team_a_id, team_b_id, qualifying_order, qualifying_court
       ) values
-        ('${qualifyingFixture}', '${tournamentId}', 'qualifying', '${teamA}', '${teamB}'),
-        ('${finalFixture}', '${tournamentId}', 'final', '${teamA}', '${teamB}');
+        ('${qualifyingFixture}', '${tournamentId}', 'qualifying', '${teamA}', '${teamB}', 1, 1),
+        ('${finalFixture}', '${tournamentId}', 'final', '${teamA}', '${teamB}', null, null);
       insert into public.matches (
         id, fixture_id, match_number, state, result_kind, winner_side
       ) values (

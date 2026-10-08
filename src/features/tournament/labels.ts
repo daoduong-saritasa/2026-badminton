@@ -1,3 +1,4 @@
+import { qualifyingFixtures, qualifyingRound, qualifyingStartBlocker } from '@/domain/qualifying-schedule'
 import { gameRules, gamesToWinMatch } from '@/domain/scoring'
 import { deciderStatus, fixtureTally } from '@/domain/team-fixtures'
 import type {
@@ -47,7 +48,9 @@ export function fixtureScheduleLabel(snapshot: TournamentSnapshot, fixture: Team
   if (fixture?.stage !== 'qualifying') return stage
   const qualifying = snapshot.fixtures.filter((candidate) => candidate.stage === 'qualifying')
   const index = qualifying.findIndex((candidate) => candidate.id === fixture.id)
-  return index < 0 ? stage : `${stage} · ${messages.common.fixtureOrder(index + 1, qualifying.length)}`
+  const round = qualifyingRound(fixture)
+  const position = fixture.qualifyingOrder ?? index + 1
+  return index < 0 ? stage : `${round === null ? stage : messages.qualifying.round(round)} · ${messages.common.fixtureOrder(position, qualifying.length)}`
 }
 
 /** "Chạm 21, cách 2 điểm, tối đa 30 · Thắng 2 ván": the game rules a stage plays under. */
@@ -165,7 +168,9 @@ export function upcomingMatches(snapshot: TournamentSnapshot): FixtureMatch[] {
 export function startBlocker(
   snapshot: TournamentSnapshot,
   match: FixtureMatch,
-): 'decider' | 'court' | 'pairs' | 'court-and-pairs' | null {
+): 'decider' | 'court' | 'pairs' | 'court-and-pairs' | 'sequence' | 'round' | null {
+  const qualifying = qualifyingStartBlocker(snapshot, match)
+  if (qualifying) return qualifying
   if (match.matchNumber === 3 && !isDeciderEligible(snapshot, match)) return 'decider'
   const needsCourt = match.court === null
   const needsPairs = match.pairA === null || match.pairB === null
@@ -174,18 +179,38 @@ export function startBlocker(
   return needsPairs ? 'pairs' : null
 }
 
+export function startBlockerText(snapshot: TournamentSnapshot, match: FixtureMatch): string | null {
+  const blocker = startBlocker(snapshot, match)
+  if (blocker === 'round') {
+    const unfinished = qualifyingFixtures(snapshot).find((fixture) => {
+      const matches = fixtureMatches(snapshot, fixture.id)
+      return matches.length !== 2 || matches.some((candidate) => candidate.state !== 'completed')
+    })
+    return messages.qualifying.waitForRound(unfinished ? qualifyingRound(unfinished) ?? 1 : 1)
+  }
+  return blocker ? messages.scoring.startBlocked[blocker] : null
+}
+
 /** Ready to start: a court and both saved pairs. */
 export function isStartable(match: FixtureMatch): boolean {
   return match.court !== null && match.pairA !== null && match.pairB !== null
 }
 
 /** Matches grouped under their fixture, both in the order given. */
-export function groupByFixture(matches: readonly FixtureMatch[]): Array<{ fixtureId: UUID; matches: FixtureMatch[] }> {
+export function groupByFixture(matches: readonly FixtureMatch[], snapshot?: TournamentSnapshot): Array<{ fixtureId: UUID; matches: FixtureMatch[] }> {
   const groups: Array<{ fixtureId: UUID; matches: FixtureMatch[] }> = []
   for (const match of matches) {
     const group = groups.find((candidate) => candidate.fixtureId === match.fixtureId)
     if (group) group.matches.push(match)
     else groups.push({ fixtureId: match.fixtureId, matches: [match] })
   }
-  return groups
+  if (!snapshot) return groups
+  return groups.toSorted((a, b) => {
+    const left = snapshot.fixtures.find((fixture) => fixture.id === a.fixtureId)
+    const right = snapshot.fixtures.find((fixture) => fixture.id === b.fixtureId)
+    const leftRound = left ? qualifyingRound(left) : null
+    const rightRound = right ? qualifyingRound(right) : null
+    return (leftRound ?? Infinity) - (rightRound ?? Infinity)
+      || (left?.qualifyingCourt ?? 0) - (right?.qualifyingCourt ?? 0)
+  })
 }

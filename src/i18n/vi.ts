@@ -258,8 +258,16 @@ export const vi = {
       'duplicate-player': 'Một cặp phải gồm hai người khác nhau.',
       'player-playing': 'Có người đang thi đấu ở trận khác.',
       'same-seed': 'Trận này cần một hạt giống 1 và một hạt giống 2.',
-      'concurrent-player-reused': 'Một người được xếp ở cả trận 1 và trận 2, hai trận đánh cùng lúc.',
+      'concurrent-player-reused': 'Một người được xếp ở cả trận 1 và trận 2 của cặp đấu.',
     },
+  },
+
+  qualifying: {
+    round: (round: number) => `Lượt ${formatNumber(round)}`,
+    waitForRound: (round: number) => `Chờ lượt ${formatNumber(round)} kết thúc`,
+    swapCourts: 'Đổi sân cả lượt',
+    next: 'Tiếp theo',
+    waiting: 'Chờ lượt trước',
   },
 
   scoring: {
@@ -272,6 +280,8 @@ export const vi = {
     resume: 'Ghi điểm',
     start: 'Bắt đầu',
     startBlocked: {
+      sequence: 'Chờ trận 1 kết thúc',
+      round: 'Chờ lượt trước kết thúc',
       decider: 'Chỉ đánh khi hòa 1–1',
       court: 'Cần xếp sân',
       pairs: 'Cần xếp cặp',
@@ -415,9 +425,9 @@ export const vi = {
       stages: [
         {
           name: 'Vòng loại',
-          overview: 'Mỗi đội gặp 3 đội còn lại. Hai trận cùng lúc, có thể hòa 1–1.',
+          overview: 'Ba lượt đấu, mỗi lượt đủ bốn đội. Hai trận mỗi cặp đấu đánh lần lượt trên cùng sân.',
           who: 'Mỗi đội gặp 3 đội còn lại. Tổng cộng 6 cặp đấu, 12 trận. Xếp hạng theo số trận thắng, không theo số cặp đấu thắng.',
-          fixture: '2 trận đánh cùng lúc trên 2 sân. Kết quả cặp đấu là 2–0, 1–1 hoặc 0–2. Không đánh trận 3 ở vòng loại.',
+          fixture: 'Mỗi sân dành cho một cặp đấu, trận 1 rồi trận 2. Cả hai sân kết thúc mới sang lượt tiếp. Có thể hòa 1–1; không đánh trận 3.',
           match: '1 ván, chạm 21, tối đa 30.',
           pairs: 'Mỗi cặp gồm 1 người hạt giống 1 và 1 người hạt giống 2. Mỗi người đánh đúng 1 trận mỗi cặp đấu, tổng 3 trận. Có thể giữ nguyên cặp qua cả ba cặp đấu.',
         },

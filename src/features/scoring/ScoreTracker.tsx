@@ -12,7 +12,7 @@ import { CourtSelect } from './CourtSelect'
 import { PairAssignmentForm } from './PairAssignmentForm'
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog'
 import { Dialog, DialogContent } from '@/components/ui/dialog'
-import { courtLabel, fixtureOf, isStartable, matchLabel, openGame, upcomingMatches } from '@/features/tournament/labels'
+import { courtLabel, fixtureOf, startBlocker, matchLabel, openGame, upcomingMatches } from '@/features/tournament/labels'
 import { errorMessage } from '@/i18n/errors'
 import { messages } from '@/i18n/messages'
 
@@ -285,7 +285,7 @@ function MatchPicker({
 }) {
   const upcoming = upcomingMatches(snapshot)
   const [startMatchId, setStartMatchId] = useState<UUID | null>(null)
-  const startMatch = upcoming.find((match) => match.id === startMatchId && isStartable(match))
+  const startMatch = upcoming.find((match) => match.id === startMatchId && startBlocker(snapshot, match) === null)
   // The fixture outlives `assignOpen` so the dialog keeps its content while closing.
   const [assignFixtureId, setAssignFixtureId] = useState<UUID | null>(null)
   const [assignOpen, setAssignOpen] = useState(false)

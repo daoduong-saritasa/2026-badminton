@@ -58,6 +58,11 @@ const viServerMessages = {
   'A player is already playing': 'Có người chơi đang thi đấu ở trận khác.',
   'Decider is not eligible': 'Trận 3 chỉ diễn ra khi hai trận đầu đã có kết quả 1–1.',
 
+  'Earlier qualifying rounds must finish': 'Cần kết thúc các lượt trước.',
+  'First qualifying match must finish': 'Cần kết thúc trận 1 của cặp đấu.',
+  'Qualifying courts are locked after progress': 'Lượt đã bắt đầu nên không thể đổi sân.',
+  'Qualifying schedule is invalid': 'Lịch vòng loại không hợp lệ. Liên hệ điều hành.',
+
   // Scoring
   'Only a playing match can be taken over': 'Chỉ nhận quyền ghi điểm được với trận đang diễn ra.',
   'Session already owns this match': 'Thiết bị này đang giữ quyền ghi điểm trận này.',
@@ -124,7 +129,7 @@ const enServerMessages: Record<ServerFailure, string> = {
   'A pair requires two distinct players': 'A pair needs two different players.',
   'Pair players must belong to the team': 'Players must belong to this team.',
   'Pair must mix seeds': 'This match needs one seed 1 and one seed 2 player.',
-  'Player already plays in this fixture': 'A player is already in the other match of this fixture, which plays at the same time.',
+  'Player already plays in this fixture': 'A player is already in the other match of this fixture.',
   'Fixture participants are not assigned': 'Both teams of this fixture are not decided yet.',
   'Qualifying requires four complete teams': 'Four teams of four players are required before qualifying starts.',
 
@@ -144,6 +149,11 @@ const enServerMessages: Record<ServerFailure, string> = {
   'Court names must be two distinct names of 1 to 30 characters': 'The two courts need different names of 1–30 characters.',
   'A player is already playing': 'A player is in play in another match.',
   'Decider is not eligible': 'Match 3 is played only when the first two matches end 1–1.',
+
+  'Earlier qualifying rounds must finish': 'Earlier rounds must finish first.',
+  'First qualifying match must finish': 'Match 1 of this fixture must finish first.',
+  'Qualifying courts are locked after progress': 'This round has started, so its courts cannot change.',
+  'Qualifying schedule is invalid': 'The qualifying schedule is invalid. Contact the organizer.',
 
   'Only a playing match can be taken over': 'You can take over scoring only for a match in play.',
   'Session already owns this match': 'This device already scores this match.',

@@ -224,10 +224,10 @@ describe('pair assignment', () => {
     await ok(await assign(organizer, second, 'a', { player1Id: seed1[0], player2Id: seed2[1] }, true))
   })
 
-  it('creates matches 1 and 2 on courts 1 and 2', async () => {
+  it('creates both qualifying matches on their fixture court', async () => {
     const ready = await startQualifying(organizer)
-    for (const fixture of ready.fixtures.filter((candidate) => candidate.stage === 'qualifying')) {
-      expect(fixtureMatches(ready, fixture.id).map(({ court }) => court)).toEqual([1, 2])
+    for (const [index, fixture] of ready.fixtures.filter((candidate) => candidate.stage === 'qualifying').entries()) {
+      expect(fixtureMatches(ready, fixture.id).map(({ court }) => court)).toEqual([index % 2 + 1, index % 2 + 1])
     }
   })
 
@@ -237,7 +237,7 @@ describe('pair assignment', () => {
     expect((await assignCourt(referee, first.id, 2)).court).toBe(2)
   })
 
-  it('blocks a player already on court for everyone, at assignment and at start', async () => {
+  it('blocks busy-player assignment and sequential qualifying starts', async () => {
     const ready = await startQualifying(organizer)
     const [first, second] = fixtureMatches(ready, ready.fixtures[0].id)
     await assignCourt(organizer, first.id, 1)
@@ -251,16 +251,16 @@ describe('pair assignment', () => {
     const attempt = await assign(organizer, currentMatch(current, second.id), 'a', { player1Id: busy, player2Id: seed2[1] }, true)
     expect(await message(attempt)).toBe('A player is already playing')
 
-    // Saved before the other match started, the overlap still blocks the start.
+
     runSql(`
       update public.matches
       set pair_a_player_1_id = '${busy}', pair_a_player_2_id = '${seed2[1]}'
       where id = '${second.id}';
     `)
     await assignMixed(organizer, second.id, ['b'])
-    const blocked = await assignCourt(organizer, second.id, 2)
+    const blocked = currentMatch(await snapshot(organizer), second.id)
     expect(await message(await rpc('start_match', mutation(blocked.version, { matchId: second.id }), organizer)))
-      .toBe('A player is already playing')
+      .toBe('First qualifying match must finish')
   })
 
   it('serializes concurrent writes, replays a request, and rejects stale versions', async () => {
