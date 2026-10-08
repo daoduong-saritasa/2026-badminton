@@ -24,7 +24,7 @@ Fresh review: required — persistent-data migration and durable mutation rules.
 - [x] Maintain `src/lib/database.types.ts` by hand; validate/map metadata in `src/data/tournament.ts`; cover valid and malformed scheduling DTOs in `src/data/tournament.test.ts`; update `src/data/impacts.test.ts` DTO fixtures.
 - [x] Update `src/features/tournament/labels.ts`, `src/features/scoring/CourtSelect.tsx`, `src/features/scoring/MatchPickerView.tsx`, and `src/features/organizer/OrganizerPage.tsx` for round labels, start blockers, fixture swaps, and locked courts; preserve future pair preparation.
 - [x] Group public fixtures and court queues in `src/features/tournament/TournamentPage.tsx` and `src/features/tournament/FixtureCard.tsx`; translate round labels, blockers, and qualifying rules in `src/i18n/vi.ts`, `src/i18n/en.ts`, and `src/i18n/errors.ts`; remove obsolete simultaneous-qualifying claims in `src/domain/pair-assignment.ts`.
-- [ ] Add transactional SQL regression scenarios in `tests/sql/qualifying-round-schedule.sql` for generation, conversion, progression, walkovers, swaps, reset, and stale versions; document concurrency review evidence.
+- [x] Add transactional SQL regression scenarios in `tests/sql/qualifying-round-schedule.sql` for generation, conversion, progression, walkovers, swaps, reset, and stale versions; document concurrency review evidence: the router, start command, and court assignment acquire the same transaction-scoped mutation lock before eligibility checks; concurrent database execution remains unverified.
 
 **Phase gate (hard):**
 - [ ] `npm run typecheck`.
