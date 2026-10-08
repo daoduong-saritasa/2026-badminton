@@ -20,8 +20,8 @@ Produces: `TeamFixture.qualifyingOrder: number | null`, `TeamFixture.qualifyingC
 Fresh review: required — persistent-data migration and durable mutation rules.
 
 - [x] Add metadata in `src/domain/types.ts`; implement round eligibility, court locking, swaps, and queues in `src/domain/qualifying-schedule.ts`; cover barriers, walkovers, missing matches, corrections, court swaps, and pair changes in `src/domain/qualifying-schedule.test.ts`; update typed fixture factories.
-- [ ] Add `supabase/migrations/202610080004_qualifying_round_schedule.sql`: guarded conversion preserving identities/pairs, fixture court constraints, roster generation, `private.sync_fixture_matches`, `private.team_start_match`, and atomic fixture court swaps in `private.team_assign_courts`; retain reset and correction contracts.
-- [ ] Maintain `src/lib/database.types.ts` by hand; validate/map metadata in `src/data/tournament.ts`; cover valid and malformed scheduling DTOs in `src/data/tournament.test.ts`; update `src/data/impacts.test.ts` DTO fixtures.
+- [x] Add `supabase/migrations/202610080004_qualifying_round_schedule.sql`: guarded conversion preserving identities/pairs, fixture court constraints, roster generation, `private.sync_fixture_matches`, `private.team_start_match`, and atomic fixture court swaps in `private.team_assign_courts`; retain reset and correction contracts.
+- [x] Maintain `src/lib/database.types.ts` by hand; validate/map metadata in `src/data/tournament.ts`; cover valid and malformed scheduling DTOs in `src/data/tournament.test.ts`; update `src/data/impacts.test.ts` DTO fixtures.
 - [ ] Update `src/features/tournament/labels.ts`, `src/features/scoring/CourtSelect.tsx`, `src/features/scoring/MatchPickerView.tsx`, and `src/features/organizer/OrganizerPage.tsx` for round labels, start blockers, fixture swaps, and locked courts; preserve future pair preparation.
 - [ ] Group public fixtures and court queues in `src/features/tournament/TournamentPage.tsx` and `src/features/tournament/FixtureCard.tsx`; translate round labels, blockers, and qualifying rules in `src/i18n/vi.ts`, `src/i18n/en.ts`, and `src/i18n/errors.ts`; remove obsolete simultaneous-qualifying claims in `src/domain/pair-assignment.ts`.
 - [ ] Add transactional SQL regression scenarios in `tests/sql/qualifying-round-schedule.sql` for generation, conversion, progression, walkovers, swaps, reset, and stale versions; document concurrency review evidence.
@@ -32,7 +32,7 @@ Fresh review: required — persistent-data migration and durable mutation rules.
 
 **On completion:** run the phase gate; run `fresh-review`; update STATUS + checkboxes; stop and ask before push/PR.
 
-- [ ] (amended 2026-10-08) Update `src/features/guide/guide-data.ts` and `src/features/guide/guide-state.ts` illustrative scheduling metadata and qualifying courts.
+- [x] (amended 2026-10-08) Update `src/features/guide/guide-data.ts` and `src/features/guide/guide-state.ts` illustrative scheduling metadata and qualifying courts.
 
 ## Spec gate (hard — once, before the final phase's PR)
 

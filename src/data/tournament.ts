@@ -56,7 +56,10 @@ const fixtureDtoSchema = z.object({
   qualifying_order: z.int().min(1).max(6).nullable(),
   qualifying_court: courtSchema.nullable(),
   version: z.int().nonnegative(),
-})
+}).refine((fixture) => fixture.stage === 'qualifying'
+  ? fixture.qualifying_order !== null && fixture.qualifying_court !== null
+  : fixture.qualifying_order === null && fixture.qualifying_court === null,
+{ message: 'Fixture scheduling metadata does not match its stage' })
 
 const matchDtoSchema = z.object({
   id: uuidSchema,

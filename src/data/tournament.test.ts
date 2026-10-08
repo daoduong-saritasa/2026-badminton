@@ -11,6 +11,7 @@ import {
   InvalidTournamentDataError,
   StaleTournamentSnapshotError,
   subscribeTournament,
+  parseSnapshot,
 } from './tournament'
 
 const tournamentId = '00000000-0000-4000-8000-000000000010'
@@ -142,8 +143,8 @@ describe('tournament data', () => {
           },
           fixtures: [
             ...base.fixtures,
-            { id: playoffId, stage: 'qualification-playoff', team_a_id: teamId, team_b_id: otherTeamId, playoff_round_id: roundId, version: 1 },
-            { id: releasedId, stage: 'qualification-playoff', team_a_id: null, team_b_id: null, playoff_round_id: null, qualifying_order: 1, qualifying_court: 1, version: 3 },
+            { id: playoffId, stage: 'qualification-playoff', team_a_id: teamId, team_b_id: otherTeamId, playoff_round_id: roundId, qualifying_order: null, qualifying_court: null, version: 1 },
+            { id: releasedId, stage: 'qualification-playoff', team_a_id: null, team_b_id: null, playoff_round_id: null, qualifying_order: null, qualifying_court: null, version: 3 },
           ],
           matches: [
             ...base.matches,
@@ -487,5 +488,19 @@ describe('tournament data', () => {
 
     resolveRefresh?.({ data: state(3, 5), error: null })
     await expect(committed).resolves.toMatchObject({ requestId, resetGeneration: 5, tournamentVersion: 3 })
+  })
+})
+
+
+describe('qualifying metadata validation', () => {
+  it('maps stored order and court', () => {
+    expect(parseSnapshot(snapshot(1)).fixtures[0]).toMatchObject({ qualifyingOrder: 1, qualifyingCourt: 1 })
+  })
+  it.each([
+    { qualifying_order: 7 }, { qualifying_court: 3 }, { qualifying_order: null },
+    { qualifying_court: null }, { stage: 'final' },
+  ])('rejects inconsistent scheduling metadata %j', (overrides) => {
+    const dto = snapshot(1)
+    expect(() => parseSnapshot({ ...dto, fixtures: [{ ...dto.fixtures[0], ...overrides }] })).toThrow(InvalidTournamentDataError)
   })
 })
